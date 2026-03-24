@@ -19,7 +19,7 @@ class FastStreamConsumer(EmptyConsumer):
         subc = self.broker.subscriber(self.queue_name)
         # @broker.subscriber(self.queue_name)
         async def f(msg:str, logger: Logger,message=Context(),broker=Context(),context=Context(),):
-            self.logger.debug(f' 这条消息是 faststream 从 {self.queue_name} 队列中取出 ,是由 faststream 框架调度 {self.consuming_function.__name__} 函数处理,msg:{message} {context}')
+            self.logger.debug(f' This message was fetched by faststream from queue {self.queue_name}, dispatched by faststream framework to function {self.consuming_function.__name__}, msg:{message} {context}')
             # print(logger.name)
             # return self.consuming_function(*args, **kwargs) # 如果没有声明 autoretry_for ，那么消费函数出错了就不会自动重试了。
             # print(msg)
@@ -34,7 +34,7 @@ class FastStreamConsumer(EmptyConsumer):
         self.faststream_subscriber = subc
 
     def _dispatch_task(self):
-        """ 完全由faststream框架接管控制消费，不使用funboost的AbstractConsumer的_run"""
+        """ Consumption is fully controlled by the faststream framework, not using funboost's AbstractConsumer._run"""
         while 1:
             time.sleep(100)
 

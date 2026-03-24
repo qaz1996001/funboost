@@ -10,7 +10,7 @@ from funboost.assist.rq_windows_worker import WindowsWorker
 
 
 def _install_signal_handlers_monkey(self):
-    """ 不能在非主线程中操作信号"""
+    """ Cannot operate signals in non-main threads"""
     pass
 
 
@@ -18,7 +18,7 @@ Worker._install_signal_handlers = _install_signal_handlers_monkey
 
 
 class RandomWindowsWorker(RandomWorker, WindowsWorker):
-    """ 这个是为了 每个队列都有机会同时拉取，默认是前面的队列先消费完才会消费下一个队列名"""
+    """ This ensures that each queue has a chance to be pulled from simultaneously. By default, the previous queue must be fully consumed before the next queue is consumed."""
 
     pass
 

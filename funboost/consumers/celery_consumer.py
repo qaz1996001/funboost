@@ -10,7 +10,7 @@ from funboost.consumers.base_consumer import AbstractConsumer
 
 class CeleryConsumer(AbstractConsumer):
     """
-    celery作为中间件实现的。
+    Consumer implemented using Celery as middleware.
     """
 
 
@@ -156,7 +156,7 @@ class CeleryConsumer(AbstractConsumer):
     '''
 
     def custom_init(self):
-        # 这就是核心，@boost时候会 @ celery app.task装饰器
+        # This is the core: when @boost is used, it applies the celery app.task decorator
         celery_task_deco_options = dict(name=self. queue_name,
                                         max_retries=self.consumer_params.max_retry_times, bind=True)
         if self.consumer_params.qps:
@@ -169,20 +169,20 @@ class CeleryConsumer(AbstractConsumer):
 
         @celery_app.task(**celery_task_deco_options)
         def f(this: CeleryTask, *args, **kwargs):
-            self.logger.debug(f' 这条消息是 celery 从 {self.queue_name} 队列中取出 ,是由 celery 框架调度 {self.consuming_function.__name__} 函数处理: args:  {args} ,  kwargs: {kwargs}')
+            self.logger.debug(f' This message was fetched by celery from queue {self.queue_name}, dispatched by celery framework to function {self.consuming_function.__name__}: args: {args}, kwargs: {kwargs}')
             if _use_celery_native_retry:
-                # 用户在 broker_exclusive_config['celery_task_config'] 中配置了 autoretry_for，
-                # 由 celery 自身接管重试逻辑，直接执行函数即可。
+                # User configured autoretry_for in broker_exclusive_config['celery_task_config'],
+                # celery handles retry logic itself, just execute the function directly.
                 return self.consuming_function(*args, **kwargs)
             try:
                 return self.consuming_function(*args, **kwargs)
             except Exception as exc:
                 # print(this.request.__dict__,dir(this))
                 if this.request.retries != self.consumer_params.max_retry_times:
-                    log_msg = f'fun: {self.consuming_function}  args: {args} , kwargs: {kwargs} 消息第{this.request.retries}次运行出错,  {exc} \n'
+                    log_msg = f'fun: {self.consuming_function}  args: {args} , kwargs: {kwargs} message error on attempt {this.request.retries},  {exc} \n'
                     self.logger.error(log_msg, exc_info=self.consumer_params.is_print_detail_exception)
                 else:
-                    log_msg = f'fun: {self.consuming_function}  args: {args} , kwargs: {kwargs} 消息达到最大重试次数{this.request.retries}次仍然出错,  {exc} \n'
+                    log_msg = f'fun: {self.consuming_function}  args: {args} , kwargs: {kwargs} message reached max retry times {this.request.retries} and still failed,  {exc} \n'
                     self.logger.critical(log_msg, exc_info=self.consumer_params.is_print_detail_exception)
                 if self.consumer_params.is_using_advanced_retry:
                     countdown = self._calculate_exponential_backoff(
@@ -196,22 +196,22 @@ class CeleryConsumer(AbstractConsumer):
                     countdown = 0
                 raise this.retry(exc=exc, countdown=countdown)
 
-        celery_app.conf.task_routes.update({self.queue_name: {"queue": self.queue_name}})  # 自动配置celery每个函数使用不同的队列名。
+        celery_app.conf.task_routes.update({self.queue_name: {"queue": self.queue_name}})  # Automatically configure celery to use different queue names for each function.
         self.celery_task = f
         CeleryHelper.concurrent_mode = self.consumer_params.concurrent_mode
 
     def start_consuming_message(self):
-        # 不单独每个函数都启动一次celery的worker消费，是把要消费的 queue name放到列表中，CeleryHelper.realy_start_celery_worker 一次性启动多个函数消费。
+        # Don't start a celery worker for each function individually; put queue names in a list, and CeleryHelper.realy_start_celery_worker starts consuming multiple functions at once.
         CeleryHelper.add_start_work_celery_queue_name(self.queue_name)
         super().start_consuming_message()
 
     def _dispatch_task(self):
-        """ 完全由celery框架接管控制消费，不使用funboost的AbstractConsumer的_run"""
+        """ Consumption is fully controlled by the celery framework, not using funboost's AbstractConsumer._run"""
         while 1:
             time.sleep(100)
 
     def _confirm_consume(self, kw):
-        """完全由celery框架接管控制消费和ack确认消费，不需要funboost自己的代码来执行"""
+        """Consumption and ack confirmation are fully controlled by the celery framework, no funboost code needed"""
         pass
 
     def _requeue(self, kw):

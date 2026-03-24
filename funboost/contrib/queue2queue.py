@@ -73,16 +73,16 @@ def multi_prcocess_queue2queue(source_target_list: typing.List[typing.List],
     if exit_script_when_finish:
         wait_for_possible_has_finish_all_tasks_by_conusmer_list(consumer_list=source_consumer_list, minutes=2)
         for (source_queue_name, source_broker_kind, target_queue_name, target_broker_kind) in source_target_list:
-            print(f'{source_queue_name}  转移到 {target_queue_name} 消息转移完成，结束脚本')
+            print(f'{source_queue_name} transferred to {target_queue_name}, message transfer complete, exiting script')
         os._exit(999)  #
 
 
 if __name__ == '__main__':
-    # 一次转移一个队列，使用单进程
+    # Transfer one queue at a time, using a single process
     consume_and_push_to_another_queue('test_queue77h3_dlx', BrokerEnum.REDIS_PRIORITY,
                                       'test_queue77h3', BrokerEnum.REDIS_PRIORITY,
                                       log_level=logging.INFO, exit_script_when_finish=True)
 
-    # 转移多个队列，并使用多进程。
+    # Transfer multiple queues using multiple processes.
     multi_prcocess_queue2queue([['test_queue77h5', BrokerEnum.RABBITMQ_AMQPSTORM, 'test_queue77h4', BrokerEnum.RABBITMQ_AMQPSTORM]],
                                log_level=logging.INFO, exit_script_when_finish=True, n=6)

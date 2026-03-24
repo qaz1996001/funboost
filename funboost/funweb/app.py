@@ -284,32 +284,32 @@ if __name__ == "__main__":
     start_funboost_web_manager(debug=False)
 
     """
-    funboost web manager 启动方式1：
+    funboost web manager startup method 1:
 
-    web代码在funboost包里面，所以可以直接使用命令行运行起来，不需要用户现亲自下载web代码就可以直接运行。
-    
-    第一步： 设置 PYTHONPATH 为你的项目根目录
-    export PYTHONPATH=你的项目根目录 (这么做是为了这个web可以读取到你项目根目录下的 funboost_config.py里面的配置)
-    (怎么设置环境变量应该不需要我来教，环境变量都没听说过太low了)
-      例如 export PYTHONPATH=/home/ydf/codes/ydfhome
-      或者 export PYTHONPATH=./   (./是相对路径，前提是已近cd到你的项目根目录了，也可以写绝对路径全路径)
-      win cmd 设置环境变量语法是 set PYTHONPATH=/home/ydf/codes/ydfhome   
-      win powershell 语法是  $env:PYTHONPATH = "/home/ydf/codes/ydfhome"   
+    The web code is inside the funboost package, so it can be run directly from the command line
+    without users needing to download the web code separately.
 
-    第二步： 启动flask app   
-    win上这么做 python3 -m funboost.funweb.app 
+    Step 1: Set PYTHONPATH to your project root directory
+    export PYTHONPATH=your_project_root_directory (this allows the web app to read the configuration from funboost_config.py in your project root)
+      e.g. export PYTHONPATH=/home/ydf/codes/ydfhome
+      or   export PYTHONPATH=./   (./ is a relative path, assuming you have already cd'd to your project root; you can also use an absolute path)
+      Windows cmd syntax: set PYTHONPATH=/home/ydf/codes/ydfhome
+      Windows powershell syntax: $env:PYTHONPATH = "/home/ydf/codes/ydfhome"
 
-    linux上可以这么做性能好一些，也可以按win的做。
+    Step 2: Start the Flask app
+    On Windows: python3 -m funboost.funweb.app
+
+    On Linux, for better performance (or use the Windows method):
     gunicorn -w 4 --threads=30 --bind 0.0.0.0:27018 funboost.funweb.app:app
     """
 
     """
-    funboost web manager 启动方式2：
-    在python代码中直接启动：
+    funboost web manager startup method 2:
+    Start directly from Python code:
 
     ```python
     from  funboost.funweb.app import start_funboost_web_manager
     start_funboost_web_manager()
     ```
-    
+
     """

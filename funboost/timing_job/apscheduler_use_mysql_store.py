@@ -5,6 +5,8 @@ from funboost.timing_job import FsdfBackgroundScheduler
 
 
 """
-这个是使用mysql作为定时任务持久化，支持动态修改 添加定时任务,用户完全可以自己按照 funboost/timing_job/apscheduler_use_redis_store.py 中的代码实现，因为apscheduler支持SQLAlchemyJobStore
-只是scheduler改个jobstores类型，和funboost知识毫无关系，是apscheduler的知识。
+This uses MySQL as the persistent store for scheduled tasks, supporting dynamic modification and addition of scheduled tasks.
+Users can fully implement this themselves following the code in funboost/timing_job/apscheduler_use_redis_store.py,
+since apscheduler supports SQLAlchemyJobStore. It's just changing the jobstores type for the scheduler,
+which is entirely apscheduler knowledge and has nothing to do with funboost.
 """

@@ -33,12 +33,12 @@ def evenlet_timeout_deco(timeout_t):
     def _evenlet_timeout_deco(f):
         def __evenlet_timeout_deco(*args, **kwargs):
             timeout = EventletImporter().Timeout(timeout_t, )
-            # timeout.start()  # 与gevent不一样,直接start了。
+            # timeout.start()  # Unlike gevent, it starts directly.
             result = None
             try:
                 result = f(*args, **kwargs)
             except EventletImporter().Timeout as t:
-                logger_evenlet_timeout_deco.error(f'函数 {f} 运行超过了 {timeout_t} 秒')
+                logger_evenlet_timeout_deco.error(f'Function {f} exceeded {timeout_t} seconds')
                 if t is not timeout:
                     print(t)
                     # raise  # not my timeout
@@ -55,10 +55,10 @@ def get_eventlet_pool_executor(*args2, **kwargs2):
     class CustomEventletPoolExecutor(EventletImporter().greenpool.GreenPool, FunboostBaseConcurrentPool):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            check_evenlet_monkey_patch()  # basecomer.py中检查。
+            check_evenlet_monkey_patch()  # Checked in basecomer.py.
             atexit.register(self.shutdown)
 
-        def submit(self, *args, **kwargs):  # 保持为一直的公有用法。
+        def submit(self, *args, **kwargs):  # Maintain a consistent public interface.
             # nb_print(args)
             self.spawn_n(*args, **kwargs)
             # self.spawn_n(*args, **kwargs)
@@ -83,5 +83,5 @@ if __name__ == '__main__':
     pool = get_eventlet_pool_executor(4)
 
     for i in range(15):
-        print(f'放入{i}')
+        print(f'submitting {i}')
         pool.submit(evenlet_timeout_deco(8)(f2), i)

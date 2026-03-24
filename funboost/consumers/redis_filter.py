@@ -120,10 +120,10 @@ class RedisImpermanencyFilterUsingRedisKey(RedisFilter):
 
     def __add_dir_prefix(self, value):
         """
-        添加一个前缀，以便redis形成一个树形文件夹，方便批量删除和折叠
+        Add a prefix so Redis forms a tree-like folder structure, convenient for batch deletion and collapsing
         :return:
         """
-        return f'{self._redis_key_name}:{value.replace(":", "：")}'  # 任务是json，带有：会形成很多树，换成中文冒号。
+        return f'{self._redis_key_name}:{value.replace(":", "\uff1a")}'  # Task is JSON, colons would create many tree branches, replace with full-width colon.
 
     def add_a_value(self, value: typing.Union[str, dict], filter_str: typing.Optional[str] = None):
         redis_key = self.__add_dir_prefix(self.generate_filter_str(value, filter_str))
@@ -138,7 +138,7 @@ class RedisImpermanencyFilterUsingRedisKey(RedisFilter):
 
     def delete_expire_filter_task_cycle(self):
         """
-        redis服务端会自动删除过期的过滤任务键。不用在客户端管理。
+        The Redis server will automatically delete expired filter task keys. No need for client-side management.
         :return:
         """
         pass

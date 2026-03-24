@@ -11,7 +11,7 @@ from urllib3 import PoolManager
 
 class HTTPPublisher(AbstractPublisher, ):
     """
-    http实现的，不支持持久化。
+    HTTP implementation, does not support persistence.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -44,10 +44,10 @@ class HTTPPublisher(AbstractPublisher, ):
 
 
     def clear(self):
-        pass  # udp没有保存消息
+        pass  # HTTP does not persist messages
 
     def get_message_count(self):
-        return -1  # http模式没有持久化保存消息
+        return -1  # HTTP mode does not persist messages
 
     def close(self):
         pass

@@ -14,7 +14,7 @@ from funboost.utils.redis_manager import RedisMixin
 
 class HueyPublisher(AbstractPublisher, ):
     """
-    使用huey框架作为中间件
+    Uses the huey framework as the broker.
     """
 
     # noinspection PyAttributeOutsideInit

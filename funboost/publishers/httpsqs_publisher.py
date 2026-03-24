@@ -15,7 +15,7 @@ http://blog.zyan.cc/httpsqs/
 
 class HttpsqsPublisher(AbstractPublisher):
     """
-    使用httpsqs作为中间件
+    Uses httpsqs as the broker.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -57,7 +57,7 @@ class HttpsqsPublisher(AbstractPublisher):
         if text != 'HTTPSQS_RESET_OK':
             self.logger.critical(text)
         else:
-            self.logger.warning(f'清除 {self._queue_name} 队列中的消息成功')
+            self.logger.warning(f'Successfully cleared messages in queue {self._queue_name}')
 
     def get_message_count(self):
         text = self.opt_httpsqs('status_json')

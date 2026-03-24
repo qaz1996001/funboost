@@ -15,7 +15,7 @@ class HueyHelper:
     # @classmethod
     # def realy_start_huey_consume(cls):
     #     for queue_name in list(cls.to_be_start_huey_queue_name_set):
-    #         multiprocessing.Process(target=cls._start_huey,args=(queue_name,)).start()  # huey的consumer的run方法无法在子线程运行，必须是主线程。
+    #         multiprocessing.Process(target=cls._start_huey,args=(queue_name,)).start()  # huey's consumer run method cannot run in a child thread, it must be the main thread.
     #
     # @classmethod
     # def _start_huey(cls,queue_name):
@@ -25,7 +25,7 @@ class HueyHelper:
 
     @classmethod
     def realy_start_huey_consume(cls):
-        """ huey 启动所有函数开始消费"""
+        """ huey starts consuming for all functions"""
         consumer_kwargs = {'huey': huey_obj, 'workers': 200, 'periodic': True,
                            'initial_delay': 0.1, 'backoff': 1.15, 'max_delay': 10.0,
                            'scheduler_interval': 1, 'worker_type': 'thread',

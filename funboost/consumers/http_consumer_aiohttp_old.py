@@ -33,7 +33,7 @@ class AioFutureStatusResult:
 
 class HTTPConsumer(AbstractConsumer, ):
     """
-    aiohttp 实现消息队列，不支持持久化，但不需要安装软件。
+    Message queue implemented with aiohttp, does not support persistence, but requires no software installation.
     """
 
 
@@ -107,7 +107,7 @@ class HTTPConsumer(AbstractConsumer, ):
     #         aio_future_status_result.set_finish()
     #         self.logger.info(f'aio_future_status_result.set_finish()')
     def _confirm_consume(self, kw):
-        pass  # 没有确认消费的功能。
+        pass  # No consumption confirmation functionality.
 
     def _requeue(self, kw):
         pass

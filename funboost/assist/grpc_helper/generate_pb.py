@@ -42,7 +42,7 @@ def generate_protobuf():
             print(f"Error message: {result.stderr}")
             
     except Exception as e:
-        print(f"❌ 生成过程中出现异常: {e}")
+        print(f"Exception occurred during generation: {e}")
 
 
 if __name__ == '__main__':

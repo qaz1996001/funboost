@@ -337,10 +337,10 @@ class BoosterRegistry:
 
     def get_all_queue_name__boost_params_unstrict_dict(self):
         """
-        主要用来给前端或可视化观看的。
+        Mainly used for frontend or visualization display.
 
-        返回一个字典,键是队列名,值是@boost的 BoosterParams 入参字典,
-        因为 BoosterParams 有的入参是复杂对象类型,不能json序列化
+        Returns a dict where keys are queue names and values are @boost BoosterParams parameter dicts.
+        Some BoosterParams parameters are complex object types that cannot be JSON serialized.
         """
         return {
             k: v.get_str_dict() for k, v in self.queue_name__boost_params_map.items()
@@ -348,7 +348,7 @@ class BoosterRegistry:
 
     def get_booster(self, queue_name: str) -> Booster:
         """
-        当前进程获得booster对象。注意和下面的get_or_create_booster_by_queue_name方法的区别,主要是开了多进程时候有区别.
+        Get booster object in current process. Note the difference from get_or_create_booster_by_queue_name below, mainly relevant when using multi-process.
         :param queue_name:
         :return:
         """
@@ -357,7 +357,7 @@ class BoosterRegistry:
         if key in self.pid_queue_name__booster_map:
             return self.pid_queue_name__booster_map[key]
         else:
-            err_msg = f"进程 {os.getpid()} ，没有 {queue_name} 对应的 booster   , pid_queue_name__booster_map: {self.pid_queue_name__booster_map}"
+            err_msg = f"Process {os.getpid()} has no booster for {queue_name}, pid_queue_name__booster_map: {self.pid_queue_name__booster_map}"
             raise ValueError(err_msg)
 
     def get_or_create_booster_by_queue_name(
@@ -365,8 +365,8 @@ class BoosterRegistry:
         queue_name,
     ) -> Booster:
         """
-        当前进程获得booster对象，如果是多进程,会在新的进程内部创建一个新的booster对象,因为多进程操作有些中间件的同一个conn不行.
-        :param queue_name: 就是 @boost的入参。
+        Get booster object in current process. In multi-process mode, a new booster object is created in the new process, because some brokers don't support sharing the same connection across processes.
+        :param queue_name: The parameter of @boost.
         :return:
         """
 
@@ -383,16 +383,16 @@ class BoosterRegistry:
 
     def get_boost_params(self, queue_name: str) -> (dict, typing.Callable):
         """
-        这个函数是为了在别的进程实例化 booster，consumer和publisher,获取queue_name队列对应的booster的当时的入参。
-        有些中间件python包的对中间件连接对象不是多进程安全的，不要在进程2中去操作进程1中生成的booster consumer publisher等对象。
+        This function is for instantiating booster, consumer and publisher in other processes, getting the original parameters of the booster for the given queue_name.
+        Some broker Python packages' connection objects are not multi-process safe, so don't use booster/consumer/publisher objects created in process 1 from process 2.
         """
         return self.queue_name__boost_params_map[queue_name]
 
     def build_booster(self, boost_params: BoosterParams) -> Booster:
         """
-        当前进程获得或者创建booster对象。方便有的人需要在函数内部临时动态根据队列名创建booster,不会无数次临时生成消费者、生产者、创建消息队列连接。
-        :param boost_params: 就是 @boost的入参。
-        :param consuming_function: 消费函数
+        Get or create a booster object in the current process. Convenient for dynamically creating boosters by queue name inside functions, without repeatedly creating consumers, publishers, and broker connections.
+        :param boost_params: The parameters for @boost.
+        :param consuming_function: The consuming function
         :return:
         """
 
@@ -402,10 +402,10 @@ class BoosterRegistry:
         else:
             if boost_params.consuming_function is None:
                 raise ValueError(
-                    f" build_booster 方法的 consuming_function 字段不能为None,必须指定一个函数"
+                    f"The consuming_function field in build_booster method cannot be None, a function must be specified"
                 )
             flogger.info(
-                f"创建booster {boost_params} {boost_params.consuming_function}"
+                f"Creating booster {boost_params} {boost_params.consuming_function}"
             )
             booster = Booster(boost_params)(boost_params.consuming_function)
         return booster
@@ -416,30 +416,30 @@ class BoosterRegistry:
         self, publisher_params: PublisherParams
     ) -> AbstractPublisher:
         """
-        跨不同的项目，发布消息。例如proj1中定义有fun1消费函数，但proj2无法直接到proj1的函数，无法直接 fun1.push 来发布消息
-        可以使用这个方法，获取一个publisher。
+        Publish messages across different projects. For example, proj1 has fun1 consuming function, but proj2 cannot directly access proj1's function and cannot use fun1.push to publish.
+        Use this method to get a publisher.
 
         publisher = BoostersManager.get_cross_project_publisher(PublisherParams(queue_name='proj1_queue', broker_kind=publisher_params.broker_kind))
         publisher.publish({'x': aaa})
         """
-        # 确保使用当前 registry 的命名空间，实现隔离
+        # Ensure using current registry's namespace for isolation
         if publisher_params.booster_registry_name != self.booster_registry_name:
             raise ValueError(f"publisher_params.booster_registry_name != self.booster_registry_name, {publisher_params.booster_registry_name} != {self.booster_registry_name}")
             
         return PublisherCacheProxy(publisher_params).publisher
 
     def push(self, queue_name, *args, **kwargs):
-        """push发布消息到消息队列 ;"""
+        """Push a message to the message queue;"""
         self.get_or_create_booster_by_queue_name(queue_name).push(*args, **kwargs)
 
     def publish(self, queue_name, msg):
-        """publish发布消息到消息队列;"""
+        """Publish a message to the message queue;"""
         self.get_or_create_booster_by_queue_name(queue_name).publish(msg)
 
     def consume_queues(self, *queue_names):
         """
-        启动多个消息队列名的消费,多个函数队列在当前同一个进程内启动消费.
-        这种方式节约总的内存,但无法利用多核cpu
+        Start consuming from multiple queue names, all function queues start consuming within the same process.
+        This approach saves total memory, but cannot utilize multi-core CPUs.
         """
         for queue_name in queue_names:
             self.get_booster(queue_name).consume()
@@ -449,8 +449,8 @@ class BoosterRegistry:
 
     def consume_all_queues(self, block=True):
         """
-        启动所有消息队列名的消费,无需一个一个函数亲自 funxx.consume()来启动,多个函数队列在当前同一个进程内启动消费.
-        这种方式节约总的内存,但无法利用多核cpu
+        Start consuming from all queue names without manually calling funxx.consume() for each function, all function queues start consuming within the same process.
+        This approach saves total memory, but cannot utilize multi-core CPUs.
         """
         for queue_name in self.get_all_queues():
             self.get_booster(queue_name).consume()
@@ -461,9 +461,9 @@ class BoosterRegistry:
 
     def multi_process_consume_queues(self, **queue_name__process_num):
         """
-        启动多个消息队列名的消费,传递队列名和进程数,每个队列启动n个单独的消费进程;
-        这种方式总的内存使用高,但充分利用多核cpu
-        例如 multi_process_consume_queues(queue1=2,queue2=3) 表示启动2个进程消费queue1,启动3个进程消费queue2
+        Start consuming from multiple queue names, passing queue names and process counts, each queue starts n separate consuming processes;
+        This approach uses more total memory, but fully utilizes multi-core CPUs.
+        E.g. multi_process_consume_queues(queue1=2,queue2=3) means start 2 processes for queue1, 3 processes for queue2.
         """
         for queue_name, process_num in queue_name__process_num.items():
             self.get_booster(queue_name).multi_process_consume(process_num)
@@ -473,10 +473,10 @@ class BoosterRegistry:
 
     def consume_group(self, booster_group: str, block=False):
         """
-        根据@boost装饰器的 booster_group消费分组名字,启动多个消费函数;
+        Start multiple consuming functions based on the booster_group name in the @boost decorator;
         """
         if booster_group is None:
-            raise ValueError("booster_group 不能为None")
+            raise ValueError("booster_group cannot be None")
         need_consume_queue_names = []
         for queue_name in self.get_all_queues():
             booster = self.get_or_create_booster_by_queue_name(queue_name)
@@ -492,7 +492,7 @@ class BoosterRegistry:
 
     def multi_process_consume_group(self, booster_group: str, process_num=1):
         """
-        根据@boost装饰器的 booster_group消费分组名字,启动多个消费函数;
+        Start multiple consuming functions based on the booster_group name in the @boost decorator using multi-process;
         """
         for _ in range(process_num):
             Process(target=self.consume_group, args=(booster_group, True)).start()
@@ -501,8 +501,8 @@ class BoosterRegistry:
 
     def multi_process_consume_all_queues(self, process_num=1):
         """
-        启动所有消息队列名的消费,无需指定队列名,每个队列启动n个单独的消费进程;
-        这种方式总的内存使用高,但充分利用多核cpu
+        Start consuming from all queue names without specifying queue names, each queue starts n separate consuming processes;
+        This approach uses more total memory, but fully utilizes multi-core CPUs.
         """
         for queue_name in self.get_all_queues():
             self.get_booster(queue_name).multi_process_consume(process_num)
@@ -514,7 +514,7 @@ class BoosterRegistry:
 booster_registry_default = BoosterRegistry(
     booster_registry_name=StrConst.BOOSTER_REGISTRY_NAME_DEFAULT,
 )
-# 这个 BoostersManager 是兼容原来名字,老的BoostersManager原来是一个包含一组classmethod方法的类，
-# 现在 BoostersManager 是 BoosterRegistry 的一个实例，是一个对象。
-# 因为引入了 booster_registry_name 概念，为了多实例隔离更方便，开发成带实例方法的类，老的 BoostersManager 则全是calssmethod方法。
+# BoostersManager is kept for backward compatibility. The original BoostersManager was a class with a set of classmethod methods.
+# Now BoostersManager is an instance of BoosterRegistry, it is an object.
+# With the introduction of booster_registry_name concept, it was developed as a class with instance methods for easier multi-instance isolation. The old BoostersManager only had classmethods.
 BoostersManager = booster_registry_default

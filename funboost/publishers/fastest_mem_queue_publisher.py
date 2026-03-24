@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-高性能内存队列发布者
+High-performance memory queue publisher.
 
-支持两种模式：
-1. 标准模式（默认）：完整的 funboost 功能支持
-2. 极速模式（ultra_fast_mode=True）：跳过大部分框架开销，直接发布消息
-   - 极速模式下会自动生成简化的 extra 字段
-   - 适用于对性能要求极高的场景
+Supports two modes:
+1. Standard mode (default): Full funboost feature support
+2. Ultra-fast mode (ultra_fast_mode=True): Skips most framework overhead, publishes messages directly
+   - Ultra-fast mode auto-generates simplified extra fields
+   - Suitable for scenarios with extremely high performance requirements
 """
 import time
 import typing
@@ -17,11 +17,11 @@ from funboost.core.msg_result_getter import AsyncResult
 
 class FastestMemQueuePublisher(AbstractPublisher):
     """
-    高性能内存队列发布者。
-    
-    broker_exclusive_config 配置项：
-    - ultra_fast_mode: 是否启用极速模式，默认 False
-      极速模式跳过大部分框架开销（序列化、装饰器、日志等），性能提升 3-5 倍
+    High-performance memory queue publisher.
+
+    broker_exclusive_config options:
+    - ultra_fast_mode: Whether to enable ultra-fast mode, default False
+      Ultra-fast mode skips most framework overhead (serialization, decorators, logging, etc.), 3-5x performance improvement
     """
 
     # noinspection PyAttributeOutsideInit
@@ -29,7 +29,7 @@ class FastestMemQueuePublisher(AbstractPublisher):
         super().custom_init()
         self._ultra_fast = self.publisher_params.broker_exclusive_config.get('ultra_fast_mode', False)
         if self._ultra_fast:
-            # 极速模式：预生成一些常量，减少运行时开销
+            # Ultra-fast mode: pre-generate some constants to reduce runtime overhead
             self._task_id_counter = 0
             self._count = 0
             self._last_log_time = time.time()
@@ -40,9 +40,9 @@ class FastestMemQueuePublisher(AbstractPublisher):
 
     def publish(self, msg: typing.Union[str, dict], task_id=None, task_options=None):
         """
-        发布消息到队列。
-        
-        极速模式下跳过大部分框架开销，直接将消息放入队列。
+        Publish a message to the queue.
+
+        In ultra-fast mode, skips most framework overhead and puts the message directly into the queue.
         """
         if self._ultra_fast:
             return self._publish_ultra_fast(msg)
@@ -51,11 +51,11 @@ class FastestMemQueuePublisher(AbstractPublisher):
 
     def _publish_ultra_fast(self, msg: typing.Union[str, dict]):
         """
-        极速发布模式：跳过序列化、装饰器、日志等开销
+        Ultra-fast publish mode: skips serialization, decorators, logging and other overhead.
         """
-        # 直接构建消息，不做任何转换
+        # Build message directly without any conversion
         if isinstance(msg, dict):
-            # 添加最小化的 extra 字段（消费者极速模式需要）
+            # Add minimal extra field (required by consumer ultra-fast mode)
             if 'extra' not in msg:
                 self._task_id_counter += 1
                 msg['extra'] = {
@@ -64,14 +64,14 @@ class FastestMemQueuePublisher(AbstractPublisher):
                 }
             self._mem_queue.put(msg)
         else:
-            # 字符串消息直接放入
+            # String messages go in directly
             self._mem_queue.put(msg)
         
-        # 简化的计数统计
+        # Simplified counting statistics
         self._count += 1
         current_time = time.time()
         if current_time - self._last_log_time > 10:
-            self.logger.info(f'[极速模式] 10秒内发布了 {self._count} 条消息到 {self._queue_name}')
+            self.logger.info(f'[Ultra-fast mode] Published {self._count} messages to {self._queue_name} in 10 seconds')
             self._count = 0
             self._last_log_time = current_time
         
@@ -82,7 +82,7 @@ class FastestMemQueuePublisher(AbstractPublisher):
 
     def clear(self):
         self._mem_queue.clear()
-        self.logger.warning(f'清除 高性能内存队列 {self._queue_name} 中的消息成功')
+        self.logger.warning(f'Successfully cleared messages in high-performance memory queue {self._queue_name}')
 
     def get_message_count(self):
         return self._mem_queue.qsize()

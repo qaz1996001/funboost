@@ -1,17 +1,17 @@
 
 """
-fastapi 开箱即用，只需要用户的 app.include_router(fastapi_router) ,即可自动给用户的fastapi添加常用路由，实现faas
+FastAPI out-of-the-box: simply use app.include_router(fastapi_router) to automatically add common routes to the user's FastAPI app, implementing FaaS.
 
 
 
 
-使用说明:
-    在用户自己的 FastAPI 项目中
+Usage:
+    In the user's own FastAPI project:
        app.include_router(fastapi_router)
-    
 
 
-如果fastapi_router集成到你自己的fastapi app时候，你觉得需要加上权限鉴权，可以这样： 
+
+If you feel you need to add authentication when integrating fastapi_router into your own FastAPI app, you can do this:
 app.include_router(
     fastapi_router,
     dependencies=[
@@ -53,8 +53,8 @@ logger = get_funboost_file_logger(__name__)
 
 
 
-# 创建 Router 实例，方便用户 include 到自己的 app 中
-# 用户可以使用 app.include_router(fastapi_router)
+# Create Router instance for users to include in their own app
+# Users can use app.include_router(fastapi_router)
 fastapi_router = APIRouter(prefix='/funboost', tags=['funboost'])
 
 

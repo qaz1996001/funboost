@@ -28,7 +28,7 @@ def _folders_key():
     return f'funweb:{LOCAL_IP}:log_folders'
 
 
-# ======================== 安全校验 ========================
+# ======================== Security validation ========================
 
 _SENSITIVE_LINUX = {'/etc', '/root', '/proc', '/sys', '/dev', '/boot', '/sbin', '/bin'}
 _SENSITIVE_WIN = set()
@@ -73,7 +73,7 @@ def _validate_folder_access(folder_path):
     return False
 
 
-# ======================== 工具函数 ========================
+# ======================== Utility functions ========================
 
 def _decode_line(raw):
     try:
@@ -273,7 +273,7 @@ def _format_size(size):
     return f'{size / (1024 * 1024 * 1024):.2f} GB'
 
 
-# ======================== API 路由 ========================
+# ======================== API routes ========================
 
 @log_bp.route('/logview/folders', methods=['GET'])
 @login_required
@@ -296,15 +296,15 @@ def add_folder():
     data = request.get_json(force=True)
     path = data.get('path', '').strip()
     if not path:
-        return jsonify({'succ': False, 'msg': '路径不能为空'})
+        return jsonify({'succ': False, 'msg': 'Path cannot be empty'})
     if not os.path.isabs(path):
-        return jsonify({'succ': False, 'msg': '请输入绝对路径'})
+        return jsonify({'succ': False, 'msg': 'Please enter an absolute path'})
     if _is_sensitive(path):
-        return jsonify({'succ': False, 'msg': '不允许添加系统敏感目录'})
+        return jsonify({'succ': False, 'msg': 'Adding sensitive system directories is not allowed'})
     if not os.path.isdir(path):
-        return jsonify({'succ': False, 'msg': f'目录不存在: {path}'})
+        return jsonify({'succ': False, 'msg': f'Directory does not exist: {path}'})
     _redis.sadd(_folders_key(), path)
-    return jsonify({'succ': True, 'msg': '添加成功'})
+    return jsonify({'succ': True, 'msg': 'Added successfully'})
 
 
 @log_bp.route('/logview/folders/remove', methods=['POST'])
@@ -313,7 +313,7 @@ def remove_folder():
     data = request.get_json(force=True)
     path = data.get('path', '').strip()
     _redis.srem(_folders_key(), path)
-    return jsonify({'succ': True, 'msg': '已移除'})
+    return jsonify({'succ': True, 'msg': 'Removed'})
 
 
 @log_bp.route('/logview/files', methods=['GET'])
@@ -327,16 +327,16 @@ def list_files():
     limit = int(request.args.get('limit', 100))
 
     if not folder:
-        return jsonify({'succ': False, 'msg': '请指定文件夹路径'})
+        return jsonify({'succ': False, 'msg': 'Please specify a folder path'})
     if not os.path.isabs(folder):
-        return jsonify({'succ': False, 'msg': '请使用绝对路径'})
+        return jsonify({'succ': False, 'msg': 'Please use an absolute path'})
 
     if not _validate_folder_access(folder):
-        return jsonify({'succ': False, 'msg': '无权访问该目录'})
+        return jsonify({'succ': False, 'msg': 'No permission to access this directory'})
 
     real_folder = os.path.realpath(folder)
     if not os.path.isdir(real_folder):
-        return jsonify({'succ': False, 'msg': '目录不存在'})
+        return jsonify({'succ': False, 'msg': 'Directory does not exist'})
 
     search_lower = search.lower() if search else ''
     entries = []
@@ -364,7 +364,7 @@ def list_files():
             except OSError:
                 continue
     except PermissionError:
-        return jsonify({'succ': False, 'msg': '无权限读取该目录'})
+        return jsonify({'succ': False, 'msg': 'No permission to read this directory'})
 
     reverse = sort_order == 'desc'
     if sort_by == 'size':
@@ -394,11 +394,11 @@ def read_content():
     max_lines = int(request.args.get('lines', 200))
 
     if not filepath:
-        return jsonify({'succ': False, 'msg': '请指定文件路径'})
+        return jsonify({'succ': False, 'msg': 'Please specify a file path'})
     if not _validate_file(filepath):
-        return jsonify({'succ': False, 'msg': '无权访问该文件'})
+        return jsonify({'succ': False, 'msg': 'No permission to access this file'})
     if not os.path.isfile(filepath):
-        return jsonify({'succ': False, 'msg': '文件不存在'})
+        return jsonify({'succ': False, 'msg': 'File does not exist'})
 
     try:
         file_stat = os.stat(filepath)
@@ -561,7 +561,7 @@ def file_info():
     if not filepath or not _validate_file(filepath):
         return jsonify({'succ': False, 'msg': '无权访问'})
     if not os.path.isfile(filepath):
-        return jsonify({'succ': False, 'msg': '文件不存在'})
+        return jsonify({'succ': False, 'msg': 'File does not exist'})
     try:
         stat = os.stat(filepath)
         return jsonify({
