@@ -58,15 +58,15 @@ def run_many_times(times=1):
 
 # noinspection PyIncorrectDocstring
 def handle_exception(retry_times=0, error_detail_level=0, is_throw_error=False, time_sleep=0):
-    """捕获函数错误的装饰器,重试并打印日志
-    :param retry_times : 重试次数
-    :param error_detail_level :为0打印exception提示，为1打印3层深度的错误堆栈，为2打印所有深度层次的错误堆栈
-    :param is_throw_error : 在达到最大次数时候是否重新抛出错误
+    """Decorator to catch function errors, retry and log.
+    :param retry_times : number of retries
+    :param error_detail_level : 0 prints exception message, 1 prints 3-level deep stack trace, 2 prints full stack trace
+    :param is_throw_error : whether to re-raise the error after max retries
     :type error_detail_level: int
     """
 
     if error_detail_level not in [0, 1, 2]:
-        raise Exception('error_detail_level参数必须设置为0 、1 、2')
+        raise Exception('error_detail_level parameter must be set to 0, 1, or 2')
 
     def _handle_exception(func):
         @wraps(func)
@@ -76,21 +76,21 @@ def handle_exception(retry_times=0, error_detail_level=0, is_throw_error=False, 
                     result = func(*args, **keyargs)
                     if i:
                         handle_exception_log.debug(
-                            u'%s\n调用成功，调用方法--> [  %s  ] 第  %s  次重试成功' % ('# ' * 40, func.__name__, i))
+                            u'%s\nCall succeeded, method --> [  %s  ] retry #%s succeeded' % ('# ' * 40, func.__name__, i))
                     return result
 
                 except BaseException as e:
                     error_info = ''
                     if error_detail_level == 0:
-                        error_info = '错误类型是：' + str(e.__class__) + '  ' + str(e)
+                        error_info = 'Error type: ' + str(e.__class__) + '  ' + str(e)
                     elif error_detail_level == 1:
-                        error_info = '错误类型是：' + str(e.__class__) + '  ' + traceback.format_exc(limit=3)
+                        error_info = 'Error type: ' + str(e.__class__) + '  ' + traceback.format_exc(limit=3)
                     elif error_detail_level == 2:
-                        error_info = '错误类型是：' + str(e.__class__) + '  ' + traceback.format_exc()
+                        error_info = 'Error type: ' + str(e.__class__) + '  ' + traceback.format_exc()
 
                     handle_exception_log.exception(
-                        u'%s\n记录错误日志，调用方法--> [  %s  ] 第  %s  次错误重试， %s\n' % ('- ' * 40, func.__name__, i, error_info))
-                    if i == retry_times and is_throw_error:  # 达到最大错误次数后，重新抛出错误
+                        u'%s\nError log recorded, method --> [  %s  ] error retry #%s, %s\n' % ('- ' * 40, func.__name__, i, error_info))
+                    if i == retry_times and is_throw_error:  # Re-raise error after reaching max retry count
                         raise e
                 time.sleep(time_sleep)
 
@@ -100,11 +100,11 @@ def handle_exception(retry_times=0, error_detail_level=0, is_throw_error=False, 
 
 
 def keep_circulating(time_sleep=0.001, exit_if_function_run_sucsess=False, is_display_detail_exception=True, block=True, daemon=False):
-    """间隔一段时间，一直循环运行某个方法的装饰器
-    :param time_sleep :循环的间隔时间
-    :param exit_if_function_run_sucsess :如果成功了就退出循环
+    """Decorator to keep running a method in a loop at regular intervals.
+    :param time_sleep : interval time between loops
+    :param exit_if_function_run_sucsess : exit the loop if the function succeeds
     :param is_display_detail_exception
-    :param block :是否阻塞主主线程，False时候开启一个新的线程运行while 1。
+    :param block : whether to block the main thread. When False, starts a new thread to run the while loop.
     """
     if not hasattr(keep_circulating, 'keep_circulating_log'):
         keep_circulating.log = LogManager('keep_circulating').get_logger_and_add_handlers()
@@ -121,7 +121,7 @@ def keep_circulating(time_sleep=0.001, exit_if_function_run_sucsess=False, is_di
                         if exit_if_function_run_sucsess:
                             return result
                     except BaseException as e:
-                        msg = func.__name__ + '   运行出错\n ' + traceback.format_exc(limit=10) if is_display_detail_exception else str(e)
+                        msg = func.__name__ + '   execution error\n ' + traceback.format_exc(limit=10) if is_display_detail_exception else str(e)
                         keep_circulating.log.error(msg)
                     finally:
                         time.sleep(time_sleep)

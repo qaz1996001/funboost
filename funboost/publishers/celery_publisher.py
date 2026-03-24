@@ -28,10 +28,10 @@ class CeleryPublisher(AbstractPublisher, ):
             self.publish_msg_num_total += 1
             if time.time() - self._current_time > 10:
                 self.logger.info(
-                    f'10秒内推送了 {self.count_per_minute} 条消息,累计推送了 {self.publish_msg_num_total} 条消息到 {self._queue_name} 队列中')
+                    f'Pushed {self.count_per_minute} messages in 10 seconds, total {self.publish_msg_num_total} messages pushed to queue {self._queue_name}')
                 self._init_count()
         # return AsyncResult(task_id)
-        return celery_result  # 这里返回celery结果原生对象，类型是 celery.result.AsyncResult。
+        return celery_result  # Returns the native celery result object, type is celery.result.AsyncResult.
 
     def _publish_impl(self, msg):
         pass
@@ -39,7 +39,7 @@ class CeleryPublisher(AbstractPublisher, ):
     def clear(self):
         python_executable = sys.executable
         cmd = f''' {python_executable} -m celery -A funboost.publishers.celery_publisher purge -Q {self.queue_name} -f'''
-        self.logger.warning(f'刪除celery {self.queue_name} 隊列中的消息  {cmd}')
+        self.logger.warning(f'Deleting messages in celery queue {self.queue_name}  {cmd}')
         os.system(cmd)
 
     def get_message_count(self):

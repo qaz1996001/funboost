@@ -17,7 +17,7 @@ def consume_and_push_to_another_queue(source_queue_name: str, source_broker_kind
                                       exit_script_when_finish=False):
     """ Move messages from one queue to another, e.g. move messages from a dead letter queue to a normal queue."""
     if source_queue_name == target_queue_name and source_broker_kind == target_broker_kind:
-        raise ValueError('不能转移消息到当前队列名，否则死循环')
+        raise ValueError('Cannot transfer messages to the same queue, otherwise it would cause an infinite loop')
 
     target_publisher = get_publisher(publisher_params=PublisherParams(queue_name=target_queue_name, broker_kind=target_broker_kind, log_level=log_level))
     msg_cnt = 0
@@ -35,8 +35,8 @@ def consume_and_push_to_another_queue(source_queue_name: str, source_broker_kind
     source_consumer.start_consuming_message()
     if exit_script_when_finish:
         source_consumer.wait_for_possible_has_finish_all_tasks(2)
-        print(f'消息转移完成，结束脚本,累计从 {source_queue_name} 转移消息到 {target_queue_name} 队列 总数是 {msg_cnt}')
-        os._exit(888)  # 结束脚本
+        print(f'Message transfer complete, exiting script. Total messages transferred from {source_queue_name} to {target_queue_name} queue: {msg_cnt}')
+        os._exit(888)  # Exit script
 
 
 def _consume_and_push_to_another_queue_for_multi_process(source_queue_name: str, source_broker_kind: str,
@@ -51,8 +51,8 @@ def _consume_and_push_to_another_queue_for_multi_process(source_queue_name: str,
 def multi_prcocess_queue2queue(source_target_list: typing.List[typing.List],
                                log_level: int = logging.DEBUG, exit_script_when_finish=False, n=1):
     """
-    转移多个队列，并使用多进程。
-    :param source_target_list:  入参例如  [['test_queue77h5', BrokerEnum.RABBITMQ_AMQPSTORM, 'test_queue77h4', BrokerEnum.RABBITMQ_AMQPSTORM],['test_queue77h6', BrokerEnum.RABBITMQ_AMQPSTORM, 'test_queue77h7', BrokerEnum.REDIS]]
+    Transfer multiple queues using multiple processes.
+    :param source_target_list:  Input example: [['test_queue77h5', BrokerEnum.RABBITMQ_AMQPSTORM, 'test_queue77h4', BrokerEnum.RABBITMQ_AMQPSTORM],['test_queue77h6', BrokerEnum.RABBITMQ_AMQPSTORM, 'test_queue77h7', BrokerEnum.REDIS]]
     :param log_level:
     :param exit_script_when_finish:
     :param n:

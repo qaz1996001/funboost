@@ -120,7 +120,7 @@
 #                       python_interpreter='python3',
 #                       process_num=1):
 #         """
-#         入参见 fabric_deploy 函数。这里重复入参是为了代码在pycharm补全提示。
+#         See fabric_deploy function for parameter details. Parameters are repeated here for PyCharm auto-completion.
 #         """
 #         in_kwargs = locals()
 #         in_kwargs.pop('self')
@@ -137,7 +137,7 @@
 #             return types.MethodType(self, instance)
 #
 #
-# IdeAutoCompleteHelper = Booster  # 兼容
+# IdeAutoCompleteHelper = Booster  # Backward compatibility alias
 #
 #
 # class _Undefined:

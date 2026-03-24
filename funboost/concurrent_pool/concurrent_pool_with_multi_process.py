@@ -15,7 +15,7 @@ class ConcurrentPoolWithProcess(FunboostFileLoggerMixin):
     def _start_a_pool(self, pool_class, max_works):
         pool = pool_class(max_works)
         while True:
-            func, args, kwargs = self._multi_process_queue.get()  # 结束可以放None，然后这里判断，终止。或者joinable queue
+            func, args, kwargs = self._multi_process_queue.get()  # To stop, put None and check here to terminate. Or use a joinable queue
             print(func, args, kwargs)
             pool.submit(func, *args, **kwargs)
 

@@ -41,19 +41,19 @@ from funboost.core.loggers import get_funboost_file_logger
 logger = get_funboost_file_logger(__name__)
 
 
-# 创建 Router 实例
-django_router = Router(tags=["Funboost 分布式任务"])
+# Create Router instance
+django_router = Router(tags=["Funboost Distributed Tasks"])
 
-# --- Schemas (数据模型) ---
+# --- Schemas (Data Models) ---
 
 class MsgItemSchema(Schema):
-    queue_name: str = Field(..., description="目标队列名称")
-    msg_body: dict = Field(..., description="任务参数字典")
-    need_result: bool = Field(False, description="是否需要等待并返回结果(RPC模式)")
-    timeout: int = Field(60, description="RPC模式下的等待超时时间(秒)")
+    queue_name: str = Field(..., description="Target queue name")
+    msg_body: dict = Field(..., description="Task parameter dictionary")
+    need_result: bool = Field(False, description="Whether to wait and return result (RPC mode)")
+    timeout: int = Field(60, description="Timeout for waiting in RPC mode (seconds)")
 
 
-# 统一响应格式的数据结构
+# Unified response format data structure
 class PublishData(Schema):
     task_id: typing.Optional[str] = None
     status_and_result: typing.Optional[dict] = None
@@ -69,7 +69,7 @@ class AllQueuesData(Schema):
     count: int = 0
 
 
-# 统一响应模型
+# Unified response model
 class BaseResponse(Schema):
     succ: bool
     msg: str
@@ -89,11 +89,11 @@ class AllQueuesResponse(BaseResponse):
 
 # --- Endpoints ---
 
-@django_router.post("/publish", response=PublishResponse, summary="发布消息")
+@django_router.post("/publish", response=PublishResponse, summary="Publish message")
 async def publish_msg(request, payload: MsgItemSchema):
     """
-    发布消息到 Funboost 队列。
-    如果 need_result=True，将挂起等待任务执行完成并返回结果。
+    Publish a message to a Funboost queue.
+    If need_result=True, it will suspend and wait for the task to complete and return the result.
     """
     status_and_result = None
     task_id = None

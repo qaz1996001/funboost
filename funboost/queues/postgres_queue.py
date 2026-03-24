@@ -248,7 +248,7 @@ class PostgresQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
                 return None
 
     def ack(self, job_id: int, delete: bool = True):
-        """确认消费成功"""
+        """Acknowledge successful consumption"""
         conn = self._get_conn()
         try:
             with conn.cursor() as cur:
@@ -267,7 +267,7 @@ class PostgresQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
             self._put_conn(conn)
 
     def requeue(self, job_id: int):
-        """消息重新入队"""
+        """Requeue the message"""
         conn = self._get_conn()
         try:
             with conn.cursor() as cur:
@@ -279,14 +279,14 @@ class PostgresQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
                     (TaskStatus.REQUEUE, job_id)
                 )
                 conn.commit()
-                # 通知其他消费者
+                # Notify other consumers
                 cur.execute(sql.SQL("NOTIFY {}, %s").format(sql.Identifier(self._notify_channel)), (str(job_id),))
                 conn.commit()
         finally:
             self._put_conn(conn)
 
     def clear(self):
-        """清空队列"""
+        """Clear the queue"""
         conn = self._get_conn()
         try:
             with conn.cursor() as cur:
@@ -296,7 +296,7 @@ class PostgresQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
             self._put_conn(conn)
 
     def get_message_count(self) -> int:
-        """获取待消费消息数量"""
+        """Get the number of messages pending consumption"""
         conn = self._get_conn()
         try:
             with conn.cursor() as cur:
@@ -312,8 +312,8 @@ class PostgresQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
 
     def recover_timeout_tasks(self, timeout_minutes: int = 10):
         """
-        恢复超时未确认的任务
-        将超过 timeout_minutes 的 PENDING 任务重置为 TO_BE_CONSUMED
+        Recover tasks that timed out without acknowledgment
+        Resets PENDING tasks older than timeout_minutes back to TO_BE_CONSUMED
         """
         conn = self._get_conn()
         try:
@@ -330,7 +330,7 @@ class PostgresQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
                 recovered = cur.fetchall()
                 conn.commit()
                 if recovered:
-                    self.logger.info(f"恢复了 {len(recovered)} 个超时任务")
+                    self.logger.info(f"Recovered {len(recovered)} timed-out tasks")
                     cur.execute(sql.SQL("NOTIFY {}, %s").format(sql.Identifier(self._notify_channel)), ('recover',))
                     conn.commit()
                 return len(recovered)
@@ -338,23 +338,23 @@ class PostgresQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
             self._put_conn(conn)
 
     def close(self):
-        """关闭连接池"""
+        """Close the connection pool"""
         if self._listen_conn:
             self._listen_conn.close()
         self._pool.closeall()
 
 
 if __name__ == '__main__':
-    # 测试代码
+    # Test code
     dsn = "host=localhost dbname=funboost user=postgres password=123456"
     queue = PostgresQueue('test_queue', dsn)
 
-    # 发布消息
+    # Publish messages
     for i in range(10):
         job_id = queue.push(json.dumps({'x': i, 'y': i * 2}), priority=i % 3)
         print(f"Published job_id: {job_id}")
 
-    # 消费消息
+    # Consume messages
     while True:
         task = queue.get(timeout=5)
         if not task:

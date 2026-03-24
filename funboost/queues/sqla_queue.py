@@ -2,7 +2,7 @@
 # @Author  : ydf
 # @Time    : 2022/1/10 0010 18:42
 """
-使用sqlachemy来使5种关系型数据库模拟消息队列。
+Uses SQLAlchemy to simulate message queues with 5 types of relational databases.
 """
 import datetime
 import json
@@ -83,9 +83,9 @@ class SqlaQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
             # __abstract__ = True
             job_id = Column(Integer, primary_key=True, autoincrement=True)
             body = Column(String(10240))
-            publish_timestamp = Column(DateTime, default=datetime.datetime.now, comment='发布时间')
+            publish_timestamp = Column(DateTime, default=datetime.datetime.now, comment='publish time')
             status = Column(String(20), index=False, nullable=True)
-            consume_start_timestamp = Column(DateTime, default=None, comment='消费时间', index=False)
+            consume_start_timestamp = Column(DateTime, default=None, comment='consume time', index=False)
 
             def __init__(self, job_id=None, body=None, publish_timestamp=None, status=None, consume_start_timestamp=None):
                 self.job_id = job_id

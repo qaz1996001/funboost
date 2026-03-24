@@ -27,7 +27,7 @@ class FunboostBrokerServiceServicer(object):
     """
 
     def Call(self, request, context):
-        """简单的问候方法
+        """Simple greeting method
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

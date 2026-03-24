@@ -204,7 +204,7 @@ def consume_speed_curve():
 @app.route("/tpl/<template>")
 @login_required
 def serve_template(template):
-    # 安全检查：确保只能访问templates目录下的html文件
+    # Security check: ensure only HTML files under the templates directory can be accessed
     if not template.endswith(".html"):
         return "Invalid request", 400
     try:
@@ -225,25 +225,25 @@ def get_time_series_data_by_queue_name(
     Returns:
         _type_: _description_
 
-    返回例如  [{'report_data': {'pause_flag': -1, 'msg_num_in_broker': 936748, 'history_run_count': '150180', 'history_run_fail_count': '46511', 'all_consumers_last_x_s_execute_count': 7, 'all_consumers_last_x_s_execute_count_fail': 0, 'all_consumers_last_x_s_avarage_function_spend_time': 3.441, 'all_consumers_avarage_function_spend_time_from_start': 4.598, 'all_consumers_total_consume_count_from_start': 1296, 'all_consumers_total_consume_count_from_start_fail': 314, 'report_ts': 1749617360.597841}, 'report_ts': 1749617360.597841}, {'report_data': {'pause_flag': -1, 'msg_num_in_broker': 936748, 'history_run_count': '150184', 'history_run_fail_count': '46514', 'all_consumers_last_x_s_execute_count': 7, 'all_consumers_last_x_s_execute_count_fail': 0, 'all_consumers_last_x_s_avarage_function_spend_time': 3.441, 'all_consumers_avarage_function_spend_time_from_start': 4.599, 'all_consumers_total_consume_count_from_start': 1299, 'all_consumers_total_consume_count_from_start_fail': 316, 'report_ts': 1749617370.628166}, 'report_ts': 1749617370.628166}]
+    Returns e.g.  [{'report_data': {'pause_flag': -1, 'msg_num_in_broker': 936748, 'history_run_count': '150180', 'history_run_fail_count': '46511', 'all_consumers_last_x_s_execute_count': 7, 'all_consumers_last_x_s_execute_count_fail': 0, 'all_consumers_last_x_s_avarage_function_spend_time': 3.441, 'all_consumers_avarage_function_spend_time_from_start': 4.598, 'all_consumers_total_consume_count_from_start': 1296, 'all_consumers_total_consume_count_from_start_fail': 314, 'report_ts': 1749617360.597841}, 'report_ts': 1749617360.597841}, {'report_data': {'pause_flag': -1, 'msg_num_in_broker': 936748, 'history_run_count': '150184', 'history_run_fail_count': '46514', 'all_consumers_last_x_s_execute_count': 7, 'all_consumers_last_x_s_execute_count_fail': 0, 'all_consumers_last_x_s_avarage_function_spend_time': 3.441, 'all_consumers_avarage_function_spend_time_from_start': 4.599, 'all_consumers_total_consume_count_from_start': 1299, 'all_consumers_total_consume_count_from_start_fail': 316, 'report_ts': 1749617370.628166}, 'report_ts': 1749617370.628166}]
     """
-    # 获取前端传递的参数
+    # Get parameters passed from the frontend
     start_ts = request.args.get("start_ts")
     end_ts = request.args.get("end_ts")
     curve_samples_count = request.args.get("curve_samples_count")
 
-    # 如果前端指定了采样点数，使用前端的值
+    # If the frontend specified a sample count, use the frontend's value
     if curve_samples_count:
         try:
             curve_samples_count = int(curve_samples_count)
-            # 验证值是否在允许的范围内
+            # Verify the value is within the allowed range
             allowed_values = [60, 120, 180, 360, 720, 1440, 8640]
             if curve_samples_count not in allowed_values:
-                curve_samples_count = 360  # 默认值
+                curve_samples_count = 360  # Default value
         except (ValueError, TypeError):
-            curve_samples_count = 360  # 默认值
+            curve_samples_count = 360  # Default value
     else:
-        # 如果前端没有指定，使用默认值
+        # If not specified by the frontend, use the default value
         curve_samples_count = 360
 
     return jsonify(

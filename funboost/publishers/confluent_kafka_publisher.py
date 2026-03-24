@@ -8,8 +8,8 @@ from funboost.core.lazy_impoter import KafkaPythonImporter
 
 if os.name == 'nt':
     """
-    为了保险起见，这样做一下,设置一下path，否则anaconda安装的python可能出现 ImportError: DLL load failed while importing cimpl: 找不到指定的模块。
-    多设置没事，少设置了才麻烦。
+    As a precaution, set the path here, otherwise Python installed via anaconda may encounter ImportError: DLL load failed while importing cimpl: The specified module could not be found.
+    Setting extra paths is fine; missing paths causes trouble.
     """
     from pathlib import Path
     import sys
@@ -34,7 +34,7 @@ from funboost.publishers.base_publisher import AbstractPublisher
 
 class ConfluentKafkaPublisher(AbstractPublisher, ):
     """
-    使用kafka作为中间件，这个confluent_kafka包的性能远强于 kafka-pyhton
+    Uses kafka as the broker. The confluent_kafka package has much better performance than kafka-python.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -49,7 +49,7 @@ class ConfluentKafkaPublisher(AbstractPublisher, ):
             pass
         except BaseException as e:
             self.logger.exception(e)
-        atexit.register(self.close)  # 程序退出前不主动关闭，会报错。
+        atexit.register(self.close)  # Will raise an error if not actively closed before program exit.
         self._confluent_producer = ConfluentProducer({'bootstrap.servers': ','.join(BrokerConnConfig.KAFKA_BOOTSTRAP_SERVERS)})
         self._recent_produce_time = time.time()
 
@@ -63,12 +63,12 @@ class ConfluentKafkaPublisher(AbstractPublisher, ):
             self._recent_produce_time = time.time()
 
     def clear(self):
-        self.logger.warning('还没开始实现 kafka 清空 消息')
+        self.logger.warning('Kafka queue clearing not yet implemented')
         # self._consumer.seek_to_end()
-        # self.logger.warning(f'将kafka offset 重置到最后位置')
+        # self.logger.warning(f'Reset kafka offset to the latest position')
 
     def get_message_count(self):
-        return -1  # 还没找到获取所有分区未消费数量的方法。
+        return -1  # Haven't found a method to get unconsumed count across all partitions.
 
     def close(self):
         pass
@@ -82,7 +82,7 @@ class ConfluentKafkaPublisher(AbstractPublisher, ):
 
 class SaslPlainKafkaPublisher(ConfluentKafkaPublisher):
     """
-    使用kafka作为中间件，这个confluent_kafka包的性能远强于 kafka-pyhton
+    Uses kafka as the broker. The confluent_kafka package has much better performance than kafka-python.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -96,7 +96,7 @@ class SaslPlainKafkaPublisher(ConfluentKafkaPublisher):
             pass
         except BaseException as e:
             self.logger.exception(e)
-        atexit.register(self.close)  # 程序退出前不主动关闭，会报错。
+        atexit.register(self.close)  # Will raise an error if not actively closed before program exit.
         self._confluent_producer = ConfluentProducer({
             'bootstrap.servers': ','.join(BrokerConnConfig.KAFKA_BOOTSTRAP_SERVERS),
             'security.protocol': BrokerConnConfig.KFFKA_SASL_CONFIG['security_protocol'],

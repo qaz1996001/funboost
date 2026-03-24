@@ -12,7 +12,7 @@ from funboost.utils.redis_manager import RedisMixin
 
 class DramatiqPublisher(AbstractPublisher, ):
     """
-    使用dramatiq框架作为中间件
+    Uses the dramatiq framework as the broker.
     """
 
     # noinspection PyAttributeOutsideInit

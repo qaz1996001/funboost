@@ -270,19 +270,19 @@ def gen_pid_queue_name_key(queue_name: str,) -> typing.Tuple[int, str]:
 
 class BoosterRegistry:
     """
-    管理boosters，可以一键启动多个消费函数或者启动一组消费函数。
+    Manages boosters, allowing one-click startup of multiple consuming functions or a group of consuming functions.
 
-    BoosterRegistry 是后加的， 原来的 BoostersManager 类是一个包含多个classmethod的类，和现在的方法名和入参一样。
-    为了兼容老的 BoostersManager 这个用法，现在的 BoostersManager 是 BoosterRegistry 的其中一个实例。
-    
-    使用 __new__ 实现享元模式，每个 booster_registry_name 对应一个唯一实例。
+    BoosterRegistry was added later. The original BoostersManager class contained multiple classmethods with the same method names and parameters.
+    For backward compatibility with BoostersManager usage, the current BoostersManager is an instance of BoosterRegistry.
+
+    Uses __new__ to implement the flyweight pattern, each booster_registry_name corresponds to a unique instance.
     """
 
     _lock = threading.Lock()
-    _instances: typing.Dict[str, 'BoosterRegistry'] = {}  # 享元模式缓存
+    _instances: typing.Dict[str, 'BoosterRegistry'] = {}  # Flyweight pattern cache
 
     def __new__(cls, booster_registry_name: str):
-        # 先检查缓存（无锁，高性能）
+        # Check cache first (no lock, high performance)
         if booster_registry_name not in cls._instances:
             with cls._lock:
                 # Double-Checked Locking
@@ -293,19 +293,19 @@ class BoosterRegistry:
         return cls._instances[booster_registry_name]
 
     def __init__(self, booster_registry_name: str):
-        # __new__ 已经处理了所有初始化逻辑，这里保持空实现
+        # __new__ has already handled all initialization logic, keep this empty
         pass
 
     def _initialize(self, booster_registry_name: str):
-        """真正的初始化逻辑，只在 __new__ 中调用一次"""
+        """Actual initialization logic, called only once in __new__"""
         self.booster_registry_name = booster_registry_name
-        
-        # pid_queue_name__booster_map字典存放 {(进程id,queue_name):Booster对象}
+
+        # pid_queue_name__booster_map stores {(process_id, queue_name): Booster object}
         self.pid_queue_name__booster_map: typing.Dict[
             typing.Tuple[int, str], Booster
         ] = {}
 
-        # queue_name__boost_params_consuming_function_map 字典存放  {queue_name,(@boost的入参字典,@boost装饰的消费函数)}
+        # queue_name__boost_params_map stores {queue_name: BoosterParams}
         self.queue_name__boost_params_map: typing.Dict[str, BoosterParams] = {}
 
         self.pid_queue_name__has_start_consume_set = set()
@@ -313,7 +313,7 @@ class BoosterRegistry:
       
 
     def regist_booster(self, booster: Booster):
-        """这个是框架在@boost时候自动调用的,无需用户亲自调用"""
+        """This is automatically called by the framework during @boost decoration, no need for users to call it manually"""
         # if booster.boost_params.is_fake_booster is True:
         #     return
         self.pid_queue_name__booster_map[

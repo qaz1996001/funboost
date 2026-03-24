@@ -8,22 +8,22 @@ import warnings
 
 from funboost.concurrent_pool import FunboostBaseConcurrentPool
 from funboost.core.loggers import get_funboost_file_logger
-# print('eventlet 导入')
+# print('eventlet imported')
 from funboost.core.lazy_impoter import EventletImporter
 
 
 def check_evenlet_monkey_patch(raise_exc=True):
     try:
-        if not EventletImporter().patcher.is_monkey_patched('socket'):  # 随便选一个检测标志
+        if not EventletImporter().patcher.is_monkey_patched('socket'):  # Pick any flag to check
             if raise_exc:
-                warnings.warn(f'检测到没有打 evenlet 包的猴子补丁 ,请在起始脚本文件首行加上     import eventlet;eventlet.monkey_patch(all=True) ')
-                raise Exception('检测到没有打 evenlet 包的猴子补丁 ,请在起始脚本文件首行加上    import eventlet;eventlet.monkey_patch(all=True)')
+                warnings.warn(f'Detected that eventlet monkey patch is not applied. Please add "import eventlet;eventlet.monkey_patch(all=True)" at the first line of your entry script.')
+                raise Exception('Detected that eventlet monkey patch is not applied. Please add "import eventlet;eventlet.monkey_patch(all=True)" at the first line of your entry script.')
         else:
             return 1
     except ModuleNotFoundError:
         if raise_exc:
-            warnings.warn(f'检测到没有打 evenlet 包的猴子补丁 ,请在起始脚本文件首行加上     import eventlet;eventlet.monkey_patch(all=True) ')
-            raise Exception('检测到没有打 evenlet 包的猴子补丁 ,请在起始脚本文件首行加上    import eventlet;eventlet.monkey_patch(all=True)')
+            warnings.warn(f'Detected that eventlet monkey patch is not applied. Please add "import eventlet;eventlet.monkey_patch(all=True)" at the first line of your entry script.')
+            raise Exception('Detected that eventlet monkey patch is not applied. Please add "import eventlet;eventlet.monkey_patch(all=True)" at the first line of your entry script.')
 
 
 logger_evenlet_timeout_deco = get_funboost_file_logger('evenlet_timeout_deco')
