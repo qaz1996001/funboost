@@ -1,11 +1,11 @@
 
 """
-python3.7 没有uuid7，自己实现。
+Python 3.7 does not have uuid7, so we implement it ourselves.
 
-uuid7比uuid4对数据库更友好，类似雪花算法
+uuid7 is more database-friendly than uuid4, similar to the snowflake algorithm.
 
-UUIDv4 完全无法知道生成时间；
-UUIDv7 可以精确还原生成时间（毫秒级）。
+UUIDv4 provides no way to know the generation time;
+UUIDv7 can precisely recover the generation time (millisecond precision).
 """
 
 import time
@@ -18,26 +18,26 @@ def uuid7() -> uuid.UUID:
     """
     RFC 9562 UUIDv7
     """
-    # 1. 毫秒时间戳（48 bits）
+    # 1. Millisecond timestamp (48 bits)
     ts_ms = int(time.time() * 1000) & ((1 << 48) - 1)
 
-    # 2. 填充剩余的 80 bits 为随机数
-    # 注意：我们先填满低 80 位，后面再通过位运算覆盖 Version 和 Variant
+    # 2. Fill the remaining 80 bits with random data
+    # Note: We fill the lower 80 bits first, then override Version and Variant via bitwise operations
     rand_payload = secrets.randbits(80)
 
-    # 3. 拼接时间戳到高位
+    # 3. Concatenate timestamp to the high bits
     value = (ts_ms << 80) | rand_payload
 
-    # 4. 设置 Version 7 (0111)
-    # 位置：bits 76-79 (从右往左数，0-indexed)
-    value &= ~(0xF << 76)  # 清除这 4 位
-    value |= (0x7 << 76)   # 写入 0111
+    # 4. Set Version 7 (0111)
+    # Position: bits 76-79 (counting from right, 0-indexed)
+    value &= ~(0xF << 76)  # Clear these 4 bits
+    value |= (0x7 << 76)   # Write 0111
 
-    # 5. 设置 Variant (10xx) - 这是原代码缺失的关键部分
-    # 位置：bits 62-63
-    # RFC 9562 要求 Variant 为 2 (即二进制 10)
-    value &= ~(0x3 << 62)  # 清除这 2 位
-    value |= (0x2 << 62)   # 写入 10
+    # 5. Set Variant (10xx) - this was the key missing part in the original code
+    # Position: bits 62-63
+    # RFC 9562 requires Variant to be 2 (i.e., binary 10)
+    value &= ~(0x3 << 62)  # Clear these 2 bits
+    value |= (0x2 << 62)   # Write 10
 
     return uuid.UUID(int=value)
 
@@ -45,7 +45,7 @@ def uuid7() -> uuid.UUID:
 
 def uuid7_fast() -> uuid.UUID:
     ts_ms = int(time.time() * 1000) & ((1 << 48) - 1)
-    rand_payload = random.getrandbits(80)  # 比 secrets 快 5-10 倍
+    rand_payload = random.getrandbits(80)  # 5-10x faster than secrets
     value = (ts_ms << 80) | rand_payload
     value &= ~(0xF << 76)
     value |= (0x7 << 76)
@@ -54,15 +54,15 @@ def uuid7_fast() -> uuid.UUID:
     return uuid.UUID(int=value)
 
 
-# 预计算常量
+# Pre-computed constants
 _MASK_48 = (1 << 48) - 1
 _MASK_CLEAR = ~(0xF << 76) & ~(0x3 << 62)
 _MASK_SET = (0x7 << 76) | (0x2 << 62)
 
 def uuid7_str() -> str:
     """
-    极速 uuid7，直接返回字符串，跳过 uuid.UUID 对象创建。
-    性能比 str(uuid7()) 快 2-3 倍。
+    Ultra-fast uuid7, returns string directly, skipping uuid.UUID object creation.
+    2-3x faster than str(uuid7()).
     """
     value = (int(time.time() * 1000) << 80) | random.getrandbits(80)
     value = (value & _MASK_CLEAR) | _MASK_SET
@@ -71,25 +71,25 @@ def uuid7_str() -> str:
 
 def parse_uuid7_timestamp(uuid_str: str) -> dict:
     """
-    解析 UUIDv7 字符串，返回包含时间戳信息的字典
+    Parse a UUIDv7 string and return a dict containing timestamp information.
     """
     try:
-        # 1. 转换为 UUID 对象（自动处理格式验证）
+        # 1. Convert to UUID object (automatically handles format validation)
         u = uuid.UUID(uuid_str)
         
-        # 2. 检查版本是否为 7
+        # 2. Check if the version is 7
         if u.version != 7:
-            raise ValueError(f"该 UUID 版本为 {u.version}，不是 v7")
+            raise ValueError(f"This UUID version is {u.version}, not v7")
 
-        # 3. 提取时间戳
-        # UUID 总共 128 位，前 48 位是时间戳
-        # 这里的 int 是 128 位的整数，右移 80 位即可拿到高 48 位
+        # 3. Extract timestamp
+        # UUID is 128 bits total, first 48 bits are the timestamp
+        # The int is a 128-bit integer, right-shift by 80 to get the high 48 bits
         ts_ms = u.int >> 80
         
-        # 4. 转换为秒 (float)
+        # 4. Convert to seconds (float)
         ts_seconds = ts_ms / 1000.0
         
-        # 5. 生成 datetime 对象
+        # 5. Generate datetime object
         dt_local = datetime.fromtimestamp(ts_seconds)
         
         return {
@@ -105,29 +105,29 @@ def parse_uuid7_timestamp(uuid_str: str) -> dict:
 
 
 if __name__ == '__main__':
-    # 验证输出格式
+    # Verify output format
     print("uuid7():", uuid7())
     print("uuid7_fast():", uuid7_fast())
     print("uuid7_str():", uuid7_str())
-    print("解析验证:", parse_uuid7_timestamp(uuid7_str()))
+    print("Parse verification:", parse_uuid7_timestamp(uuid7_str()))
     
     n = 1000000
-    print(f"\n=== 性能对比 ({n} 次) ===")
+    print(f"\n=== Performance Comparison ({n} iterations) ===")
     
-    # str(uuid7()) - 原版
+    # str(uuid7()) - original version
     t = time.time()
     for _ in range(n):
         str(uuid7())
-    print(f"str(uuid7()):      {time.time()-t:.3f} 秒")
+    print(f"str(uuid7()):      {time.time()-t:.3f} sec")
     
-    # str(uuid7_fast()) - random版
+    # str(uuid7_fast()) - random version
     t = time.time()
     for _ in range(n):
         str(uuid7_fast())
-    print(f"str(uuid7_fast()): {time.time()-t:.3f} 秒")
+    print(f"str(uuid7_fast()): {time.time()-t:.3f} sec")
     
-    # uuid7_str() - 极速版
+    # uuid7_str() - ultra-fast version
     t = time.time()
     for _ in range(n):
         uuid7_str()
-    print(f"uuid7_str():       {time.time()-t:.3f} 秒  ← 最快")
+    print(f"uuid7_str():       {time.time()-t:.3f} sec  <- fastest")

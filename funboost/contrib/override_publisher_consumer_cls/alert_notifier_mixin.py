@@ -350,7 +350,7 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
         )
 
     def _send_notification(self, message: str):
-        """通过配置的告警通道发送通知"""
+        """Send notification via the configured alert channel"""
         try:
             if self._alert_app == 'dingtalk':
                 self._alert_notifier.send_dingtalk(message, add_caller_info=False)
@@ -381,7 +381,8 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
             current_function_result_status, kw)
         
         """
-        如果任务被 requeue、发到死信队列、或被远程 kill，这些不是真正的业务失败，可以不计入告警计数，否则会导致误告警。
+        If a task is requeued, sent to dead letter queue, or remotely killed, these are not real business failures
+        and should not be counted toward the alert threshold, otherwise it would cause false alerts.
         """
         if (current_function_result_status._has_requeue
                 or current_function_result_status._has_to_dlx_queue
@@ -404,7 +405,7 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
         if self._alert_tracker.strategy == 'rate':
             info_dict['error_rate_info'] = self._alert_tracker.get_error_rate_info()
 
-        # 进入告警状态 → 发送告警
+        # Entered alerting state -> send alert
         if new_state == AlertState.ALERTING:
             if self._should_send_alert():
                 msg = self._format_alert_message(info_dict)
@@ -420,7 +421,7 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
                     f"but suppressed by alert_interval={self._alert_interval}s"
                 )
 
-        # 从告警状态恢复 → 发送恢复通知
+        # Recovered from alerting state -> send recovery notification
         if old_state == AlertState.ALERTING and new_state == AlertState.NORMAL:
             if self._should_send_recovery():
                 msg = self._format_recovery_message(info_dict)
@@ -436,11 +437,11 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
 
 class AlertNotifierBoosterParams(BoosterParams):
     """
-    预配置了告警通知的 BoosterParams
+    Pre-configured BoosterParams with alert notification
 
-    使用示例：
+    Usage examples:
 
-        # 连续失败5次告警 + 企业微信
+        # Alert after 5 consecutive failures + WeChat Work
         @boost(AlertNotifierBoosterParams(
             queue_name='my_task',
             broker_kind=BrokerEnum.REDIS,
@@ -455,7 +456,7 @@ class AlertNotifierBoosterParams(BoosterParams):
         def my_task(x):
             return call_external_api(x)
 
-        # 错误率策略 + 钉钉
+        # Error rate strategy + DingTalk
         @boost(AlertNotifierBoosterParams(
             queue_name='my_task_rate',
             broker_kind=BrokerEnum.REDIS,

@@ -204,9 +204,10 @@ _ANSI_RE_B = re.compile(rb'\x1b\[[0-9;]*m')
 
 
 def _grep_fast(filepath, keyword, max_lines=200, start_offset=0, end_offset=None):
-    """多行日志感知的关键字搜索。
-    将连续行按日志条目分组（以时间戳开头的行为新条目起点，无时间戳的续行归属上一条目），
-    关键字命中条目中任一行则返回整个条目的所有行。
+    """Multi-line log-aware keyword search.
+    Groups consecutive lines by log entry (lines starting with a timestamp begin a new entry,
+    lines without a timestamp are continuation lines belonging to the previous entry).
+    If the keyword matches any line in an entry, all lines of that entry are returned.
     """
     try:
         file_size = os.path.getsize(filepath)
@@ -559,7 +560,7 @@ def log_stream():
 def file_info():
     filepath = request.args.get('file', '').strip()
     if not filepath or not _validate_file(filepath):
-        return jsonify({'succ': False, 'msg': '无权访问'})
+        return jsonify({'succ': False, 'msg': 'Access denied'})
     if not os.path.isfile(filepath):
         return jsonify({'succ': False, 'msg': 'File does not exist'})
     try:

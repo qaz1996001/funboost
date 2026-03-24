@@ -8,24 +8,24 @@ import json
 
 class FunboostException(Exception):
     """
-    企业级通用异常基类。
-    支持子类默认 message / code / error_data。
-    自动生成 trace_id（可用于分布式日志）。
+    Enterprise-grade general exception base class.
+    Supports subclass default message / code / error_data.
+    Automatically generates trace_id (usable for distributed logging).
     """
 
-    # 子类可覆盖以下默认项
+    # Subclasses can override the following defaults
     default_message = "An error occurred"
     default_code = None
     default_error_data = None
     enable_trace_id = False
 
     def __init__(self, message=None, code=None, error_data:typing.Optional[dict]=None, trace_id=None):
-        # 允许实例覆盖默认字段
+        # Allow instances to override default fields
         self.message = message or self.default_message
         self.code = code if code is not None else self.default_code
         self.error_data = error_data if error_data is not None else self.default_error_data
 
-        # 自动生成 trace_id
+        # Auto-generate trace_id
         if trace_id:
             self.trace_id = trace_id
         elif self.enable_trace_id:
@@ -36,7 +36,7 @@ class FunboostException(Exception):
         # super().__init__(self.message)
         super().__init__(message,code, error_data,trace_id)
 
-    # 优雅的字符串表现形式
+    # Elegant string representation
     def __str__(self):
         parts = [f"{self.__class__.__name__}"]  # 显示异常类型
 
@@ -53,7 +53,7 @@ class FunboostException(Exception):
 
         return " | ".join(parts)
 
-    # REPL / 日志建议信息
+    # REPL / logging info
     def __repr__(self):
         parts = [self.__class__.__name__]
 
@@ -67,14 +67,14 @@ class FunboostException(Exception):
 
         return f"<{' '.join(parts)}>"
 
-    # JSON 序列化
+    # JSON serialization
     def to_dict(self):
-        # 获取当前 UTC 时间，带时区
+        # Get current UTC time with timezone
         utc_dt = datetime.datetime.now(datetime.timezone.utc)
         utc_str = utc_dt.isoformat()  # 2025-12-10T08:30:00+00:00
 
-        # 获取当前本地时间，带本地时区
-        local_dt = utc_dt.astimezone()  # 转成本地时区
+        # Get current local time with local timezone
+        local_dt = utc_dt.astimezone()  # Convert to local timezone
         local_str = local_dt.isoformat()  # 2025-12-10T16:30:00+08:00
 
         return {
@@ -92,26 +92,26 @@ class FunboostException(Exception):
         return json.dumps(self.to_dict(),indent=4 if pretty else None,ensure_ascii=False)
 
     def to_fastapi_response(self, http_status=200):
-        """返回fastapi的JSONResponse,让异常和fastapi的接口model保持一致，复用
-        
-        
-        pydantic model建议明确这样写：（或者allow_extra）
+        """Return a FastAPI JSONResponse, keeping the exception consistent with FastAPI's interface model for reuse.
 
-        ```pyhton
+
+        Recommended pydantic model (or use allow_extra):
+
+        ```python
         T = typing.TypeVar('T')
 
         class BaseResponse(BaseModel, typing.Generic[T]):
             '''
-            统一的泛型响应模型
-            
-            字段说明:
-                succ: 请求是否成功，True表示成功，False表示失败
-                msg: 消息描述
-                data: 返回的数据，使用泛型T
-                code: 业务状态码，200表示成功，其他表示各种错误
-                error: 错误类型名称（可选），如 "QueueNameNotExists", "ValueError"
-                traceback: 异常堆栈信息（可选），仅在出错时返回
-                trace_id: 追踪ID（可选），用于分布式追踪
+            Unified generic response model
+
+            Field descriptions:
+                succ: Whether the request succeeded, True for success, False for failure
+                msg: Message description
+                data: Returned data, using generic T
+                code: Business status code, 200 for success, others for various errors
+                error: Error type name (optional), e.g. "QueueNameNotExists", "ValueError"
+                traceback: Exception stack trace (optional), only returned on error
+                trace_id: Trace ID (optional), for distributed tracing
             '''
             succ: bool
             msg: str
@@ -124,8 +124,8 @@ class FunboostException(Exception):
         ```
 
 
-        可以参考  funboost/faas/fastapi_adapter.py 的 
-        register_funboost_exception_handlers 和 handle_funboost_exceptions 进行自动捕获转化。
+        Refer to funboost/faas/fastapi_adapter.py's
+        register_funboost_exception_handlers and handle_funboost_exceptions for automatic capture and conversion.
         """
 
 
@@ -139,45 +139,45 @@ class FunboostException(Exception):
 
 
 class ExceptionForRetry(FunboostException):
-    """为了重试的，抛出错误。只是定义了一个子类，用不用都可以，函数出任何类型错误了框架都会自动重试"""
+    """Raise this to trigger a retry. This is just a subclass definition, using it is optional - the framework will auto-retry on any error type"""
 
 
 class ExceptionForRequeue(FunboostException):
-    """框架检测到此错误，重新放回当前队列中"""
+    """When the framework detects this error, the message is put back into the current queue"""
 
 class FunboostWaitRpcResultTimeout(FunboostException):
-    """等待rpc结果超过了指定时间"""
+    """Waiting for RPC result exceeded the specified timeout"""
 
 class FunboostRpcResultError(FunboostException):
-    """rpc结果是错误状态"""
+    """RPC result is in error status"""
 
 class HasNotAsyncResult(FunboostException):
     pass
 
 class ExceptionForPushToDlxqueue(FunboostException):
-    """框架检测到ExceptionForPushToDlxqueue错误，发布到死信队列"""
+    """When the framework detects this error, the message is published to the dead letter queue"""
 
 
 class BoostDecoParamsIsOldVersion(FunboostException):
     default_message = """
-你的@boost入参是老的方式,建议用新的入参方式,老入参方式不再支持函数入参代码自动补全了。
+Your @boost parameters use the old style. Please use the new parameter style. The old parameter style no longer supports function parameter auto-completion.
 
-老版本的@boost装饰器方式是:
+Old version @boost decorator style:
 @boost('queue_name_xx',qps=3)
 def f(x):
     pass
-    
 
-用户需要做的改变如下:
+
+What users need to change:
 @boost(BoosterParams(queue_name='queue_name_xx',qps=3))
 def f(x):
     pass
 
-就是把原来函数入参的加个 BoosterParams 就可以了.
+Just wrap the original function parameters with BoosterParams.
 
-@boost这个最重要的funboost核心方法作出改变的原因是:
-1/由于开发框架时候,Booster和Consumer多处需要重复声明入参,
-2/入参个数较多,需要locals转化,麻烦
+Reasons for this change in @boost, the most important funboost core method:
+1/ During framework development, Booster and Consumer needed to repeatedly declare parameters in multiple places.
+2/ Too many parameters needed locals() conversion, which was cumbersome.
     """
 
 

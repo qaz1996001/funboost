@@ -809,7 +809,7 @@ class _Test(unittest.TestCase):
 
     @unittest.skip
     def test_where_is_it_called(self):
-        """测试函数被调用的装饰器，被调用2次将会记录2次被调用的日志"""
+        """Test the function-call-tracking decorator; calling twice will log two invocation records"""
 
         @where_is_it_called
         def f9(a, b):
@@ -827,7 +827,7 @@ class _Test(unittest.TestCase):
     def test_cached_function_result(self):
         @FunctionResultCacher.cached_function_result_for_a_time(3)
         def f10(a, b, c=3, d=4):
-            print('计算中。。。')
+            print('Calculating...')
             return a + b + c + d
 
         print(f10(1, 2, 3, d=6))
@@ -864,7 +864,7 @@ class _Test(unittest.TestCase):
     @unittest.skip
     def test_timeout(self):
         """
-        测试超时装饰器
+        Test timeout decorator
         :return:
         """
 

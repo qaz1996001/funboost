@@ -7,7 +7,7 @@ from funboost.utils.redis_manager import RedisMixin
 
 class RedisPubSubPublisher(AbstractPublisher, RedisMixin, ):
     """
-    使用redis作为中间件
+    Uses redis pub/sub as the broker.
     """
 
     def _publish_impl(self, msg):
@@ -15,7 +15,7 @@ class RedisPubSubPublisher(AbstractPublisher, RedisMixin, ):
 
     def clear(self):
         self.redis_db_frame.delete(self._queue_name)
-        self.logger.warning(f'清除 {self._queue_name} 队列中的消息成功')
+        self.logger.warning(f'Successfully cleared messages in queue {self._queue_name}')
 
     def get_message_count(self):
         return -1

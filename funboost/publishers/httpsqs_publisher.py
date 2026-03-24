@@ -45,7 +45,7 @@ class HttpsqsPublisher(AbstractPublisher):
         return resp_text
 
     def _publish_impl(self, msg):
-        # curl "http://host:port/?name=your_queue_name&opt=put&data=经过URL编码的文本消息&auth=mypass123"
+        # curl "http://host:port/?name=your_queue_name&opt=put&data=URL_encoded_text_message&auth=mypass123"
         text = self.opt_httpsqs('put', msg)
         if text != 'HTTPSQS_PUT_OK':
             self.logger.critical(text)

@@ -10,7 +10,7 @@ from funboost.funboost_config_deafult import BrokerConnConfig
 
 class RabbitmqClientRabbitPy:
     """
-    使用rabbitpy包。
+    Uses the rabbitpy package.
     """
 
     # noinspection PyUnusedLocal
@@ -19,12 +19,12 @@ class RabbitmqClientRabbitPy:
         self.connection = rabbitpy.Connection(rabbit_url)
 
     def creat_a_channel(self) -> rabbitpy.AMQP:
-        return rabbitpy.AMQP(self.connection.channel())  # 使用适配器，使rabbitpy包的公有方法几乎接近pika包的channel的方法。
+        return rabbitpy.AMQP(self.connection.channel())  # Uses adapter to make rabbitpy's public methods nearly match pika's channel methods.
 
 
 class RabbitmqClientPika:
     """
-    使用pika包,多线程不安全的包。
+    Uses the pika package, which is not thread-safe.
     """
 
     def __init__(self, username, password, host, port, virtual_host, heartbeat=0):
@@ -54,7 +54,7 @@ class RabbitMqFactory:
     def __init__(self, heartbeat=600 , is_use_rabbitpy=0):
         """
         :param heartbeat:
-        :param is_use_rabbitpy: 为0使用pika，多线程不安全。为1使用rabbitpy，多线程安全的包。
+        :param is_use_rabbitpy: 0 uses pika (not thread-safe). 1 uses rabbitpy (thread-safe).
         """
         if is_use_rabbitpy:
             self.rabbit_client = RabbitmqClientRabbitPy(BrokerConnConfig.RABBITMQ_USER, BrokerConnConfig.RABBITMQ_PASS,

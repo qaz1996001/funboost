@@ -8,7 +8,7 @@ from funboost.publishers.redis_publisher import RedisPublisher
 
 class RedisPublisherLpush(RedisPublisher):
     """
-    使用redis作为中间件,
+    Uses redis as the broker, with lpush method.
     """
 
     _push_method = 'lpush'

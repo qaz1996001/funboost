@@ -2,9 +2,8 @@
 # @Author  : ydf
 # @Time    : 2022/8/8 0008 13:32
 """
-
-这个是加强版的可确认消费的redis消费实现，所以比redis_conusmer实现复杂很多。
-这个可以确保随意反复多次停止重启脚本，任务永不丢失
+This is the enhanced version of Redis consumption with acknowledgment, so it is much more complex than redis_consumer implementation.
+This ensures that tasks are never lost no matter how many times the script is stopped and restarted.
 """
 import json
 import time
@@ -16,9 +15,9 @@ from funboost.consumers.confirm_mixin import ConsumerConfirmMixinWithTheHelpOfRe
 
 class RedisConsumerAckAble(ConsumerConfirmMixinWithTheHelpOfRedisByHearbeat, AbstractConsumer, ):
     """
-    随意重启代码不会丢失任务，采用的是配合redis心跳，将心跳过期的未确认的队列，全部重回消费队列。这种不需要等待10分钟，判断更精确。
-    redis作为中间件实现的。将取出来的消息同时放入一个set中，代表unack消费状态。以支持对机器和python进程的随意关闭和断电。
-    和celery的配置  task_reject_on_worker_lost = True task_acks_late = True后，处理逻辑几乎不约而同相似。
+    Restarting code at will does not lose tasks. Uses Redis heartbeat to re-queue all unconfirmed queues with expired heartbeats. This doesn't need to wait 10 minutes, and the detection is more precise.
+    Implemented using Redis as middleware. Fetched messages are simultaneously placed in a set representing the unack consumption state. This supports arbitrary shutdown and power loss of machines and Python processes.
+    The processing logic is very similar to celery's configuration with task_reject_on_worker_lost = True and task_acks_late = True.
 
     lua_4 = '''
    local v = redis.call("lpop", KEYS[1])
@@ -57,7 +56,7 @@ class RedisConsumerAckAble(ConsumerConfirmMixinWithTheHelpOfRedisByHearbeat, Abs
     def custom_init(self):
         super().custom_init()
         self.pull_msg_batch_size = self.consumer_params.broker_exclusive_config['pull_msg_batch_size']
-        self.pull_initial_interval = self.consumer_params.broker_exclusive_config.get('pull_base_interval',0.01) # 这是后加的，防止redis元信息中的配置生成consumer报错，使用get。
+        self.pull_initial_interval = self.consumer_params.broker_exclusive_config.get('pull_base_interval',0.01) # This was added later to prevent config from redis metadata causing consumer creation errors, using get.
         self.pull_max_interval = self.consumer_params.broker_exclusive_config.get('pull_max_interval',2)
 
         
@@ -88,7 +87,7 @@ class RedisConsumerAckAble(ConsumerConfirmMixinWithTheHelpOfRedisByHearbeat, Abs
         while True:
             task_str_list = script(keys=[self._queue_name, self._unack_zset_name], args=[time.time()])
             if task_str_list:
-                sleep_time = self.pull_initial_interval # 有消息，重置为初始值
+                sleep_time = self.pull_initial_interval # Has messages, reset to initial value
                 self._print_message_get_from_broker( task_str_list)
                 # self.logger.debug(f'从redis的 [{self._queue_name}] 队列中 取出的消息是：  {task_str_list}  ')
                 for task_str in task_str_list:
@@ -96,7 +95,7 @@ class RedisConsumerAckAble(ConsumerConfirmMixinWithTheHelpOfRedisByHearbeat, Abs
                     self._submit_task(kw)
             else:
                 time.sleep(sleep_time)
-                sleep_time = min(sleep_time * 2, self.pull_max_interval)  # 指数退避加大轮训间隔，不使用固定的间隔时间。
+                sleep_time = min(sleep_time * 2, self.pull_max_interval)  # Exponential backoff to increase polling interval, instead of using a fixed interval.
 
     def _requeue(self, kw):
         self.redis_db_frame.rpush(self._queue_name, json.dumps(kw['body']))

@@ -16,7 +16,7 @@ get_funboost_file_logger('gnsq',log_level_int=20)
 
 class NsqConsumer(AbstractConsumer):
     """
-    nsq作为中间件实现的。
+    Consumer implemented using NSQ as middleware.
     """
 
 
@@ -26,7 +26,7 @@ class NsqConsumer(AbstractConsumer):
 
         @consumer.on_message.connect
         def handler(consumerx: GnsqImporter().Consumer, message: GnsqImporter().Message):
-            # 第一条消息不能并发，第一条消息之后可以并发。
+            # The first message cannot be concurrent, messages after the first can be concurrent.
             # self.logger.debug(f'从nsq的 [{self._queue_name}] 主题中 取出的消息是：  {message.body.decode()}')
             message.enable_async()
             kw = {'consumer': consumerx, 'message': message, 'body': message.body}

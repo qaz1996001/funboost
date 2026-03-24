@@ -8,7 +8,7 @@ from funboost.utils.redis_manager import RedisMixin
 
 class RedisPublisher(FlushRedisQueueMixin, AbstractPublisher, RedisMixin, ):
     """
-    使用redis作为中间件
+    Uses redis as the broker.
     """
 
     def _publish_impl(self, msg):

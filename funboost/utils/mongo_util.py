@@ -19,12 +19,13 @@ def _get_mongo_url():
 
 class MongoMixin:
     """
-    mixin类被继承，也可以直接实例化。
+    Mixin class that can be inherited or directly instantiated.
 
-    这个是修改后的，当使用f.multi_process_connsume() + linux +  保存结果到mongo + pymongo.0.2 时候不再报错了。
+    This is the modified version that no longer errors when using f.multi_process_consume() + Linux + saving results to MongoDB + pymongo.
 
-    在linux上 即使写 connect=False，如果在主进程操作了collection，那么就破坏了 connect=False，在子进程中继续操作这个collection全局变量就会报错。
-    设计了多进程+fork 每次都 get_mongo_collection() 是最保险的
+    On Linux, even with connect=False, if you operate on a collection in the main process, it breaks connect=False,
+    and continuing to use that collection global variable in child processes will cause errors.
+    Designed with multi-process+fork to always call get_mongo_collection() for maximum safety.
     """
     processid__client_map = {}
     processid__db_map = {}

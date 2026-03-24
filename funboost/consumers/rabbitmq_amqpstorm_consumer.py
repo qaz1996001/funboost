@@ -9,8 +9,8 @@ from funboost.consumers.base_consumer import AbstractConsumer
 
 class RabbitmqConsumerAmqpStorm(AbstractConsumer):
     """
-    使用AmqpStorm实现的，多线程安全的，不用加锁。
-    funboost 强烈推荐使用这个做消息队列中间件。
+    Implemented using AmqpStorm, thread-safe, no locking needed.
+    funboost strongly recommends using this as the message queue middleware.
     """
 
     # _rabbitmq_pb_cls = RabbitmqPublisherUsingAmqpStorm
@@ -37,9 +37,9 @@ class RabbitmqConsumerAmqpStorm(AbstractConsumer):
         # noinspection PyBroadException
         if self.consumer_params.broker_exclusive_config['no_ack'] is False:
             try:
-                kw['amqpstorm_message'].ack()  # 确认消费
+                kw['amqpstorm_message'].ack()  # Confirm consumption
             except BaseException as e:
-                self.logger.error(f'AmqpStorm确认消费失败  {type(e)} {e}')
+                self.logger.error(f'AmqpStorm confirm consumption failed  {type(e)} {e}')
 
     def _requeue(self, kw):
         # amqpstorm.Message.delivery_tag

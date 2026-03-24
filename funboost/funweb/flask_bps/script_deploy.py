@@ -48,7 +48,7 @@ def _names_key():
 
 
 def _coerce_redis_hash_mapping(mapping):
-    """保证 HSET 的 field/value 均为 Redis 可编码字符串，避免 None 等触发客户端或服务端错误。"""
+    """Ensure HSET field/value are Redis-encodable strings, avoiding None etc. that could trigger client or server errors."""
     out = {}
     for k, v in mapping.items():
         if v is None:
@@ -63,8 +63,8 @@ def _coerce_redis_hash_mapping(mapping):
 
 
 def _redis_hset_mapping(key, mapping):
-    """写入 hash。逐字段 HSET，兼容 Redis 3（不支持 HSET 多 field 形态）；
-    若 key 类型错误（WRONGTYPE），删除后重写。"""
+    """Write to hash. Sets fields one by one via HSET for Redis 3 compatibility (which doesn't support multi-field HSET).
+    If the key has the wrong type (WRONGTYPE), deletes it and rewrites."""
     m = _coerce_redis_hash_mapping(mapping)
     if not m:
         return
@@ -104,7 +104,7 @@ def _redis_hset_field(key, field, value):
 
 
 def _get_log_path():
-    # 不可能不存在，不用考虑兼容的情况。
+    # This should always exist, no need to handle compatibility cases.
     from nb_log import nb_log_config_default
     return str(nb_log_config_default.LOG_PATH)
     # try:
@@ -122,14 +122,14 @@ def _get_nohup_log_path(name):
     return os.path.join(log_dir, f'{name}.nohup.log')
 
 
-# 这些进程会继承 FUNWEB_DEPLOY，但不是业务 Python 进程，不参与合并展示/计数
+# These processes inherit FUNWEB_DEPLOY but are not business Python processes; they are excluded from merged display/counting
 _DEPLOY_SHELL_PROCESS_NAMES = frozenset({
     'cmd.exe', 'powershell.exe', 'pwsh.exe', 'conhost.exe', 'comhost.exe',
 })
 
 
 def _script_fingerprint_for_config(config):
-    """从 start_cmd 解析脚本路径指纹，供 cmdline 匹配与壳子进程过滤。"""
+    """Parse script path fingerprint from start_cmd, used for cmdline matching and shell process filtering."""
     start_cmd = (config.get('start_cmd') or '').strip() if config else ''
     if not start_cmd:
         return None, None
@@ -163,7 +163,7 @@ def _pid_is_ancestor_of(ancestor_pid, desc_pid):
 
 
 def _drop_ancestor_pids(pids):
-    """在同一批 PID 内去掉「另一 PID 的祖先」：例如 py.exe → python.exe 只保留后者。"""
+    """Remove ancestor PIDs from the same batch: e.g. py.exe -> python.exe, keep only the latter."""
     unique = []
     seen = set()
     for p in pids:
@@ -184,7 +184,7 @@ def _drop_ancestor_pids(pids):
 
 
 def _filter_shell_children_to_script_leaves(child_info, config):
-    """壳进程下可能同时出现 py.exe、python.exe 等多层子进程，只保留真正跑脚本的叶子 Python。"""
+    """Under shell processes there may be multiple layers of child processes like py.exe, python.exe, etc. Keep only the leaf Python processes actually running the script."""
     if not child_info or not config:
         return child_info
     fp, base_py = _script_fingerprint_for_config(config)
@@ -238,8 +238,8 @@ def _filter_shell_children_to_script_leaves(child_info, config):
 
 
 def _check_pid_alive(pid, stored_ct=None):
-    """极速验证 PID 是否存活 + create_time 防 PID 复用。
-    仅调用 is_running() 和 create_time()，毫秒级，不读环境变量/命令行。
+    """Ultra-fast check whether a PID is alive + create_time to prevent PID reuse.
+    Only calls is_running() and create_time(), millisecond-level, does not read env vars/cmdline.
     """
     try:
         p = psutil.Process(int(pid))
@@ -257,12 +257,12 @@ def _check_pid_alive(pid, stored_ct=None):
 
 
 def _find_child_pids(parent_pid, timeout=3.0):
-    """找到壳进程（cmd.exe/sh）启动的 Python 解释器进程，返回 [(pid, create_time), ...]。
-    策略：
-      1. 先取壳进程的直接子进程（不递归），过滤出 python 解释器。
-      2. 若直接子进程是 py.exe（Windows 启动器），则再向下取其直接子。
-      3. 只保留第一层真正的 python 解释器，不继续递归，避免把用户脚本
-         spawn 出的孙进程（如多进程 worker）也一并纳入管理。
+    """Find Python interpreter processes launched by a shell process (cmd.exe/sh), returns [(pid, create_time), ...].
+    Strategy:
+      1. Get direct children of the shell process (non-recursive), filter for Python interpreters.
+      2. If a direct child is py.exe (Windows launcher), go one level deeper to get its direct children.
+      3. Only keep the first layer of actual Python interpreters, do not recurse further to avoid
+         including grandchild processes spawned by user scripts (e.g., multiprocess workers).
     """
     _py_launcher = {'py.exe', 'py3.exe'}
 
@@ -278,11 +278,11 @@ def _find_child_pids(parent_pid, timeout=3.0):
                 name = (c.name() or '').lower()
                 ct = c.create_time()
                 if name in _py_launcher:
-                    # py.exe 启动器：再向下一层取真正的 python
+                    # py.exe launcher: go one level deeper to get the actual python
                     result.extend(_get_direct_python_children(c.pid))
                 elif 'python' in name:
                     result.append((c.pid, ct))
-                # 其他（conhost 等）忽略
+                # Others (conhost, etc.) are ignored
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
         return result
@@ -302,9 +302,9 @@ def _find_child_pids(parent_pid, timeout=3.0):
 
 
 def _find_deploy_pids(name):
-    """从 Redis 读取 PID + create_time 列表，逐一验证存活。
-    仅调用 is_running() 和 create_time()，不读环境变量/命令行，毫秒级。
-    返回 (alive_pid_list, search_cmd_display, alive_ct_list)
+    """Read PID + create_time list from Redis, verify each one is alive.
+    Only calls is_running() and create_time(), does not read env vars/cmdline, millisecond-level.
+    Returns (alive_pid_list, search_cmd_display, alive_ct_list)
     """
     if os.name == 'nt':
         display = 'Redis pid_list + psutil.Process(pid).is_running()'
@@ -335,44 +335,45 @@ def _find_deploy_pids(name):
 
 
 def _verify_pid_belongs_to_deploy(pid, name, stored_ct=None):
-    """杀进程前的安全校验：确认 PID 确实属于该部署，防止系统重启后 PID 复用导致误杀。
-    校验优先级：
-      1. create_time 必须与启动时记录的一致（排除绝大多数 PID 复用）
-      2. 环境变量 FUNWEB_DEPLOY == name（最终确认是自己的进程）
-    仅在 stop/restart/kill 路径调用，不在轮询路径使用。
+    """Safety check before killing a process: confirm the PID actually belongs to this deployment,
+    preventing accidental kills due to PID reuse after system restart.
+    Validation priority:
+      1. create_time must match the value recorded at startup (eliminates most PID reuse cases)
+      2. Environment variable FUNWEB_DEPLOY == name (final confirmation it's our process)
+    Only called in stop/restart/kill paths, not in polling paths.
     """
     try:
         p = psutil.Process(int(pid))
         if not p.is_running():
-            return False, '进程已不存在'
-        # 第一层：create_time 校验
+            return False, 'Process no longer exists'
+        # Layer 1: create_time validation
         if stored_ct:
             try:
                 ct = p.create_time()
                 if abs(ct - float(stored_ct)) > 3.0:
-                    return False, f'PID 已被复用（create_time 不匹配: 记录={stored_ct}, 实际={ct:.2f}）'
+                    return False, f'PID has been reused (create_time mismatch: recorded={stored_ct}, actual={ct:.2f})'
             except (psutil.AccessDenied, ValueError):
                 pass
-        # 第二层：FUNWEB_DEPLOY 环境变量校验
+        # Layer 2: FUNWEB_DEPLOY environment variable validation
         try:
             env = p.environ()
             deploy_val = env.get('FUNWEB_DEPLOY', '')
             if deploy_val == name:
                 return True, ''
             if deploy_val:
-                return False, f'PID 属于其他部署（FUNWEB_DEPLOY={deploy_val}，期望={name}）'
-            # 环境变量为空但 create_time 匹配 → 可能是权限问题，允许杀
+                return False, f'PID belongs to another deployment (FUNWEB_DEPLOY={deploy_val}, expected={name})'
+            # Env var is empty but create_time matches -> possibly a permission issue, allow kill
         except (psutil.AccessDenied, psutil.NoSuchProcess, OSError):
-            # 无法读取环境变量（权限不足等），回退到仅信任 create_time
+            # Cannot read environment variables (insufficient permissions, etc.), fall back to trusting create_time only
             pass
         return True, ''
     except (psutil.NoSuchProcess, psutil.AccessDenied, ValueError, OSError):
-        return False, '进程已不存在'
+        return False, 'Process no longer exists'
 
 
 def _kill_pids(pids, name=None, ct_list=None):
-    """杀死一组 PID。如果提供 name 和 ct_list，会在杀之前做安全校验防止误杀。
-    返回 [(pid, ok, err_msg, kill_cmd), ...]"""
+    """Kill a group of PIDs. If name and ct_list are provided, performs safety checks before killing to prevent accidental kills.
+    Returns [(pid, ok, err_msg, kill_cmd), ...]"""
     results = []
     for i, pid in enumerate(pids):
         pid = int(pid)
@@ -381,12 +382,12 @@ def _kill_pids(pids, name=None, ct_list=None):
         else:
             kill_cmd = f'kill -SIGTERM {pid} && sleep 1 && kill -SIGKILL {pid}'
 
-        # 安全校验：确认 PID 属于该部署
+        # Safety check: confirm PID belongs to this deployment
         if name:
             ct = ct_list[i] if ct_list and i < len(ct_list) else None
             belongs, reason = _verify_pid_belongs_to_deploy(pid, name, ct)
             if not belongs:
-                results.append((pid, True, f'跳过（{reason}）', f'# 跳过 PID {pid}: {reason}'))
+                results.append((pid, True, f'Skipped ({reason})', f'# Skipped PID {pid}: {reason}'))
                 continue
 
         try:
@@ -456,7 +457,7 @@ def _format_env_summary(config, name=''):
 
 
 def _check_pids_still_alive(pid_list, ct_list):
-    """检查一批已知 PID 是否仍存活，返回存活的 PID 列表。"""
+    """Check whether a batch of known PIDs are still alive, return the list of alive PIDs."""
     alive = []
     for i, pid in enumerate(pid_list):
         ct = ct_list[i] if i < len(ct_list) else None
@@ -466,20 +467,20 @@ def _check_pids_still_alive(pid_list, ct_list):
 
 
 def _read_log_tail_str(log_file, max_lines=30):
-    """读取日志文件末尾若干行，返回字符串，用于启动失败诊断"""
+    """Read the last few lines of a log file and return as a string, used for diagnosing startup failures"""
     lines = _read_log_tail(log_file, max_lines)
     return ''.join(lines).strip()
 
 
 def _start_process(name, config, num_processes=None):
-    """启动一个或多个进程。返回 (procs, err, cmd_detail)"""
+    """Start one or more processes. Returns (procs, err, cmd_detail)"""
     project_dir = config.get('project_dir', '')
     start_cmd = config.get('start_cmd', '')
 
     if not start_cmd:
-        return None, '启动命令为空', {}
+        return None, 'Start command is empty', {}
     if project_dir and not os.path.isdir(project_dir):
-        return None, f'项目目录不存在: {project_dir}', {}
+        return None, f'Project directory does not exist: {project_dir}', {}
 
     if num_processes is None:
         num_processes = int(config.get('num_processes', '1') or 1)
@@ -491,7 +492,7 @@ def _start_process(name, config, num_processes=None):
     log_file = _get_nohup_log_path(name)
 
     cmd_detail = {
-        'cwd': project_dir or '(当前目录)',
+        'cwd': project_dir or '(current directory)',
         'env_vars': _format_env_summary(config, name),
         'log_file': log_file,
         'num_processes': num_processes,
@@ -528,19 +529,19 @@ def _start_process(name, config, num_processes=None):
                 )
             shell_procs.append(proc)
         except Exception as e:
-            errors.append(f'进程 #{idx}: {e}')
+            errors.append(f'Process #{idx}: {e}')
 
     if not shell_procs:
-        return None, '所有进程启动失败: ' + '; '.join(errors), cmd_detail
+        return None, 'All processes failed to start: ' + '; '.join(errors), cmd_detail
 
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    # 找真实子进程 PID + create_time（python.exe 而非 cmd.exe 壳进程）
+    # Find real child process PID + create_time (python.exe, not the cmd.exe shell process)
     all_real_pids = []
     all_real_cts = []
     failed_any = False
 
-    # 子进程出现可能较慢：等待上限随「存活检查秒数」放宽，但不超过 60 秒
+    # Child processes may appear slowly: wait limit scales with health check seconds, but capped at 60 seconds
     child_wait_timeout = min(max(health_secs, 5), 60)
     for i, proc in enumerate(shell_procs):
         child_info = _find_child_pids(proc.pid, timeout=child_wait_timeout)
@@ -554,12 +555,12 @@ def _start_process(name, config, num_processes=None):
             if exit_code is not None and exit_code != 0:
                 failed_any = True
                 log_tail = _read_log_tail_str(log_file, 20)
-                err = f'进程 #{i} 启动后退出（退出码: {exit_code}）'
+                err = f'Process #{i} exited after startup (exit code: {exit_code})'
                 if log_tail:
-                    err += f'\n--- 日志尾部 ---\n{log_tail}'
+                    err += f'\n--- Log tail ---\n{log_tail}'
                 errors.append(err)
             else:
-                # 壳进程还活着但子进程找不到，用壳进程 PID 兜底
+                # Shell process is alive but child process not found, fall back to shell process PID
                 try:
                     shell_ct = psutil.Process(proc.pid).create_time()
                 except Exception:
@@ -579,7 +580,7 @@ def _start_process(name, config, num_processes=None):
         })
         return shell_procs, '\n'.join(errors), cmd_detail
 
-    # 存活检查：在 health_secs 秒内每秒确认全部 PID 仍存活（此前仅立即检查，未真正等待）
+    # Liveness check: confirm all PIDs are still alive every second for health_secs seconds (previously only checked immediately without waiting)
     pid_ints = [int(p) for p in all_real_pids]
     if not pid_ints:
         cmd_detail['survived_secs'] = -1
@@ -588,7 +589,7 @@ def _start_process(name, config, num_processes=None):
             'pid_list': '[]',
             'ct_list': '[]',
         })
-        return shell_procs, '未能记录到任何进程 PID，无法进行存活检查', cmd_detail
+        return shell_procs, 'Failed to record any process PID, unable to perform liveness check', cmd_detail
     ct_parsed = []
     for s in all_real_cts:
         try:
@@ -603,11 +604,11 @@ def _start_process(name, config, num_processes=None):
             failed_any = True
             log_tail = _read_log_tail_str(log_file, 30)
             err = (
-                f'存活检查失败：启动后约 {elapsed + 1} 秒内进程退出 '
-                f'（期望 {len(pid_ints)} 个，剩余 {len(alive)} 个）'
+                f'Liveness check failed: process(es) exited within ~{elapsed + 1} second(s) after startup '
+                f'(expected {len(pid_ints)}, remaining {len(alive)})'
             )
             if log_tail:
-                err += f'\n--- 日志尾部 ---\n{log_tail}'
+                err += f'\n--- Log tail ---\n{log_tail}'
             errors.append(err)
             cmd_detail['survived_secs'] = -1
             cmd_detail['pid'] = ', '.join(str(p) for p in alive) if alive else ''
@@ -672,12 +673,12 @@ def _find_log_files(name):
 
 
 def _do_git_pull(project_dir, target_branch=None):
-    """执行 git pull，可选切换分支。
-    返回 dict:
-      steps      - list of {cmd, output, ok, summary}  每一步操作
-      success    - bool 整体是否成功
-      current_branch - 最终所在分支
-      summary    - 最终中文总结文本
+    """Execute git pull, optionally switch branches.
+    Returns dict:
+      steps      - list of {cmd, output, ok, summary}  each step of the operation
+      success    - bool whether the overall operation succeeded
+      current_branch - the final branch
+      summary    - final summary text
     """
     steps = []
 
@@ -690,18 +691,18 @@ def _do_git_pull(project_dir, target_branch=None):
                       'summary': summary_ok if ok else summary_fail})
         return r, ok, out
 
-    # 获取当前分支（内部查询，不加入 steps）
+    # Get current branch (internal query, not added to steps)
     cr = subprocess.run(['git', '-C', project_dir, 'rev-parse', '--abbrev-ref', 'HEAD'],
                         capture_output=True, text=True, timeout=10)
     current_branch = cr.stdout.strip() if cr.returncode == 0 else ''
 
-    # 获取 remote 名称（内部查询）
+    # Get remote name (internal query)
     rr = subprocess.run(['git', '-C', project_dir, 'remote'],
                         capture_output=True, text=True, timeout=10)
     remotes = [r.strip() for r in rr.stdout.strip().split('\n') if r.strip()]
     remote = remotes[0] if remotes else 'origin'
 
-    # 切换分支
+    # Switch branch
     switched = False
     if target_branch and target_branch != current_branch:
         local_branch = target_branch
@@ -710,26 +711,26 @@ def _do_git_pull(project_dir, target_branch=None):
 
         r, ok, out = run_step(
             ['git', '-C', project_dir, 'checkout', local_branch],
-            summary_ok=f'✓ 已切换到分支 "{local_branch}"',
+            summary_ok=f'✓ Switched to branch "{local_branch}"',
             summary_fail='',
             timeout=30,
         )
         if not ok:
-            # 本地不存在，从远程创建
+            # Does not exist locally, create from remote
             steps.pop()
             r, ok, out = run_step(
                 ['git', '-C', project_dir, 'checkout', '-b', local_branch, target_branch],
-                summary_ok=f'✓ 已从 "{target_branch}" 创建并切换到本地分支 "{local_branch}"',
-                summary_fail=f'✗ 切换分支失败：无法检出 "{local_branch}"',
+                summary_ok=f'✓ Created and switched to local branch "{local_branch}" from "{target_branch}"',
+                summary_fail=f'✗ Branch switch failed: unable to checkout "{local_branch}"',
                 timeout=30,
             )
             if not ok:
                 return {'steps': steps, 'success': False, 'current_branch': current_branch,
-                        'summary': f'✗ 切换分支失败，已终止。\n{out}'}
+                        'summary': f'✗ Branch switch failed, operation aborted.\n{out}'}
         current_branch = local_branch
         switched = True
 
-    # 检查 upstream tracking
+    # Check upstream tracking
     tr = subprocess.run(
         ['git', '-C', project_dir, 'rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'],
         capture_output=True, text=True, timeout=10
@@ -740,7 +741,7 @@ def _do_git_pull(project_dir, target_branch=None):
     else:
         if not current_branch:
             return {'steps': steps, 'success': False, 'current_branch': current_branch,
-                    'summary': '✗ 无法检测当前 Git 分支，pull 终止。'}
+                    'summary': '✗ Unable to detect the current Git branch, pull aborted.'}
         ls_r = subprocess.run(
             ['git', '-C', project_dir, 'ls-remote', '--heads', remote, current_branch],
             capture_output=True, text=True, timeout=15
@@ -761,27 +762,27 @@ def _do_git_pull(project_dir, target_branch=None):
                 pull_args = ['git', '-C', project_dir, 'pull', remote, found_default]
             else:
                 return {'steps': steps, 'success': False, 'current_branch': current_branch,
-                        'summary': (f'✗ 分支 "{current_branch}" 在远程 "{remote}" 上不存在，'
-                                    f'且未找到 main/master，pull 终止。\n'
-                                    f'请手动执行: git branch --set-upstream-to={remote}/<分支名> {current_branch}')}
+                        'summary': (f'✗ Branch "{current_branch}" does not exist on remote "{remote}", '
+                                    f'and main/master not found, pull aborted.\n'
+                                    f'Please run manually: git branch --set-upstream-to={remote}/<branch_name> {current_branch}')}
 
     r, ok, out = run_step(
         pull_args,
-        summary_ok='',  # 下面根据 output 内容精细判断
+        summary_ok='',  # Will be refined below based on output content
         summary_fail='',
         timeout=60,
     )
 
-    # 精细判断 pull 结果
+    # Detailed assessment of pull result
     pull_out_lower = out.lower()
     if ok:
         if 'already up to date' in pull_out_lower or 'already up-to-date' in pull_out_lower:
-            pull_summary = f'✓ 分支 "{current_branch}" 已是最新，无需更新。'
+            pull_summary = f'✓ Branch "{current_branch}" is already up to date, no update needed.'
         elif 'conflict' in pull_out_lower or 'merge conflict' in pull_out_lower:
-            pull_summary = '⚠ 拉取时发生合并冲突，请手动解决后再操作。'
+            pull_summary = '⚠ Merge conflict occurred during pull, please resolve manually before proceeding.'
             ok = False
         else:
-            pull_summary = f'✓ 成功拉取分支 "{current_branch}" 的最新代码。'
+            pull_summary = f'✓ Successfully pulled the latest code for branch "{current_branch}".'
         if ok and tr.returncode != 0 and current_branch:
             subprocess.run(
                 ['git', '-C', project_dir, 'branch', '--set-upstream-to',
@@ -790,18 +791,18 @@ def _do_git_pull(project_dir, target_branch=None):
             )
     else:
         if 'conflict' in pull_out_lower:
-            pull_summary = '✗ 拉取失败：存在合并冲突，请手动处理。'
+            pull_summary = '✗ Pull failed: merge conflict exists, please resolve manually.'
         elif 'rejected' in pull_out_lower:
-            pull_summary = '✗ 拉取被拒绝（可能本地有超前提交），建议先检查本地状态。'
+            pull_summary = '✗ Pull rejected (local may have ahead commits), please check local status first.'
         elif 'could not read' in pull_out_lower or 'authentication' in pull_out_lower:
-            pull_summary = '✗ 拉取失败：认证或网络问题。'
+            pull_summary = '✗ Pull failed: authentication or network issue.'
         else:
-            pull_summary = '✗ 拉取失败。'
+            pull_summary = '✗ Pull failed.'
 
     steps[-1]['ok'] = ok
     steps[-1]['summary'] = pull_summary
 
-    # 整体总结
+    # Overall summary
     parts = []
     if switched:
         switch_step = next((s for s in steps if 'checkout' in s['cmd']), None)
@@ -814,12 +815,12 @@ def _do_git_pull(project_dir, target_branch=None):
             'summary': final_summary}
 
 
-# ======================== 路由 ========================
+# ======================== Routes ========================
 
 @deploy_bp.route('/deploy/list', methods=['GET'])
 @login_required
 def deploy_list():
-    """列表页：仅用 Redis pid_list + is_running()/create_time() 验证，毫秒级返回。"""
+    """List page: uses only Redis pid_list + is_running()/create_time() for validation, returns in milliseconds."""
     names = _redis.smembers(_names_key())
     result = []
     for name in sorted(names):
@@ -854,7 +855,7 @@ def deploy_save():
     data = request.get_json(force=True)
     name = data.get('name', '').strip()
     if not name:
-        return jsonify({'succ': False, 'msg': '部署名称不能为空'})
+        return jsonify({'succ': False, 'msg': 'Deployment name cannot be empty'})
 
     project_dir = data.get('project_dir', '').strip()
     start_cmd = data.get('start_cmd', '').strip()
@@ -891,7 +892,7 @@ def deploy_save():
         'health_check_secs': health_check_secs,
         'num_processes': num_processes,
     })
-    return jsonify({'succ': True, 'msg': '保存成功'})
+    return jsonify({'succ': True, 'msg': 'Saved successfully'})
 
 
 @deploy_bp.route('/deploy/<name>/clone', methods=['POST'])
@@ -900,7 +901,7 @@ def deploy_clone(name):
     data = request.get_json(force=True)
     new_name = data.get('new_name', '').strip()
     if not new_name:
-        return jsonify({'succ': False, 'msg': '新部署名称不能为空'})
+        return jsonify({'succ': False, 'msg': 'New deployment name cannot be empty'})
     if _redis.sismember(_names_key(), new_name):
         return jsonify({'succ': False, 'msg': f'部署名称 "{new_name}" 已存在'})
 

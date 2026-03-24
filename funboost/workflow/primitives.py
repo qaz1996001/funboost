@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Funboost Workflow - 编排原语 (Primitives)
+Funboost Workflow - Orchestration Primitives
 
-提供类似 Celery Canvas 的编排原语：
-- Chain: 链式执行
-- Group: 并行执行
-- Chord: 并行 + 汇总
+Provides orchestration primitives similar to Celery Canvas:
+- Chain: Sequential execution
+- Group: Parallel execution
+- Chord: Parallel + aggregation
 
-设计哲学：
-- 声明式定义，命令式执行
-- 复用 funboost 现有的 RPC 机制
-- 不修改 funboost 核心代码
+Design philosophy:
+- Declarative definition, imperative execution
+- Reuses funboost's existing RPC mechanism
+- Does not modify funboost core code
 """
 
 import typing
@@ -23,15 +23,15 @@ from funboost.core.function_result_status_saver import FunctionResultStatus
 
 def _ensure_workflow_context() -> bool:
     """
-    确保存在工作流上下文，如果不存在则创建初始上下文
-    
-    :return: True 表示创建了新上下文（调用者需要在结束时清理），False 表示已存在上下文
+    Ensure workflow context exists, creating an initial context if it doesn't
+
+    :return: True means a new context was created (caller needs to clean up at the end), False means context already exists
     """
     existing = WorkflowPublisherMixin.get_workflow_context()
     if existing:
-        return False  # 已存在，不需要创建
-    
-    # 创建初始工作流上下文
+        return False  # Already exists, no need to create
+
+    # Create initial workflow context
     initial_ctx = {
         'workflow_id': str(uuid.uuid4()),
         'chain_depth': 0,
@@ -39,55 +39,55 @@ def _ensure_workflow_context() -> bool:
         'parent_task_id': None,
     }
     WorkflowPublisherMixin.set_workflow_context(initial_ctx)
-    return True  # 新创建的，调用者需要清理
+    return True  # Newly created, caller needs to clean up
 
 
 class Chain:
     """
-    链式执行：顺序执行多个任务，上游结果自动传给下游
-    
-    用法：
+    Sequential execution: Executes multiple tasks in order, upstream results automatically passed to downstream
+
+    Usage:
     ```python
-    # 方式1：构造函数
+    # Method 1: Constructor
     workflow = Chain(task1.s(x), task2.s(), task3.s())
-    
-    # 方式2：便捷函数
+
+    # Method 2: Convenience function
     workflow = chain(task1.s(x), task2.s(), task3.s())
-    
-    # 方式3：| 运算符
+
+    # Method 3: | operator
     workflow = task1.s(x) | task2.s() | task3.s()
-    
-    # 执行
+
+    # Execute
     result = workflow.apply()
     ```
-    
-    执行流程：
-    1. 执行 task1，获取结果 r1
-    2. 将 r1 作为 task2 的第一个参数，执行 task2，获取结果 r2
-    3. 将 r2 作为 task3 的第一个参数，执行 task3，获取结果 r3
-    4. 返回 r3
+
+    Execution flow:
+    1. Execute task1, get result r1
+    2. Pass r1 as task2's first argument, execute task2, get result r2
+    3. Pass r2 as task3's first argument, execute task3, get result r3
+    4. Return r3
     """
     
     def __init__(self, *tasks):
         """
-        :param tasks: 任务列表，可以是 Signature、Chain、Group、Chord
+        :param tasks: List of tasks, can be Signature, Chain, Group, Chord
         """
         self.tasks = []
         for task in tasks:
             if isinstance(task, Chain):
-                # 展平嵌套的 Chain
+                # Flatten nested Chain
                 self.tasks.extend(task.tasks)
             else:
                 self.tasks.append(task)
     
     def apply(self, prev_result=None) -> FunctionResultStatus:
         """
-        同步执行整个链条
-        
-        :param prev_result: 外部传入的初始结果（可选）
-        :return: 最后一个任务的执行结果
+        Synchronously execute the entire chain
+
+        :param prev_result: Externally provided initial result (optional)
+        :return: The last task's execution result
         """
-        # 确保存在工作流上下文（如果不存在则自动创建）
+        # Ensure workflow context exists (auto-create if not present)
         created_new_ctx = _ensure_workflow_context()
         
         try:
@@ -106,16 +106,16 @@ class Chain:
             
             return result_status
         finally:
-            # 只有当本方法创建了上下文时才清理
+            # Only clean up if this method created the context
             if created_new_ctx:
                 WorkflowPublisherMixin.clear_workflow_context()
-    
+
     def apply_async(self, prev_result=None) -> AsyncResult:
         """
-        异步执行第一个任务，返回 AsyncResult
-        
-        注意：对于 Chain，完整的异步执行需要配合回调机制
-        当前实现仅启动第一个任务
+        Asynchronously execute the first task, returning AsyncResult
+
+        Note: For Chain, complete async execution requires a callback mechanism.
+        Current implementation only starts the first task.
         """
         if not self.tasks:
             raise ValueError("Chain is empty")
@@ -127,7 +127,7 @@ class Chain:
             raise NotImplementedError("Async chain with nested primitives not yet supported")
     
     def __or__(self, other):
-        """支持 | 运算符追加任务"""
+        """Support | operator to append tasks"""
         if isinstance(other, Signature):
             return Chain(*self.tasks, other)
         elif isinstance(other, Chain):
@@ -142,29 +142,29 @@ class Chain:
 
 class Group:
     """
-    并行执行：同时执行多个任务，收集所有结果
-    
-    用法：
+    Parallel execution: Executes multiple tasks simultaneously, collects all results
+
+    Usage:
     ```python
-    # 方式1：构造函数
+    # Method 1: Constructor
     g = Group(task.s(1), task.s(2), task.s(3))
-    
-    # 方式2：便捷函数
+
+    # Method 2: Convenience function
     g = group(task.s(1), task.s(2), task.s(3))
-    
-    # 方式3：生成器
+
+    # Method 3: Generator
     g = group(task.s(i) for i in range(10))
-    
-    # 执行
-    results = g.apply()  # 返回结果列表 [r1, r2, r3]
+
+    # Execute
+    results = g.apply()  # Returns result list [r1, r2, r3]
     ```
     """
     
     def __init__(self, *tasks):
         """
-        :param tasks: 任务列表，支持生成器
+        :param tasks: List of tasks, supports generators
         """
-        # 支持传入生成器
+        # Support passing generators
         if len(tasks) == 1 and hasattr(tasks[0], '__iter__') and not isinstance(tasks[0], (Signature, Chain, Chord)):
             self.tasks = list(tasks[0])
         else:
@@ -172,32 +172,32 @@ class Group:
     
     def apply(self, prev_result=None) -> typing.List:
         """
-        并行执行所有任务，等待全部完成
-        
-        :param prev_result: 传递给每个任务的初始结果（可选）
-        :return: 所有任务结果的列表
+        Execute all tasks in parallel, wait for all to complete
+
+        :param prev_result: Initial result passed to each task (optional)
+        :return: List of all task results
         """
         if not self.tasks:
             return []
         
-        # 确保存在工作流上下文（如果不存在则自动创建）
+        # Ensure workflow context exists (auto-create if not present)
         created_new_ctx = _ensure_workflow_context()
         
         try:
-            # 并行发布所有任务
+            # Publish all tasks in parallel
             async_results = []
             for task in self.tasks:
                 if isinstance(task, Signature):
                     async_results.append(task.apply_async(prev_result))
                 elif isinstance(task, (Chain, Group, Chord)):
-                    # 对于嵌套结构，同步执行（简化实现）
+                    # For nested structures, execute synchronously (simplified implementation)
                     result = task.apply(prev_result)
-                    # 包装成类似 AsyncResult 的结构以统一处理
+                    # Wrap into AsyncResult-like structure for unified processing
                     async_results.append(_WrapperResult(result))
                 else:
                     raise TypeError(f"Unsupported task type: {type(task)}")
             
-            # 等待所有结果
+            # Wait for all results
             results = []
             last_task_id = None
             for ar in async_results:
@@ -209,25 +209,25 @@ class Group:
                     results.append(status.result)
                     last_task_id = status.task_id
             
-            # Group 完成后更新 workflow context
-            # 使用最后一个任务的 task_id 作为 current_task_id，
-            # 这样 chord callback 的 parent_task_id 能指向 group 中的某个任务
-            # 注意：_update_workflow_context_after_task 会同时递增 chain_depth
+            # Update workflow context after Group completes
+            # Use the last task's task_id as current_task_id,
+            # so the chord callback's parent_task_id can point to a task in the group
+            # Note: _update_workflow_context_after_task also increments chain_depth
             if last_task_id:
                 from .signature import _update_workflow_context_after_task
                 _update_workflow_context_after_task(last_task_id)
             
             return results
         finally:
-            # 只有当本方法创建了上下文时才清理
+            # Only clean up if this method created the context
             if created_new_ctx:
                 WorkflowPublisherMixin.clear_workflow_context()
     
     def apply_async(self, prev_result=None) -> typing.List[AsyncResult]:
         """
-        异步发布所有任务
-        
-        :return: AsyncResult 列表
+        Asynchronously publish all tasks
+
+        :return: List of AsyncResults
         """
         async_results = []
         for task in self.tasks:
@@ -242,7 +242,7 @@ class Group:
 
 
 class _WrapperResult:
-    """用于包装同步执行结果的辅助类"""
+    """Helper class for wrapping synchronous execution results"""
     def __init__(self, result):
         if isinstance(result, FunctionResultStatus):
             self.result = result.result
@@ -252,34 +252,34 @@ class _WrapperResult:
 
 class Chord:
     """
-    并行 + 汇总：header 并行执行，结果列表传给 body
-    
-    用法：
+    Parallel + aggregation: header executes in parallel, result list passed to body
+
+    Usage:
     ```python
-    # 定义 chord
+    # Define chord
     c = chord(
-        group(task.s(i) for i in range(3)),  # header: 并行执行
-        callback.s()  # body: 接收结果列表
+        group(task.s(i) for i in range(3)),  # header: parallel execution
+        callback.s()  # body: receives result list
     )
-    
-    # 执行
+
+    # Execute
     result = c.apply()
     ```
-    
-    执行流程：
-    1. 并行执行 header 中的所有任务
-    2. 收集所有结果到列表 [r0, r1, r2]
-    3. 将结果列表作为 body 的第一个参数执行
-    4. 返回 body 的执行结果
+
+    Execution flow:
+    1. Execute all tasks in header in parallel
+    2. Collect all results into list [r0, r1, r2]
+    3. Execute body with result list as its first argument
+    4. Return body's execution result
     """
     
     def __init__(self, header: Group, body: Signature):
         """
-        :param header: 并行执行的任务组 (Group)
-        :param body: 汇总回调任务 (Signature)
+        :param header: Task group for parallel execution (Group)
+        :param body: Aggregation callback task (Signature)
         """
         if not isinstance(header, Group):
-            # 自动包装成 Group
+            # Auto-wrap into Group
             if isinstance(header, (list, tuple)):
                 header = Group(*header)
             else:
@@ -290,22 +290,22 @@ class Chord:
     
     def apply(self, prev_result=None) -> FunctionResultStatus:
         """
-        执行 chord
-        
-        :param prev_result: 传递给 header 每个任务的初始结果
-        :return: body 任务的执行结果
+        Execute chord
+
+        :param prev_result: Initial result passed to each task in header
+        :return: body task's execution result
         """
-        # 确保存在工作流上下文（如果不存在则自动创建）
+        # Ensure workflow context exists (auto-create if not present)
         created_new_ctx = _ensure_workflow_context()
         
         try:
-            # 1. 执行 header（并行）
+            # 1. Execute header (in parallel)
             header_results = self.header.apply(prev_result)
             
-            # 2. 将 header 结果列表作为 body 的第一个参数执行
+            # 2. Execute body with header results list as its first argument
             return self.body.apply(prev_result=header_results)
         finally:
-            # 只有当本方法创建了上下文时才清理
+            # Only clean up if this method created the context
             if created_new_ctx:
                 WorkflowPublisherMixin.clear_workflow_context()
     
@@ -314,12 +314,12 @@ class Chord:
 
 
 # ============================================================
-# 便捷函数
+# Convenience functions
 # ============================================================
 
 def chain(*tasks) -> Chain:
     """
-    创建链式执行工作流
+    Create a sequential execution workflow
     
     用法：
     ```python
@@ -332,14 +332,14 @@ def chain(*tasks) -> Chain:
 
 def group(*tasks) -> Group:
     """
-    创建并行执行工作流
-    
-    用法：
+    Create a parallel execution workflow
+
+    Usage:
     ```python
     g = group(task.s(1), task.s(2), task.s(3))
     results = g.apply()  # [r1, r2, r3]
-    
-    # 支持生成器
+
+    # Supports generators
     g = group(task.s(i) for i in range(10))
     ```
     """
@@ -348,7 +348,7 @@ def group(*tasks) -> Group:
 
 def chord(header, body) -> Chord:
     """
-    创建 并行+汇总 工作流
+    Create a parallel+aggregation workflow
     
     用法：
     ```python

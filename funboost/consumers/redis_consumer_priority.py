@@ -2,11 +2,10 @@
 # @Author  : ydf
 # @Time    : 2022/8/8 0008 13:32
 """
+This is the enhanced version of Redis consumption with acknowledgment, much more complex than the redis_consumer implementation.
+This ensures that tasks are not lost with arbitrary repeated restarts. Without lua, there is an extremely small probability of losing one task during arbitrary restarts.
 
-这个是加强版的可确认消费的redis消费实现，所以比redis_conusmer实现复杂很多。
-这个可以确保随意反复多次停止重启脚本，任务不丢失，没人采用lua，随意反复重启代码极小概率丢失一个任务。
-
-这个是支持任务优先级的redis队列实现。
+This is a Redis queue implementation that supports task priority.
 """
 import json
 import time
@@ -18,14 +17,14 @@ from funboost.consumers.redis_consumer_ack_able import RedisConsumerAckAble
 
 class RedisPriorityConsumer(RedisConsumerAckAble):
     """
-       使用多个redis list来实现redis支持队列优先级。brpop可以支持监听多个redis键。
-       根据消息的 priroty 来决定发送到哪个队列。我这个想法和celery依赖的kombu实现的redis具有队列优先级是一样的。
+       Uses multiple Redis lists to implement Redis queue priority support. brpop can monitor multiple Redis keys.
+       Determines which queue to send to based on the message's priority. This idea is the same as kombu's Redis queue priority implementation used by celery.
 
-       注意：  rabbitmq、celery队列优先级都指的是同一个队列中的每个消息具有不同的优先级，消息可以不遵守先进先出，而是优先级越高的消息越先取出来。
-              队列优先级其实是某个队列中的消息的优先级，这是队列的 x-max-priority 的原生概念。
+       Note: rabbitmq and celery queue priorities refer to each message in the same queue having different priorities. Messages don't follow FIFO; higher priority messages are fetched first.
+              Queue priority is actually the priority of messages within a specific queue, which is the native concept of x-max-priority.
 
-              队列优先级有的人错误的以为是 queuexx 和queueyy两个队列，以为是优先消费queuexx的消息，这是大错特错的想法。
-              队列优先级是指某个队列中的每个消息可以具有不同的优先级，不是在不同队列名之间来比较哪个队列名具有更高的优先级。
+              Some people mistakenly think queue priority means having two queues queuexx and queueyy, and consuming queuexx messages first. This is completely wrong.
+              Queue priority means each message within a queue can have different priorities, not comparing which queue name has higher priority among different queue names.
     """
     """用法如下。
     第一，如果使用redis做支持优先级的消息队列， @boost中要选择 broker_kind = BrokerEnum.REDIS_PRIORITY

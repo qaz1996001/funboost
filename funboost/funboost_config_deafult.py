@@ -6,8 +6,8 @@ from nb_log import nb_log_config_default
 from urllib.parse import quote_plus
 
 '''
-funboost_config.py 文件是第一次运行框架自动生成到你的项目根目录的，不需要用由户手动创建。
-此文件里面可以写任意python代码。例如 中间件 帐号 密码自己完全可以从apola配置中心获取或者从环境变量获取。
+The funboost_config.py file is automatically generated in your project root directory on the first run of the framework. Users do not need to create it manually.
+You can write any Python code in this file. For example, broker credentials/passwords can be fetched from a configuration center like Apollo or from environment variables.
 '''
 
 '''

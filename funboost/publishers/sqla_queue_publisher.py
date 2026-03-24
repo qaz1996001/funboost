@@ -9,8 +9,8 @@ from funboost.publishers.base_publisher import AbstractPublisher
 # noinspection PyProtectedMember
 class SqlachemyQueuePublisher(AbstractPublisher):
     """
-    使用Sqlachemy 操作数据库 ，实现的5种sql 数据库服务器作为 消息队列。包括sqlite mydql microsoftsqlserver postgre oracle
-    这个是使用数据库表模拟的消息队列。这不是突发奇想一意孤行，很多包库都实现了这。
+    Uses SQLAlchemy to operate databases, implementing 5 types of SQL database servers as message queues, including SQLite, MySQL, Microsoft SQL Server, PostgreSQL, and Oracle.
+    This simulates a message queue using database tables. This is not a whimsical idea; many packages have implemented this.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -22,7 +22,7 @@ class SqlachemyQueuePublisher(AbstractPublisher):
 
     def clear(self):
         self.queue.clear_queue()
-        self.logger.warning(f'清除 sqlalchemy 数据库队列 {self._queue_name} 中的消息成功')
+        self.logger.warning(f'Successfully cleared messages in sqlalchemy database queue {self._queue_name}')
 
     def get_message_count(self):
         return self.queue.to_be_consumed_count

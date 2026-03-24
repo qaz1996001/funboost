@@ -9,8 +9,8 @@ from funboost.utils.str_utils import PwdEnc, StrHelper
 
 class DataClassBase:
     """
-    使用类实现的 简单数据类。
-    也可以使用装饰器来实现数据类
+    Simple data class implemented using a class.
+    Can also use decorators to implement data classes.
     """
 
     def __new__(cls, **kwargs):
@@ -38,7 +38,7 @@ class DataClassBase:
         return json_helper.dict_to_un_strict_json(self.get_dict(),indent=indent)
 
     def get_pwd_enc_json(self,indent=4):
-        """防止打印密码明文,泄漏密码"""
+        """Prevent printing plaintext passwords to avoid password leaks"""
         dict_new = {}
         for k, v in self.get_dict().items():
             # only_print_on_main_process(f'{k} :  {v}')

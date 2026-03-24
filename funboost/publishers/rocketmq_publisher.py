@@ -9,7 +9,7 @@ from funboost.publishers.base_publisher import AbstractPublisher
 from funboost.utils import system_util
 
 if system_util.is_windows():
-    raise ImportError('rocketmq包 只支持linux和mac')
+    raise ImportError('rocketmq package only supports Linux and macOS')
 
 from rocketmq.client import Producer,Message
 
@@ -21,7 +21,7 @@ class RocketmqPublisher(AbstractPublisher, ):
     def custom_init(self):
         group_id = f'g-{self._queue_name}'
         with self._lock_for_create_producer:
-            if group_id not in self.__class__._group_id__rocketmq_producer:  # 同一个进程中创建多个同组消费者会报错。
+            if group_id not in self.__class__._group_id__rocketmq_producer:  # Creating multiple consumers of the same group in the same process will cause an error.
                 producer = Producer(group_id)
                 producer.set_namesrv_addr(BrokerConnConfig.ROCKETMQ_NAMESRV_ADDR)
                 producer.start()
@@ -32,19 +32,19 @@ class RocketmqPublisher(AbstractPublisher, ):
 
     def _publish_impl(self, msg):
         rocket_msg = Message(self._queue_name)
-        # rocket_msg.set_keys(msg)  # 利于检索
+        # rocket_msg.set_keys(msg)  # Useful for retrieval
         # rocket_msg.set_tags('XXX')
         rocket_msg.set_body(msg)
         # print(msg)
         self._producer.send_sync(rocket_msg)
 
     def clear(self):
-        self.logger.error('清除队列，python版的rocket包太弱了，没有方法设置偏移量或者删除主题。java才能做到')
+        self.logger.error('Clear queue: the Python rocketmq package is too limited, no methods to set offset or delete topics. Only Java can do this.')
 
     def get_message_count(self):
         if time.time() - getattr(self, '_last_warning_count', 0) > 300:
             setattr(self, '_last_warning_count', time.time())
-            self.logger.warning('获取消息数量，python版的rocket包太弱了，没找到方法。java才能做到。')
+            self.logger.warning('Get message count: the Python rocketmq package is too limited, no method found. Only Java can do this.')
         return -1
 
     def close(self):

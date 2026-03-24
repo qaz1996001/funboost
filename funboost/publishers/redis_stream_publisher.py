@@ -8,7 +8,7 @@ from funboost.utils.redis_manager import RedisMixin
 
 class RedisStreamPublisher(AbstractPublisher,RedisMixin):
     """
-    redis 的 stream 结构 作为中间件实现的。需要redis 5.0以上，redis stream结构 是redis的消息队列，功能远超 list结构。
+    Implemented using Redis stream data structure as the broker. Requires Redis 5.0+. Redis stream is Redis's message queue, with far more features than the list structure.
     """
 
     _has__check_redis_version = False
@@ -16,23 +16,23 @@ class RedisStreamPublisher(AbstractPublisher,RedisMixin):
     def _check_redis_version(self):
         redis_server_info_dict = self.redis_db_frame.info()
         if float(redis_server_info_dict['redis_version'][0]) < 5:
-            raise EnvironmentError('必须是5.0版本以上redis服务端才能支持  stream 数据结构，'
-                                   '请升级服务端，否则使用 REDIS_ACK_ABLE 方式使用redis 的 list 结构')
+            raise EnvironmentError('Redis server version 5.0+ is required to support the stream data structure. '
+                                   'Please upgrade the server, or use REDIS_ACK_ABLE mode with Redis list structure.')
         if self.redis_db_frame.type(self._queue_name) == 'list':
-            raise EnvironmentError(f'检测到已存在 {self._queue_name} 这个键，且类型是list， 必须换个队列名字或者删除这个'
-                                   f' list 类型的键。'
-                                   f'RedisStreamConsumer 使用的是 stream数据结构')
+            raise EnvironmentError(f'Detected that key {self._queue_name} already exists and its type is list. '
+                                   f'You must use a different queue name or delete this list-type key. '
+                                   f'RedisStreamConsumer uses the stream data structure.')
         self._has__check_redis_version = True
 
     def _publish_impl(self, msg):
-        # redis服务端必须是5.0以上，并且确保这个键的类型是stream不能是list数据结构。
+        # Redis server must be 5.0+, and ensure the key type is stream, not list data structure.
         if not self._has__check_redis_version:
             self._check_redis_version()
         self.redis_db_frame.xadd(self._queue_name, {"": msg})
 
     def clear(self):
         self.redis_db_frame.delete(self._queue_name)
-        self.logger.warning(f'清除 {self._queue_name} 队列中的消息成功')
+        self.logger.warning(f'Successfully cleared messages in queue {self._queue_name}')
 
     def get_message_count(self):
         # nb_print(self.redis_db7,self._queue_name)

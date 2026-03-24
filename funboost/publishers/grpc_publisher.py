@@ -7,7 +7,7 @@ import grpc
 
 
 class GrpcPublisher(AbstractPublisher, ):
-    """grpc 作为broker"""
+    """gRPC as broker"""
 
     def custom_init(self):
         host = self.publisher_params.broker_exclusive_config['host']

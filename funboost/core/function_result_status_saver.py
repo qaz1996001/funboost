@@ -26,39 +26,39 @@ class RunStatus:
     finish = 'finish'
 
 class FunctionResultStatus():
-    # 类级别缓存，避免每次实例化都调用系统函数
+    # Class-level cache to avoid calling system functions on every instantiation
     host_name = socket.gethostname()
-    _process_id = os.getpid()  # 进程ID在进程生命周期内不变
-    _host_process = f'{host_name} - {_process_id}'  # 缓存 host_process
+    _process_id = os.getpid()  # Process ID doesn't change during the process lifecycle
+    _host_process = f'{host_name} - {_process_id}'  # Cache host_process
 
     script_name_long = sys.argv[0]
     script_name = script_name_long.split('/')[-1].split('\\')[-1]
 
     FUNC_RUN_ERROR = 'FUNC_RUN_ERROR'
     
-    # 使用 __slots__ 可以减少内存占用和提升属性访问速度，但会影响动态属性添加
-    # 这里不使用 __slots__ 以保持兼容性
+    # Using __slots__ can reduce memory usage and improve attribute access speed, but affects dynamic attribute addition
+    # Not using __slots__ here to maintain compatibility
 
     def __init__(self, queue_name: str, fucntion_name: str, msg_dict: dict, function_only_params: dict = None):
-        # 优化：使用类级别缓存的 host_process，避免每次格式化
+        # Optimization: use class-level cached host_process to avoid formatting each time
         self.host_process = self._host_process
         self.queue_name = queue_name
         self.function = fucntion_name
         self.msg_dict = msg_dict
-        # 优化：直接从 msg_dict 获取 extra，避免多次 get 调用
+        # Optimization: get extra directly from msg_dict to avoid multiple get calls
         extra = msg_dict.get('extra', {})
         self.task_id = extra.get('task_id', '')
         self.publish_time = extra.get('publish_time')
         self.publish_time_format = extra.get('publish_time_format')
-        # 优化：使用类级别缓存的 process_id
+        # Optimization: use class-level cached process_id
         self.process_id = self._process_id
         self.thread_id = threading.get_ident()
-        # 优化：如果已经传入 function_only_params，直接使用，避免重复计算
+        # Optimization: if function_only_params already provided, use directly to avoid recalculation
         self.params = function_only_params if function_only_params is not None else get_func_only_params(msg_dict)
-        # 优化：延迟计算 params_str，使用 _params_str 缓存
+        # Optimization: lazy compute params_str, use _params_str cache
         self._params_str = None
         self.result = None
-        self.run_times = 0  # 消息实际重试运行了多少次
+        self.run_times = 0  # How many times the message was actually retried
         self.exception = None
         self.exception_type = None
         self.exception_msg = None
@@ -68,20 +68,20 @@ class FunctionResultStatus():
         self.time_end = None
         self.success = False
         self.run_status = ''
-        # 优化：延迟获取 total_thread，避免不必要的系统调用
+        # Optimization: lazy fetch total_thread to avoid unnecessary system calls
         self._total_thread = None
         self._has_requeue = False
         self._has_to_dlx_queue = False
         self._has_kill_task = False
         self.rpc_result_expire_seconds = None
         
-        # 额外的方便用户扩展，如果用户想自己放点其他的其他特殊奇葩信息，可以放在这里。而不必来这里改源码加字段。
-        # 用户可以在同一个线程或者协程中通过 fct.function_result_status.user_context 获取。
+        # Extra field for user extensions. If users want to store other special custom info, they can put it here without modifying source code to add fields.
+        # Users can access it within the same thread or coroutine via fct.function_result_status.user_context.
         self.user_context: dict = {}
     
     @property
     def params_str(self):
-        """延迟计算 params_str，只在需要时才进行 JSON 序列化"""
+        """Lazy compute params_str, only perform JSON serialization when needed"""
         if self._params_str is None:
             self._params_str = Serialization.to_json_str(self.params)
         return self._params_str
@@ -92,7 +92,7 @@ class FunctionResultStatus():
     
     @property
     def total_thread(self):
-        """延迟获取线程数，避免不必要的系统调用"""
+        """Lazy fetch thread count to avoid unnecessary system calls"""
         if self._total_thread is None:
             self._total_thread = threading.active_count()
         return self._total_thread
@@ -130,7 +130,7 @@ class FunctionResultStatus():
         datetime_str = time_util.DatetimeConverter().datetime_str
         try:
             Serialization.to_json_str(item['result'])
-            # json.dumps(item['result'])  # 不希望存不可json序列化的复杂类型。麻烦。存这种类型的结果是伪需求。
+            # json.dumps(item['result'])  # Don't want to store non-JSON-serializable complex types. Storing such result types is a pseudo-requirement.
         except TypeError:
             item['result'] = str(item['result'])[:1000]
         item.update({'insert_time_str': datetime_str,
@@ -168,7 +168,7 @@ class ResultPersistenceHelper(MongoMixin, FunboostFileLoggerMixin):
         if self.function_result_status_persistance_conf.is_save_status:
             self._create_indexes()
             # self._mongo_bulk_write_helper = MongoBulkWriteHelper(task_status_col, 100, 2)
-            self.logger.debug(f"函数运行状态结果将保存至mongo的 {MongoDbName.TASK_STATUS_DB} 库的 {queue_name} 集合中，请确认 funboost.py文件中配置的 MONGO_CONNECT_URL")
+            self.logger.debug(f"Function execution status results will be saved to the {queue_name} collection in MongoDB's {MongoDbName.TASK_STATUS_DB} database. Please verify the MONGO_CONNECT_URL configured in funboost.py")
 
     def _create_indexes(self):
         task_status_col = self.get_mongo_collection(MongoDbName.TASK_STATUS_DB, self._table_name)
@@ -189,14 +189,14 @@ class ResultPersistenceHelper(MongoMixin, FunboostFileLoggerMixin):
                                                 IndexModel([("params_str", pymongo.TEXT)]), IndexModel([("success", 1)]),
                                                 IndexModel([("time_cost", -1)]),  # 用于按耗时查询
                                                 ], )
-                task_status_col.create_index([("utime", 1)],  # 这个是过期时间索引。
-                                             expireAfterSeconds=self.function_result_status_persistance_conf.expire_seconds)  # 只保留7天(用户自定义的)。
+                task_status_col.create_index([("utime", 1)],  # This is the expiration time index.
+                                             expireAfterSeconds=self.function_result_status_persistance_conf.expire_seconds)  # Retain only 7 days (user-configurable).
             else:
                 if old_expire_after_seconds != self.function_result_status_persistance_conf.expire_seconds:
-                    self.logger.warning(f'过期时间从 {old_expire_after_seconds} 修改为 {self.function_result_status_persistance_conf.expire_seconds} 。。。')
-                    task_status_col.drop_index('utime_1', ),  # 这个不能也设置为True，导致修改过期时间不成功。
+                    self.logger.warning(f'Expiration time changed from {old_expire_after_seconds} to {self.function_result_status_persistance_conf.expire_seconds}')
+                    task_status_col.drop_index('utime_1', ),  # This cannot also be set to True, would cause modification of expiration time to fail.
                     task_status_col.create_index([("utime", 1)],
-                                                 expireAfterSeconds=self.function_result_status_persistance_conf.expire_seconds, background=True)  # 只保留7天(用户自定义的)。
+                                                 expireAfterSeconds=self.function_result_status_persistance_conf.expire_seconds, background=True)  # Retain only 7 days (user-configurable).
         except pymongo.errors.PyMongoError as e:
             self.logger.warning(e)
 
@@ -206,7 +206,7 @@ class ResultPersistenceHelper(MongoMixin, FunboostFileLoggerMixin):
             item = function_result_status.get_status_dict()
             item2 = copy.copy(item)
             if not self.function_result_status_persistance_conf.is_save_result:
-                item2['result'] = '不保存结果'
+                item2['result'] = 'result not saved'
             if item2['result'] is None:
                 item2['result'] = ''
             if item2['exception'] is None:
@@ -223,9 +223,9 @@ class ResultPersistenceHelper(MongoMixin, FunboostFileLoggerMixin):
                         self._has_start_bulk_insert_thread = True
                         decorators.keep_circulating(time_sleep=0.2, is_display_detail_exception=True, block=False,
                                                     daemon=False)(self._bulk_insert)()
-                        self.logger.warning(f'启动批量保存函数消费状态 结果到mongo的 线程')
+                        self.logger.warning(f'Started thread for bulk saving function consumption status results to MongoDB')
             else:
-                task_status_col.replace_one({'_id': item2['_id']}, item2, upsert=True)  # 立即实时插入。
+                task_status_col.replace_one({'_id': item2['_id']}, item2, upsert=True)  # Immediate real-time insert.
 
     def _bulk_insert(self):
         with self._bulk_list_lock:

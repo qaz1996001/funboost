@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Funboost Workflow - Signature 任务签名
+Funboost Workflow - Signature (Task Signature)
 
-Signature 表示一个"待执行"的任务，包含：
-- 对 booster（@boost 装饰的函数）的引用
-- 调用时的参数 (args, kwargs)
-- 是否忽略上游结果 (immutable)
+Signature represents a "pending" task, containing:
+- A reference to a booster (function decorated with @boost)
+- The call parameters (args, kwargs)
+- Whether to ignore upstream results (immutable)
 
-类似 Celery 的 signature / s() 概念。
+Similar to Celery's signature / s() concept.
 """
 
 import typing
@@ -18,37 +18,37 @@ from .workflow_mixin import WorkflowPublisherMixin
 
 def _update_workflow_context_after_task(task_id: str):
     """
-    任务完成后更新 workflow_context 的 current_task_id 和 chain_depth
-    
-    这解决了 primitives 编排场景下的问题：
-    - 发布者发布任务 A，等待 RPC 结果
-    - A 完成，发布者需要知道 A 的 task_id
-    - 发布者发布任务 B 时，B 的 parent_task_id 应该是 A 的 task_id
-    - 同时递增 chain_depth，使得 B 的层级比 A 深一层
+    Update workflow_context's current_task_id and chain_depth after a task completes
+
+    This solves the problem in primitives orchestration scenarios:
+    - Publisher publishes task A, waits for RPC result
+    - A completes, publisher needs to know A's task_id
+    - When publisher publishes task B, B's parent_task_id should be A's task_id
+    - Also increments chain_depth so B's level is one deeper than A's
     """
     ctx = WorkflowPublisherMixin.get_workflow_context()
     if ctx:
         ctx = ctx.copy()
         ctx['current_task_id'] = task_id
-        ctx['chain_depth'] = ctx.get('chain_depth', 0) + 1  # 递增层级
+        ctx['chain_depth'] = ctx.get('chain_depth', 0) + 1  # Increment level
         WorkflowPublisherMixin.set_workflow_context(ctx)
 
 
 class Signature:
     """
-    任务签名 - 表示一个待执行的任务及其参数
-    
-    用法：
+    Task Signature - represents a pending task and its parameters
+
+    Usage:
     ```python
-    # 方式1：直接创建
+    # Method 1: Create directly
     sig = Signature(my_task, args=(1, 2), kwargs={'name': 'test'})
-    
-    # 方式2：通过便捷函数（推荐）
+
+    # Method 2: Via convenience function (recommended)
     sig = my_task.s(1, 2, name='test')
-    
-    # 执行签名
-    result = sig.apply()  # 同步
-    async_result = sig.apply_async()  # 异步
+
+    # Execute signature
+    result = sig.apply()  # Synchronous
+    async_result = sig.apply_async()  # Asynchronous
     ```
     """
     
@@ -58,10 +58,10 @@ class Signature:
                  kwargs: dict = None, 
                  immutable: bool = False):
         """
-        :param booster: @boost 装饰的函数
-        :param args: 位置参数
-        :param kwargs: 关键字参数
-        :param immutable: 是否忽略上游传入的结果（用于 chain 场景）
+        :param booster: Function decorated with @boost
+        :param args: Positional arguments
+        :param kwargs: Keyword arguments
+        :param immutable: Whether to ignore upstream results (used in chain scenarios)
         """
         self.booster = booster
         self.args = args or ()
@@ -70,7 +70,7 @@ class Signature:
     
     def s(self, *args, **kwargs) -> 'Signature':
         """
-        创建新的签名，合并参数（类似 Celery 的 .s() 方法）
+        Create a new signature with merged parameters (similar to Celery's .s() method)
         
         用法：
         ```python
@@ -83,21 +83,21 @@ class Signature:
     
     def si(self, *args, **kwargs) -> 'Signature':
         """
-        创建不可变签名（忽略上游结果）
-        
-        在 chain 中使用时，不会将上游任务的结果作为第一个参数传入。
+        Create an immutable signature (ignores upstream results)
+
+        When used in a chain, the upstream task's result will not be passed as the first argument.
         """
         merged_args = self.args + args
         merged_kwargs = {**self.kwargs, **kwargs}
         return Signature(self.booster, merged_args, merged_kwargs, immutable=True)
     
     def set_immutable(self, immutable: bool = True) -> 'Signature':
-        """设置是否忽略上游结果"""
+        """Set whether to ignore upstream results"""
         self.immutable = immutable
         return self
     
     def clone(self) -> 'Signature':
-        """克隆当前签名"""
+        """Clone the current signature"""
         return Signature(
             self.booster, 
             self.args, 
@@ -106,35 +106,35 @@ class Signature:
         )
     
     def _build_args(self, prev_result=None) -> tuple:
-        """构建实际执行时的参数，处理上游结果传递"""
+        """Build actual execution parameters, handling upstream result passing"""
         if prev_result is not None and not self.immutable:
-            # 将上游结果作为第一个参数
+            # Pass upstream result as the first argument
             return (prev_result,) + self.args
         return self.args
     
     def apply(self, prev_result=None) -> FunctionResultStatus:
         """
-        同步执行任务并等待结果
-        
-        :param prev_result: 上游任务的结果（用于 chain 场景）
-        :return: FunctionResultStatus 包含执行结果
+        Synchronously execute the task and wait for result
+
+        :param prev_result: Upstream task's result (used in chain scenarios)
+        :return: FunctionResultStatus containing execution result
         """
         args = self._build_args(prev_result)
         async_result = self.booster.push(*args, **self.kwargs)
         result_status = async_result.wait_rpc_data_or_raise(raise_exception=True)
         
-        # 任务完成后，更新 workflow_context 的 current_task_id
-        # 这样下一个任务发布时，parent_task_id 就是当前任务的 task_id
+        # After task completes, update workflow_context's current_task_id
+        # So when the next task is published, parent_task_id will be the current task's task_id
         _update_workflow_context_after_task(result_status.task_id)
         
         return result_status
     
     def apply_async(self, prev_result=None) -> AsyncResult:
         """
-        异步执行任务，返回 AsyncResult
-        
-        :param prev_result: 上游任务的结果（用于 chain 场景）
-        :return: AsyncResult 可用于后续等待结果
+        Asynchronously execute the task, returning AsyncResult
+
+        :param prev_result: Upstream task's result (used in chain scenarios)
+        :return: AsyncResult that can be used to wait for the result later
         """
         args = self._build_args(prev_result)
         return self.booster.push(*args, **self.kwargs)
@@ -144,9 +144,9 @@ class Signature:
     
     def __or__(self, other):
         """
-        支持 | 运算符创建 Chain
-        
-        用法：task1.s() | task2.s() | task3.s()
+        Support | operator to create Chain
+
+        Usage: task1.s() | task2.s() | task3.s()
         """
         from .primitives import Chain
         if isinstance(other, Signature):
@@ -159,7 +159,7 @@ class Signature:
 
 def signature(booster, *args, **kwargs) -> Signature:
     """
-    便捷函数：创建任务签名
+    Convenience function: create a task signature
     
     用法：
     ```python

@@ -9,7 +9,7 @@ from funboost.utils.redis_manager import RedisMixin
 
 class RedisPriorityPublisher(FlushRedisQueueMixin,AbstractPublisher, RedisMixin,):
     """
-    redis队列，支持任务优先级。
+    Redis queue with task priority support.
     """
 
     def custom_init(self):
@@ -23,7 +23,7 @@ class RedisPriorityPublisher(FlushRedisQueueMixin,AbstractPublisher, RedisMixin,
 
     def build_queue_name_by_msg(self, msg):
         """
-        根据消息的other_extra_params的 priority ，自动生成子队列名。例如 queue_name:1   queue_name:2  queue_name:3 queue_name:4
+        Automatically generate sub-queue names based on the message's other_extra_params priority. E.g., queue_name:1  queue_name:2  queue_name:3  queue_name:4
         :param msg:
         :return:
         """
@@ -31,7 +31,7 @@ class RedisPriorityPublisher(FlushRedisQueueMixin,AbstractPublisher, RedisMixin,
         x_max_priority = self.publisher_params.broker_exclusive_config['x-max-priority']
         queue_name = self.queue_name
         if x_max_priority and priority:
-            priority = min(priority, x_max_priority)  # 防止有傻瓜发布消息的优先级priroty比最大支持的优先级还高。
+            priority = min(priority, x_max_priority)  # Prevent priority from exceeding the maximum supported priority.
             queue_name = f'{self.queue_name}:{priority}'
         return queue_name
 
@@ -51,6 +51,6 @@ class RedisPriorityPublisher(FlushRedisQueueMixin,AbstractPublisher, RedisMixin,
         pass
 
     def clear(self):
-        self.logger.warning(f'清除 {self.queue_list} 中的消息')
+        self.logger.warning(f'Clearing messages in {self.queue_list}')
         self.redis_db_frame.delete(*self.queue_list)
         FlushRedisQueueMixin.clear(self)

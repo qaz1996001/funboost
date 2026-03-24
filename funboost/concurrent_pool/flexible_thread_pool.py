@@ -1,11 +1,11 @@
 """
-比 ThreadPoolExecutorShrinkAble 更简单的的弹性线程池。完全彻底从头手工开发
+A simpler flexible thread pool than ThreadPoolExecutorShrinkAble. Completely built from scratch.
 
-这个线程池 submit没有返回值，不返回future对象，不支持map方法。
+This thread pool's submit has no return value, does not return a future object, and does not support the map method.
 
-此线程池性能比concurrent.futures.ThreadPoolExecutor高200%
+This thread pool's performance is 200% better than concurrent.futures.ThreadPoolExecutor.
 
-顺便兼容asyns def的函数并发运行
+Also supports concurrent execution of async def functions.
 """
 
 import asyncio
@@ -55,7 +55,7 @@ class FlexibleThreadPoolMinWorkers0(FlexibleThreadPool):
 
 
 def run_sync_or_async_fun000(func, *args, **kwargs):
-    """这种方式造成电脑很卡,不行"""
+    """This approach makes the computer very laggy, not viable"""
     fun_is_asyncio = inspect.iscoroutinefunction(func)
     if fun_is_asyncio:
         loop = asyncio.new_event_loop()
@@ -105,8 +105,8 @@ class _KeepAliveTimeThread(threading.Thread, metaclass=FunboostMetaTypeFileLogge
         self.pool = thread_pool
 
     def run(self) -> None:
-        # 可以设置 LogManager('_KeepAliveTimeThread').preset_log_level(logging.INFO) 来屏蔽下面的话,见文档6.17.b
-        self.logger.debug(f'新启动线程 {self.ident} ')
+        # You can set LogManager('_KeepAliveTimeThread').preset_log_level(logging.INFO) to suppress the messages below, see docs section 6.17.b
+        self.logger.debug(f'New thread started {self.ident} ')
         self.pool._change_threads_free_count(1)
         self.pool._change_threads_start_count(1)
         while 1:
@@ -117,11 +117,11 @@ class _KeepAliveTimeThread(threading.Thread, metaclass=FunboostMetaTypeFileLogge
                     # print(self.pool.threads_free_count)
                     if self.pool.threads_free_count > self.pool.MIN_WORKERS:
                   
-                        # 你如果不喜欢这条日志，对funboost的自适应伸缩线程池没有兴趣，可以在你的 funboost_config.py 的 FunboostCommonConfig 设置 FUNBOOST_PROMPT_LOG_LEVEL = logging.INFO
-                        self.logger.debug(f'停止线程 {self._ident}, 触发条件是 {self.pool.pool_ident} 线程池中的 {self.ident} 线程 超过 {self.pool.KEEP_ALIVE_TIME} 秒没有任务，线程池中不在工作状态中的线程数量是 {self.pool.threads_free_count}，超过了指定的最小核心数量 {self.pool.MIN_WORKERS}')  # noqa
+                        # If you don't want this log message and are not interested in funboost's adaptive thread pool, set FUNBOOST_PROMPT_LOG_LEVEL = logging.INFO in FunboostCommonConfig in your funboost_config.py
+                        self.logger.debug(f'Stopping thread {self._ident}, trigger: thread {self.ident} in pool {self.pool.pool_ident} has had no tasks for {self.pool.KEEP_ALIVE_TIME} seconds. Idle thread count: {self.pool.threads_free_count}, exceeds minimum core count {self.pool.MIN_WORKERS}')  # noqa
                         self.pool._change_threads_free_count(-1)
                         self.pool._change_threads_start_count(-1)
-                        break  # 退出while 1，即是结束。
+                        break  # Exit while loop, i.e., terminate.
                     else:
                         continue
             self.pool._change_threads_free_count(-1)
@@ -129,7 +129,7 @@ class _KeepAliveTimeThread(threading.Thread, metaclass=FunboostMetaTypeFileLogge
                 fun = sync_or_async_fun_deco(func)
                 fun(*args, **kwargs)
             except BaseException as exc:
-                self.logger.exception(f'函数 {func} 中发生错误，错误原因是 {type(exc)} {exc} ')
+                self.logger.exception(f'Error occurred in function {func}, reason: {type(exc)} {exc} ')
             self.pool._change_threads_free_count(1)
 
 

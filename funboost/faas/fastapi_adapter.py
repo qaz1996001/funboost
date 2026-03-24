@@ -88,13 +88,13 @@ async def funboost_exception_handler(request: Request, exc: FunboostException) -
 
 async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
-    统一处理所有其他异常
-    返回固定code 5555,并包含完整的异常堆栈信息
+    Unified handler for all other exceptions.
+    Returns a fixed code 5555 and includes the full exception traceback.
     """
-    logger.exception(f'未预期的异常: {str(exc)}')
+    logger.exception(f'Unexpected exception: {str(exc)}')
     response_data = {
         "succ": False,
-        "msg": f"系统错误: {type(exc).__name__}: {str(exc)}",
+        "msg": f"System error: {type(exc).__name__}: {str(exc)}",
         "code": 5555,
         "error_data": None,
         "error": type(exc).__name__,
@@ -109,14 +109,14 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
 
 def register_funboost_exception_handlers(app: FastAPI):
     """
-    注册 Funboost 的全局异常处理器到 FastAPI app
-    
-    使用示例:
+    Register Funboost's global exception handlers to the FastAPI app.
+
+    Usage example:
         from funboost.faas.fastapi_adapter import fastapi_router, register_funboost_exception_handlers
-        
+
         app = FastAPI()
         app.include_router(fastapi_router)
-        register_funboost_exception_handlers(app)  # 注册全局异常处理
+        register_funboost_exception_handlers(app)  # Register global exception handling
     """
     app.add_exception_handler(FunboostException, funboost_exception_handler)
     app.add_exception_handler(Exception, general_exception_handler)
@@ -124,37 +124,37 @@ def register_funboost_exception_handlers(app: FastAPI):
 
 
 
-# ==================== Funboost Router 异常处理装饰器 ====================
-# 只针对 funboost router 的接口，不影响用户自己的 app
+# ==================== Funboost Router Exception Handling Decorator ====================
+# Only applies to funboost router endpoints, does not affect the user's own app
 
 def handle_funboost_exceptions(func):
     """
-    装饰器：统一处理 funboost router 接口的异常
-    只在 funboost 的接口中使用，不会影响用户自己的 FastAPI app
-    
-    使用方法:
+    Decorator: unified exception handling for funboost router endpoints.
+    Only used in funboost endpoints, does not affect the user's own FastAPI app.
+
+    Usage:
         @fastapi_router.get("/some_endpoint")
         @handle_funboost_exceptions
         async def some_endpoint():
-            # 直接写业务逻辑，不需要 try-except
+            # Write business logic directly, no try-except needed
             return BaseResponse(...)
-    
-    异常处理规则:
-        - FunboostException: 返回异常的 code、message、data、trace_id
-        - 其他异常: 返回 code 5555，包含完整堆栈信息
+
+    Exception handling rules:
+        - FunboostException: returns the exception's code, message, data, trace_id
+        - Other exceptions: returns code 5555, includes full traceback
     """
     import functools
     
     @functools.wraps(func)
     async def async_wrapper(*args, **kwargs):
         try:
-            # 如果是异步函数
+            # If it's an async function
             if asyncio.iscoroutinefunction(func):
                 return await func(*args, **kwargs)
             else:
                 return func(*args, **kwargs)
         except FunboostException as e:
-            # 处理 FunboostException
+            # Handle FunboostException
             # print(4444,e.to_dict())
             return BaseResponse(
                 succ=False,
@@ -166,11 +166,11 @@ def handle_funboost_exceptions(func):
                 trace_id=getattr(e, "trace_id", None)
             )
         except Exception as e:
-            # 处理其他异常
-            logger.exception(f'未预期的异常: {str(e)}')
+            # Handle other exceptions
+            logger.exception(f'Unexpected exception: {str(e)}')
             return BaseResponse(
                 succ=False,
-                msg=f"系统错误: {type(e).__name__}: {str(e)}",
+                msg=f"System error: {type(e).__name__}: {str(e)}",
                 code=5555,
                 error_data=None,
                 error=type(e).__name__,
@@ -183,7 +183,7 @@ def handle_funboost_exceptions(func):
         try:
             return func(*args, **kwargs)
         except FunboostException as e:
-            # 处理 FunboostException
+            # Handle FunboostException
             # print(4444,e.to_dict())
             return BaseResponse(
                 succ=False,
@@ -195,11 +195,11 @@ def handle_funboost_exceptions(func):
                 trace_id=getattr(e, "trace_id", None)
             )
         except Exception as e:
-            # 处理其他异常
-            logger.exception(f'未预期的异常: {str(e)}')
+            # Handle other exceptions
+            logger.exception(f'Unexpected exception: {str(e)}')
             return BaseResponse(
                 succ=False,
-                msg=f"系统错误: {type(e).__name__}: {str(e)}",
+                msg=f"System error: {type(e).__name__}: {str(e)}",
                 code=5555,
                 error_data=None,
                 error=type(e).__name__,
@@ -207,7 +207,7 @@ def handle_funboost_exceptions(func):
                 trace_id=None
             )
     
-    # 根据函数类型返回对应的包装器
+    # Return the corresponding wrapper based on function type
     if asyncio.iscoroutinefunction(func):
         return async_wrapper
     else:
@@ -218,31 +218,31 @@ def handle_funboost_exceptions(func):
 class BaseAllowExtraModel(BaseModel):
     
     if pydantic_version == 'v2':
-        # Pydantic v2 使用
+        # Pydantic v2 usage
         model_config = ConfigDict(extra="allow")
 
     elif pydantic_version == 'v1':
-        # Pydantic v1 使用
+        # Pydantic v1 usage
         class Config:
             extra = "allow"
 
 
 
-# 统一响应模型（泛型）
+# Unified response model (generic)
 T = typing.TypeVar('T')
 
 class BaseResponse(BaseModel, typing.Generic[T]):
     """
-    统一的泛型响应模型
-    
-    字段说明:
-        succ: 请求是否成功，True表示成功，False表示失败
-        msg: 消息描述
-        data: 返回的数据，使用泛型T
-        code: 业务状态码，200表示成功，其他表示各种错误
-        error: 错误类型名称（可选），如 "QueueNameNotExists", "ValueError"
-        traceback: 异常堆栈信息（可选），仅在出错时返回
-        trace_id: 追踪ID（可选），用于分布式追踪
+    Unified generic response model.
+
+    Field descriptions:
+        succ: Whether the request succeeded, True for success, False for failure
+        msg: Message description
+        data: Returned data, using generic T
+        code: Business status code, 200 means success, others indicate various errors
+        error: Error type name (optional), e.g., "QueueNameNotExists", "ValueError"
+        traceback: Exception traceback info (optional), only returned on errors
+        trace_id: Trace ID (optional), for distributed tracing
     """
     succ: bool
     msg: str
@@ -255,81 +255,81 @@ class BaseResponse(BaseModel, typing.Generic[T]):
 
 
 class MsgItem(BaseModel):
-    queue_name: str  # 队列名
-    msg_body: dict  # 消息体,就是boost函数的入参字典,例如 {"x":1,"y":2}
-    need_result: bool = False  # 发布消息后,是否需要返回结果
-    timeout: int = 60  # 等待结果返回的最大等待时间.
-    task_id: str = None  # 可选：指定 task_id
+    queue_name: str  # Queue name
+    msg_body: dict  # Message body, i.e., the boost function's input parameter dictionary, e.g., {"x":1,"y":2}
+    need_result: bool = False  # Whether to return the result after publishing the message
+    timeout: int = 60  # Maximum wait time for result to return
+    task_id: str = None  # Optional: specify task_id
 
 
-# 统一响应格式的数据结构
+# Unified response format data structures
 
-# 函数执行结果状态的详细模型（参考 FunctionResultStatus）
+# Detailed model for function execution result status (references FunctionResultStatus)
 class FunctionResultStatusModel(BaseModel):
     """
-    函数执行结果状态模型
-    对应 FunctionResultStatus.get_status_dict() 的返回值结构
+    Function execution result status model.
+    Corresponds to the return value structure of FunctionResultStatus.get_status_dict()
     """
-    # 基本信息
-    host_process: str  # 主机名-进程ID，例如 "LAPTOP-7V78BBO2 - 34572"
-    queue_name: str  # 队列名称
-    function: str  # 函数名称
-    
-    # 消息信息
-    msg_dict: dict  # 原始消息字典
-    task_id: str  # 任务ID
-    
-    # 进程和线程信息
-    process_id: int  # 进程ID
-    thread_id: int  # 线程ID
-    total_thread: int  # 活跃线程总数
-    
-    # 时间信息
-    publish_time: float  # 发布时间（时间戳）
-    publish_time_format: str  # 发布时间格式化字符串，例如 "2025-12-05 13:28:12"
-    time_start: float  # 开始执行时间（时间戳）
-    time_cost: typing.Optional[float]  # 执行耗时（秒）
-    time_end: float  # 结束时间（时间戳）
-    insert_time_str: str  # 插入时间字符串，例如 "2025-12-05 13:28:13"
-    insert_minutes: str  # 插入时间精确到分钟，例如 "2025-12-05 13:28"
-    
-    # 参数信息
-    params: dict  # 函数参数（字典形式）
-    params_str: str  # 函数参数（JSON字符串形式）
-    
-    # 执行结果信息
-    result: typing.Any  # 函数执行结果
-    run_times: int  # 运行次数
-    success: bool  # 是否成功
-    run_status: str  # 运行状态：'running' 或 'finish'
-    
-    # 异常信息（可选）
-    exception: typing.Optional[str]  # 异常详情
-    exception_type: typing.Optional[str]  # 异常类型
-    exception_msg: typing.Optional[str]  # 异常消息
-    rpc_chain_error_msg_dict: typing.Optional[dict]  # RPC链式调用错误信息
-    
-    # RPC配置
-    rpc_result_expire_seconds: typing.Optional[int]  # RPC结果过期时间（秒）
-    
-    # 主机信息
-    host_name: str  # 主机名，例如 "LAPTOP-7V78BBO2"
-    script_name: str  # 脚本名称（短），例如 "example_fastapi_router.py"
-    script_name_long: str  # 脚本名称（完整路径）
+    # Basic info
+    host_process: str  # Host name - Process ID, e.g., "LAPTOP-7V78BBO2 - 34572"
+    queue_name: str  # Queue name
+    function: str  # Function name
 
-    user_context: typing.Optional[dict] = {}  # 用户自定义的额外信息，用户随意存放任何信息。
-    
-    # MongoDB文档ID
-    _id: str  # MongoDB 文档ID，通常等于 task_id
-    
+    # Message info
+    msg_dict: dict  # Original message dictionary
+    task_id: str  # Task ID
+
+    # Process and thread info
+    process_id: int  # Process ID
+    thread_id: int  # Thread ID
+    total_thread: int  # Total active threads
+
+    # Time info
+    publish_time: float  # Publish time (timestamp)
+    publish_time_format: str  # Formatted publish time string, e.g., "2025-12-05 13:28:12"
+    time_start: float  # Execution start time (timestamp)
+    time_cost: typing.Optional[float]  # Execution duration (seconds)
+    time_end: float  # End time (timestamp)
+    insert_time_str: str  # Insert time string, e.g., "2025-12-05 13:28:13"
+    insert_minutes: str  # Insert time rounded to minute, e.g., "2025-12-05 13:28"
+
+    # Parameter info
+    params: dict  # Function parameters (dict form)
+    params_str: str  # Function parameters (JSON string form)
+
+    # Execution result info
+    result: typing.Any  # Function execution result
+    run_times: int  # Number of runs
+    success: bool  # Whether successful
+    run_status: str  # Run status: 'running' or 'finish'
+
+    # Exception info (optional)
+    exception: typing.Optional[str]  # Exception details
+    exception_type: typing.Optional[str]  # Exception type
+    exception_msg: typing.Optional[str]  # Exception message
+    rpc_chain_error_msg_dict: typing.Optional[dict]  # RPC chain call error info
+
+    # RPC config
+    rpc_result_expire_seconds: typing.Optional[int]  # RPC result expiration time (seconds)
+
+    # Host info
+    host_name: str  # Host name, e.g., "LAPTOP-7V78BBO2"
+    script_name: str  # Script name (short), e.g., "example_fastapi_router.py"
+    script_name_long: str  # Script name (full path)
+
+    user_context: typing.Optional[dict] = {}  # User-defined extra info, users can store any information here.
+
+    # MongoDB document ID
+    _id: str  # MongoDB document ID, usually equals task_id
+
     class Config:
-        # 允许字段别名（如 _id）
+        # Allow field aliases (e.g., _id)
         populate_by_name = True
 
 
 class RpcRespData(BaseAllowExtraModel):
     task_id: typing.Optional[str] = None
-    status_and_result: typing.Optional[FunctionResultStatusModel] = None  # 消费函数的消费状态和结果
+    status_and_result: typing.Optional[FunctionResultStatusModel] = None  # Consumer function's consumption status and result
 
 
 class CountData(BaseModel):
@@ -343,65 +343,65 @@ class AllQueuesData(BaseModel):
 
 
 class DeprecateQueueRequest(BaseModel):
-    """废弃队列请求模型"""
-    queue_name: str  # 要废弃的队列名称
+    """Deprecate queue request model"""
+    queue_name: str  # Queue name to deprecate
 
 
 class DeprecateQueueData(BaseModel):
-    """废弃队列响应数据模型"""
+    """Deprecate queue response data model"""
     queue_name: str
-    removed: bool  # 是否成功移除
+    removed: bool  # Whether removal was successful
 
 
 @fastapi_router.post("/publish", response_model=BaseResponse[RpcRespData])
 async def publish_msg(msg_item: MsgItem):
     """
-    发布消息接口，支持RPC模式。
-    支持queue_name是否存在的校验，支持校验消息内容是否正确。所以不用担心跨部门用户使用了错误的queue_name，或者消息内容不正确。
+    Publish message endpoint, supports RPC mode.
+    Supports validation of whether queue_name exists and whether message content is correct. So there's no need to worry about cross-department users using wrong queue_name or incorrect message content.
 
-    用户可以先通过 /get_queues_config 接口获取所有队列的配置信息，就知道有哪些队列，以及每个队列支持的消费函数的消息内容需要包括哪些入参字段了。
-    # 发布消息时候会立即校验入参是否正确，使用了redis中的 booster配置的 auto_generate_info.final_func_input_params_info 信息来校验入参名字和个数是否正确
+    Users can first get all queue configuration info via the /get_queues_config endpoint to know which queues exist and what input parameter fields each queue's consumer function requires.
+    # When publishing a message, the input parameters are immediately validated using the auto_generate_info.final_func_input_params_info from the booster config in redis to check if parameter names and count are correct.
     """
     status_and_result = None
     task_id = None
     try:
-        # SingleQueueConusmerParamsGetter(msg_item.queue_name).gen_publisher_for_faas() 从 funboost 的reids配置中生成 publisher
-        # 不需要用户亲自判断queue_name，然后精确使用某个非常具体的消费函数，
+        # SingleQueueConusmerParamsGetter(msg_item.queue_name).gen_publisher_for_faas() generates publisher from funboost's redis config
+        # No need for users to manually determine queue_name and then precisely use a specific consumer function,
 
 
         publisher = SingleQueueConusmerParamsGetter(msg_item.queue_name).gen_publisher_for_faas()
         booster_params_by_redis = SingleQueueConusmerParamsGetter(msg_item.queue_name).get_one_queue_params_use_cache()
         
-        # 检查是否需要 RPC 模式
+        # Check if RPC mode is needed
         if msg_item.need_result:
-          
-            # 开启 RPC 模式发布
+
+            # Publish with RPC mode enabled
             async_result = await publisher.aio_publish(
                 msg_item.msg_body,
-                task_id=msg_item.task_id,  # 可选：指定 task_id（用于重试失败任务）
+                task_id=msg_item.task_id,  # Optional: specify task_id (for retrying failed tasks)
                 task_options=TaskOptions(is_using_rpc_mode=True)
             )
             task_id = async_result.task_id
-            # 等待结果
+            # Wait for result
             status_and_result = await AioAsyncResult(async_result.task_id, timeout=msg_item.timeout).status_and_result
         else:
-            # 普通发布，可以指定 task_id
+            # Normal publish, can specify task_id
             async_result = await publisher.aio_publish(msg_item.msg_body, task_id=msg_item.task_id)
             task_id = async_result.task_id
 
         return BaseResponse[RpcRespData](
             succ=True,
-            msg=f'{msg_item.queue_name} 队列,消息发布成功',
+            msg=f'{msg_item.queue_name} queue, message published successfully',
             data=RpcRespData(
                 task_id=task_id,
                 status_and_result=status_and_result
             )
         )
     except Exception as e:
-        logger.exception(f'发布消息失败: {str(e)}')
+        logger.exception(f'Failed to publish message: {str(e)}')
         return BaseResponse[RpcRespData](
             succ=False,
-            msg=f'{msg_item.queue_name} 队列,消息发布失败 {type(e)} {e} {traceback.format_exc()}',
+            msg=f'{msg_item.queue_name} queue, message publish failed {type(e)} {e} {traceback.format_exc()}',
             data=RpcRespData(
                 task_id=task_id,
                 status_and_result=status_and_result
@@ -412,18 +412,18 @@ async def publish_msg(msg_item: MsgItem):
 @fastapi_router.get("/get_result", response_model=BaseResponse[RpcRespData])
 async def get_result(task_id: str, timeout: int = 5,):
     """
-    根据 task_id 获取任务执行结果
+    Get task execution result by task_id
     """
     try:
-        # 尝试获取结果，默认给个短的 timeout 防止一直阻塞，或者复用 AioAsyncResult 的逻辑
-        # 注意：如果任务还在运行，AioAsyncResult 会阻塞直到 timeout
-        # 如果任务早已完成并过期，这里可能返回 None
+        # Try to get the result, default to a short timeout to prevent blocking indefinitely, or reuse AioAsyncResult's logic
+        # Note: if the task is still running, AioAsyncResult will block until timeout
+        # If the task has already completed and expired, this may return None
         status_and_result = await AioAsyncResult(task_id, timeout=timeout).status_and_result
         
         if status_and_result:
             return BaseResponse[RpcRespData](
                 succ=True,
-                msg="获取成功",
+                msg="Retrieved successfully",
                 data=RpcRespData(
                     task_id=task_id,
                     status_and_result=status_and_result
@@ -432,7 +432,7 @@ async def get_result(task_id: str, timeout: int = 5,):
         else:
             return BaseResponse[RpcRespData](
                 succ=False,
-                msg="未获取到结果(可能已过期或未开始执行或超时或压根没启动消费)",
+                msg="No result retrieved (possibly expired, not started, timed out, or consumer not started at all)",
                 data=RpcRespData(
                     task_id=task_id,
                     status_and_result=None
@@ -440,10 +440,10 @@ async def get_result(task_id: str, timeout: int = 5,):
             )
             
     except Exception as e:
-        logger.exception(f'获取结果失败: {str(e)}')
+        logger.exception(f'Failed to get result: {str(e)}')
         return BaseResponse[RpcRespData](
             succ=False,
-            msg=f"获取结果出错: {str(e)}",
+            msg=f"Error getting result: {str(e)}",
             data=RpcRespData(
                 task_id=task_id,
                 status_and_result=None
@@ -451,15 +451,15 @@ async def get_result(task_id: str, timeout: int = 5,):
         )
 
 
-# 队列控制接口（暂停/恢复）
+# Queue control endpoints (pause/resume)
 
 class QueueNameRequest(BaseModel):
-    """队列名称请求模型"""
+    """Queue name request model"""
     queue_name: str
 
 
 class QueueControlData(BaseModel):
-    """队列控制操作的响应数据"""
+    """Response data for queue control operations"""
     queue_name: str
     success: bool
 
@@ -467,19 +467,19 @@ class QueueControlData(BaseModel):
 @fastapi_router.post("/pause_consume", response_model=BaseResponse[QueueControlData])
 def pause_consume(request: QueueNameRequest):
     """
-    暂停队列消费
-    
-    请求体:
+    Pause queue consumption.
+
+    Request body:
         {
-            "queue_name": "队列名称"
+            "queue_name": "queue name"
         }
-    
-    返回:
-        暂停操作的结果
-        
-    说明:
-        此接口会在 Redis 中设置暂停标志为 '1'，消费者会定期检查此标志并暂停消费。
-        暂停不会立即生效，需要等待消费者检查标志的时间间隔。
+
+    Returns:
+        Result of the pause operation.
+
+    Notes:
+        This endpoint sets the pause flag to '1' in Redis. Consumers will periodically check this flag and pause consumption.
+        Pausing does not take effect immediately; it requires waiting for the consumer's flag check interval.
     """
     try:
         
@@ -488,17 +488,17 @@ def pause_consume(request: QueueNameRequest):
         
         return BaseResponse[QueueControlData](
             succ=True,
-            msg=f"队列 {request.queue_name} 暂停成功",
+            msg=f"队列 {request.queue_name} paused successfully",
             data=QueueControlData(
                 queue_name=request.queue_name,
                 success=True
             )
         )
     except Exception as e:
-        logger.exception(f'暂停队列消费失败: {str(e)}')
+        logger.exception(f'Failed to pause queue consumption: {str(e)}')
         return BaseResponse[QueueControlData](
             succ=False,
-            msg=f"暂停队列 {request.queue_name} 失败: {str(e)}",
+            msg=f"Pause queue {request.queue_name} 失败: {str(e)}",
             data=QueueControlData(
                 queue_name=request.queue_name,
                 success=False
@@ -509,19 +509,19 @@ def pause_consume(request: QueueNameRequest):
 @fastapi_router.post("/resume_consume", response_model=BaseResponse[QueueControlData])
 def resume_consume(request: QueueNameRequest):
     """
-    恢复队列消费
-    
-    请求体:
+    Resume queue consumption.
+
+    Request body:
         {
-            "queue_name": "队列名称"
+            "queue_name": "queue name"
         }
-    
-    返回:
-        恢复操作的结果
-        
-    说明:
-        此接口会在 Redis 中设置暂停标志为 '0'，消费者会定期检查此标志并恢复消费。
-        恢复不会立即生效，需要等待消费者检查标志的时间间隔。
+
+    Returns:
+        Result of the resume operation.
+
+    Notes:
+        This endpoint sets the pause flag to '0' in Redis. Consumers will periodically check this flag and resume consumption.
+        Resuming does not take effect immediately; it requires waiting for the consumer's flag check interval.
     """
     try:
         
@@ -530,17 +530,17 @@ def resume_consume(request: QueueNameRequest):
         
         return BaseResponse[QueueControlData](
             succ=True,
-            msg=f"队列 {request.queue_name} 恢复成功",
+            msg=f"队列 {request.queue_name} resumed successfully",
             data=QueueControlData(
                 queue_name=request.queue_name,
                 success=True
             )
         )
     except Exception as e:
-        logger.exception(f'恢复队列消费失败: {str(e)}')
+        logger.exception(f'Failed to resume queue consumption: {str(e)}')
         return BaseResponse[QueueControlData](
             succ=False,
-            msg=f"恢复队列 {request.queue_name} 失败: {str(e)}",
+            msg=f"Resume queue {request.queue_name} 失败: {str(e)}",
             data=QueueControlData(
                 queue_name=request.queue_name,
                 success=False
@@ -553,27 +553,27 @@ def resume_consume(request: QueueNameRequest):
 @handle_funboost_exceptions  # 使用装饰器统一处理异常，不影响用户的app
 def get_msg_count(queue_name: str):
     """
-    根据 queue_name 获取消息数量
-    
-    注意：此接口使用了 @handle_funboost_exceptions 装饰器
-    所以不需要写 try-except，异常会自动被捕获并返回统一格式
+    Get message count by queue_name.
+
+    Note: this endpoint uses the @handle_funboost_exceptions decorator,
+    so no try-except is needed; exceptions are automatically caught and returned in a unified format.
     """
-    # 直接写业务逻辑，不需要 try-except
+    # Write business logic directly, no try-except needed
     publisher = SingleQueueConusmerParamsGetter(queue_name).gen_publisher_for_faas()
-    # 获取消息数量（注意：某些中间件可能不支持准确计数，返回-1）
+    # Get message count (Note: some middleware may not support accurate counting, returns -1)
     count = publisher.get_message_count()
     return BaseResponse[CountData](
         succ=True,
-        msg="获取成功",
+        msg="Retrieved successfully",
         data=CountData(
             queue_name=queue_name,
             count=count
         )
     )
-# 队列清空接口
+# Queue clear endpoint
 
 class ClearQueueData(BaseModel):
-    """清空队列响应数据"""
+    """Clear queue response data"""
     queue_name: str
     success: bool
 
@@ -581,41 +581,41 @@ class ClearQueueData(BaseModel):
 @fastapi_router.post("/clear_queue", response_model=BaseResponse[ClearQueueData])
 def clear_queue(request: QueueNameRequest):
     """
-    清空队列中的所有消息
-    
-    请求体:
+    Clear all messages in the queue.
+
+    Request body:
         {
-            "queue_name": "队列名称"
+            "queue_name": "queue name"
         }
-    
-    返回:
-        清空操作的结果
-        
-    说明:
-        此接口会清空指定队列中的所有待消费消息。
-        ⚠️ 此操作不可逆，请谨慎使用！
-        
-    注意:
-        broker_kind 会自动从已注册的 booster 中获取，无需手动指定。
+
+    Returns:
+        Result of the clear operation.
+
+    Notes:
+        This endpoint clears all pending messages in the specified queue.
+        Warning: this operation is irreversible, use with caution!
+
+    Note:
+        broker_kind is automatically obtained from the registered booster, no need to specify manually.
     """
     try:
-        # 通过 queue_name 自动获取对应的 booster
+        # Automatically get the corresponding booster by queue_name
         publisher = SingleQueueConusmerParamsGetter(request.queue_name).gen_publisher_for_faas()
         publisher.clear()
-        
+
         return BaseResponse[ClearQueueData](
             succ=True,
-            msg=f"队列 {request.queue_name} 清空成功",
+            msg=f"Queue {request.queue_name} cleared successfully",
             data=ClearQueueData(
                 queue_name=request.queue_name,
                 success=True
             )
         )
     except Exception as e:
-        logger.exception(f'清空队列失败: {str(e)}')
+        logger.exception(f'Failed to clear queue: {str(e)}')
         return BaseResponse[ClearQueueData](
             succ=False,
-            msg=f"清空队列 {request.queue_name} 失败: {str(e)}",
+            msg=f"Failed to clear queue {request.queue_name}: {str(e)}",
             data=ClearQueueData(
                 queue_name=request.queue_name,
                 success=False
@@ -628,27 +628,27 @@ def clear_queue(request: QueueNameRequest):
 @fastapi_router.get("/get_all_queues", response_model=BaseResponse[AllQueuesData])
 def get_all_queues():
     """
-    获取所有已注册的队列名称
-    
-    返回所有通过 @boost 装饰器注册的队列名称列表
+    Get all registered queue names.
+
+    Returns a list of all queue names registered via the @boost decorator.
     """
     try:
-        # 获取所有队列名称
+        # Get all queue names
         all_queues = QueuesConusmerParamsGetter().get_all_queue_names()
         
         return BaseResponse[AllQueuesData](
             succ=True,
-            msg="获取成功",
+            msg="Retrieved successfully",
             data=AllQueuesData(
                 queues=all_queues,
                 count=len(all_queues)
             )
         )
     except Exception as e:
-        logger.exception(f'获取所有队列失败: {str(e)}')
+        logger.exception(f'Failed to get all queues: {str(e)}')
         return BaseResponse[AllQueuesData](
             succ=False,
-            msg=f"获取所有队列失败: {str(e)}",
+            msg=f"Failed to get all queues: {str(e)}",
             data=AllQueuesData(
                 queues=[],
                 count=0
@@ -658,14 +658,13 @@ def get_all_queues():
 
 
 
-# 队列配置参数详细模型（参考 BoosterParams）
+# Detailed queue configuration parameters model (references BoosterParams)
 class QueueParams(BaseAllowExtraModel):
     """
-    队列的完整配置参数，
-    和BoosterParams不同的是，这里是完全版可json序列化的
-    这里的数据是从redis获取的，redis只能存json序列化的数据。
-    所以这里的例如 specify_async_loop 和 specify_concurrent_pool 都改成 typing.Any
-    
+    Complete configuration parameters for a queue.
+    Unlike BoosterParams, this version is fully JSON-serializable.
+    The data here is obtained from redis, which can only store JSON-serializable data.
+    Therefore, fields like specify_async_loop and specify_concurrent_pool are changed to typing.Any.
     """
     
     def __init__(self, **data):
@@ -676,103 +675,103 @@ class QueueParams(BaseAllowExtraModel):
                 data[new_field] = data.pop(old_field)
         super().__init__(**data)
 
-    # 基础配置
-    queue_name: str  # 队列名字
-    broker_kind: str  # 中间件类型，如 REDIS, RABBITMQ 等
-    project_name: typing.Optional[str] = None # 项目名
-    
-    # 并发配置
-    concurrent_mode: str  # 并发模式：threading/gevent/eventlet/async/single_thread
-    concurrent_num: int  # 并发数量
-    specify_concurrent_pool: typing.Optional[typing.Any]  # 指定的线程池/协程池
-    specify_async_loop: typing.Optional[typing.Any]   # 指定的async loop
-    is_auto_start_specify_async_loop_in_child_thread: bool  # 是否自动在子线程启动async loop
-    
-    # 频率控制
-    qps: typing.Optional[float]  # QPS限制（每秒执行次数）
-    is_using_distributed_frequency_control: bool  # 是否使用分布式频控
-    
-    # 心跳与监控
-    is_send_consumer_heartbeat_to_redis: bool  # 是否发送消费者心跳到redis
-    
-    # 重试配置
-    max_retry_times: int  # 最大自动重试次数
-    is_using_advanced_retry: bool  # 是否使用高级重试
-    advanced_retry_config: typing.Dict[str, typing.Any]  # 高级重试配置
-    is_push_to_dlx_queue_when_retry_max_times: bool  # 达到最大重试次数后是否推送到死信队列
-    
-    # 函数装饰与超时
-    consuming_function_decorator: typing.Optional[typing.Any]    # 函数装饰器
-    function_timeout: typing.Optional[float]  # 函数超时时间（秒）
-    is_support_remote_kill_task: bool  # 是否支持远程杀死任务
-    
-    # 日志配置
-    log_level: int  # 日志级别
-    logger_prefix: str  # 日志名字前缀
-    create_logger_file: bool  # 是否创建文件日志
-    logger_name: str  # 日志命名空间
-    log_filename: typing.Optional[str]  # 日志文件名
-    is_show_message_get_from_broker: bool  # 是否显示从broker获取的消息
-    is_print_detail_exception: bool  # 是否打印详细异常堆栈
-    publish_msg_log_use_full_msg: bool  # 发布消息日志是否显示完整消息
-    
-    # 消息过期与过滤
-    msg_expire_seconds: typing.Optional[float]  # 消息过期时间（秒）
-    do_task_filtering: bool  # 是否对函数入参进行过滤去重
-    task_filtering_expire_seconds: int  # 任务过滤的失效期
-    
-    # 函数结果持久化
-    function_result_status_persistance_conf: typing.Dict[str, typing.Any]  # 函数结果状态持久化配置
-    
-    # 用户自定义
-    user_custom_record_process_info_func: typing.Optional[typing.Any]  # 用户自定义的保存消息处理记录函数
-    
-    # RPC模式
-    is_using_rpc_mode: bool  # 是否使用RPC模式
-    rpc_result_expire_seconds: int  # RPC结果过期时间（秒）
-    rpc_timeout: int  # RPC超时时间（秒）
-    
-    # 延时任务
-    delay_task_apscheduler_jobstores_kind: str  # 延时任务的jobstore类型：redis/memory
-    
-    # 定时运行控制
-    allow_run_time_cron: typing.Optional[str] = None  # 只允许在规定的crontab表达式时间内运行，为None则不限制
-    
-    # 启动控制
-    schedule_tasks_on_main_thread: bool  # 是否在主线程调度任务
-    is_auto_start_consuming_message: bool  # 是否自动启动消费
-    
-    # 分组管理
-    booster_group: typing.Optional[str]  # 消费分组名字
-    
-    # 消费函数信息
-    consuming_function: typing.Any  # 消费函数
-    consuming_function_raw: typing.Any  # 原始消费函数
-    consuming_function_name: str  # 消费函数名称
-    
-    # 中间件专属配置
-    broker_exclusive_config: typing.Dict[str, typing.Any]  # 不同中间件的专属配置
-    
-    # 参数校验
-    should_check_publish_func_params: bool  # 是否校验发布时的函数参数
-    manual_func_input_params :typing.Optional[typing.Dict[str, typing.Any]] = None # 手动指定函数入参字段，默认是根据消费函数def定义的入参来生成这个。
-    
-    # 自定义覆盖类
-    consumer_override_cls: typing.Optional[typing.Any]   # 自定义消费者类
-    publisher_override_cls: typing.Optional[typing.Any]   # 自定义发布者类
-    
-    # 函数类型
-    consuming_function_kind: typing.Optional[str]  # 函数类型：CLASS_METHOD/INSTANCE_METHOD/STATIC_METHOD/COMMON_FUNCTION
-    
-    # 用户自定义配置
-    user_options: typing.Dict[str, typing.Any]  # 用户额外自定义的配置
-    
-    # 自动生成信息
-    auto_generate_info: typing.Dict[str, typing.Any]  # 自动生成的信息,里面有个 final_func_input_params_info 存储了函数入参信息，用户也可以把这当做微服务的接口文档协议，让用户清楚知道消息需要传递哪些入参。
+    # Basic configuration
+    queue_name: str  # Queue name
+    broker_kind: str  # Middleware type, e.g., REDIS, RABBITMQ, etc.
+    project_name: typing.Optional[str] = None # Project name
 
-    # faas 相关
-    is_fake_booster: bool = False  # 是否是伪造的booster，用于faas模式下跨项目管理
-    booster_registry_name: str = 'default'  # 用于隔离boosters注册，普通用户不用改
+    # Concurrency configuration
+    concurrent_mode: str  # Concurrency mode: threading/gevent/eventlet/async/single_thread
+    concurrent_num: int  # Number of concurrent workers
+    specify_concurrent_pool: typing.Optional[typing.Any]  # Specified thread pool/coroutine pool
+    specify_async_loop: typing.Optional[typing.Any]   # Specified async loop
+    is_auto_start_specify_async_loop_in_child_thread: bool  # Whether to auto-start async loop in child thread
+
+    # Rate control
+    qps: typing.Optional[float]  # QPS limit (executions per second)
+    is_using_distributed_frequency_control: bool  # Whether to use distributed rate control
+
+    # Heartbeat and monitoring
+    is_send_consumer_heartbeat_to_redis: bool  # Whether to send consumer heartbeat to redis
+
+    # Retry configuration
+    max_retry_times: int  # Maximum auto-retry count
+    is_using_advanced_retry: bool  # Whether to use advanced retry
+    advanced_retry_config: typing.Dict[str, typing.Any]  # Advanced retry configuration
+    is_push_to_dlx_queue_when_retry_max_times: bool  # Whether to push to dead letter queue when max retries reached
+
+    # Function decoration and timeout
+    consuming_function_decorator: typing.Optional[typing.Any]    # Function decorator
+    function_timeout: typing.Optional[float]  # Function timeout (seconds)
+    is_support_remote_kill_task: bool  # Whether to support remote task killing
+
+    # Logging configuration
+    log_level: int  # Log level
+    logger_prefix: str  # Logger name prefix
+    create_logger_file: bool  # Whether to create file log
+    logger_name: str  # Logger namespace
+    log_filename: typing.Optional[str]  # Log filename
+    is_show_message_get_from_broker: bool  # Whether to show messages received from broker
+    is_print_detail_exception: bool  # Whether to print detailed exception traceback
+    publish_msg_log_use_full_msg: bool  # Whether publish message log shows full message
+
+    # Message expiration and filtering
+    msg_expire_seconds: typing.Optional[float]  # Message expiration time (seconds)
+    do_task_filtering: bool  # Whether to filter and deduplicate function input parameters
+    task_filtering_expire_seconds: int  # Task filtering expiration period
+
+    # Function result persistence
+    function_result_status_persistance_conf: typing.Dict[str, typing.Any]  # Function result status persistence configuration
+
+    # User custom
+    user_custom_record_process_info_func: typing.Optional[typing.Any]  # User-defined function for saving message processing records
+
+    # RPC mode
+    is_using_rpc_mode: bool  # Whether to use RPC mode
+    rpc_result_expire_seconds: int  # RPC result expiration time (seconds)
+    rpc_timeout: int  # RPC timeout (seconds)
+
+    # Delayed tasks
+    delay_task_apscheduler_jobstores_kind: str  # Delayed task jobstore type: redis/memory
+
+    # Scheduled run control
+    allow_run_time_cron: typing.Optional[str] = None  # Only allow running during specified crontab expression times, None means no restriction
+
+    # Startup control
+    schedule_tasks_on_main_thread: bool  # Whether to schedule tasks on the main thread
+    is_auto_start_consuming_message: bool  # Whether to auto-start consuming
+
+    # Group management
+    booster_group: typing.Optional[str]  # Consumer group name
+
+    # Consumer function info
+    consuming_function: typing.Any  # Consumer function
+    consuming_function_raw: typing.Any  # Raw consumer function
+    consuming_function_name: str  # Consumer function name
+
+    # Middleware-specific configuration
+    broker_exclusive_config: typing.Dict[str, typing.Any]  # Middleware-specific configurations
+
+    # Parameter validation
+    should_check_publish_func_params: bool  # Whether to validate function parameters when publishing
+    manual_func_input_params :typing.Optional[typing.Dict[str, typing.Any]] = None # Manually specify function input parameter fields; by default, this is generated from the consumer function's def parameter definitions.
+
+    # Custom override classes
+    consumer_override_cls: typing.Optional[typing.Any]   # Custom consumer class
+    publisher_override_cls: typing.Optional[typing.Any]   # Custom publisher class
+
+    # Function type
+    consuming_function_kind: typing.Optional[str]  # Function type: CLASS_METHOD/INSTANCE_METHOD/STATIC_METHOD/COMMON_FUNCTION
+
+    # User custom configuration
+    user_options: typing.Dict[str, typing.Any]  # User's additional custom configuration
+
+    # Auto-generated info
+    auto_generate_info: typing.Dict[str, typing.Any]  # Auto-generated info, contains final_func_input_params_info which stores function input parameter info. Users can also use this as a microservice API documentation protocol to clearly know what input parameters a message needs.
+
+    # FaaS related
+    is_fake_booster: bool = False  # Whether it is a fake booster, used for cross-project management in FaaS mode
+    booster_registry_name: str = 'default'  # Used to isolate booster registrations, regular users don't need to change this
 
     
 
@@ -869,7 +868,7 @@ def get_queues_config():
         
         return BaseResponse[QueueConfigData](
             succ=True,
-            msg="获取成功",
+            msg="Retrieved successfully",
             data=QueueConfigData(
                 queues_config=queues_config,
                 count=len(queues_config)
@@ -903,7 +902,7 @@ def get_one_queue_config(queue_name: str):
     
     return BaseResponse[QueueParams](
         succ=True,
-        msg="获取成功",
+        msg="Retrieved successfully",
         data=queue_params
     )
 @fastapi_router.get("/get_queue_run_info", response_model=BaseResponse[QueueParamsAndActiveConsumersData])
@@ -936,7 +935,7 @@ def get_queue_run_info(queue_name: str):
         
         return BaseResponse[QueueParamsAndActiveConsumersData](
             succ=True,
-            msg="获取成功",
+            msg="Retrieved successfully",
             data=QueueParamsAndActiveConsumersData(**queue_info)
         )
         
@@ -983,7 +982,7 @@ def get_all_queue_run_info():
         
         return BaseResponse[AllQueuesRunInfoData](
             succ=True,
-            msg="获取成功",
+            msg="Retrieved successfully",
             data=AllQueuesRunInfoData(
                 queues=queues_data,
                 total_count=len(queues_data)
@@ -1215,7 +1214,7 @@ def get_timing_jobs(
         
         return BaseResponse[TimingJobListData](
             succ=True,
-            msg="获取成功",
+            msg="Retrieved successfully",
             data=TimingJobListData(
                 jobs_by_queue=jobs_by_queue,
                 total_count=total_count
@@ -1259,7 +1258,7 @@ def get_timing_job(
             kwargs = job.kwargs if hasattr(job, 'kwargs') and job.kwargs else {}
             return BaseResponse[TimingJobData](
                 succ=True,
-                msg="获取成功",
+                msg="Retrieved successfully",
                 data=TimingJobData(
                     job_id=job.id,
                     queue_name=queue_name,
@@ -1532,7 +1531,7 @@ def get_scheduler_status(
     
     return BaseResponse(
         succ=True,
-        msg="获取成功",
+        msg="Retrieved successfully",
         data=SchedulerStatusData(
             queue_name=queue_name,
             status_code=state,
@@ -1617,7 +1616,7 @@ def get_care_project_name():
     
     return BaseResponse(
         succ=True,
-        msg="获取成功",
+        msg="Retrieved successfully",
         data=CareProjectNameData(
             care_project_name=care_project_name
         )
@@ -1669,7 +1668,7 @@ def get_all_project_names():
     
     return BaseResponse(
         succ=True,
-        msg="获取成功",
+        msg="Retrieved successfully",
         data=AllProjectNamesData(
             project_names=sorted(project_names) if project_names else [],
             count=len(project_names) if project_names else 0

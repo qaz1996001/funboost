@@ -19,18 +19,18 @@ from funboost.funboost_config_deafult import BrokerConnConfig
 
 get_funboost_file_logger('pikav1', log_level_int=20)
 
-@deprecated('不建议使用这个中间件模式，建议使用 BrokerEnum.RABBITMQ_AMQPSTORM 操作rabbitmq')
+@deprecated('This middleware mode is not recommended. Please use BrokerEnum.RABBITMQ_AMQPSTORM to operate rabbitmq')
 class RabbitmqConsumer(AbstractConsumer):
     """
-    使用pika包实现的。
-    pika包 子线程去使用chanel执行ack，由于跨线程操作chanel报错，比较麻烦。
+    Implemented using the pika package.
+    With pika, using a channel in a child thread for ack causes cross-thread channel operation errors, which is troublesome.
     """
 
 
     # noinspection PyAttributeOutsideInit
     def custom_init(self):
         self._lock_for_pika = Lock()
-        self.logger.critical('pika 多线程中操作同一个 channel 有问题，如果使用 rabbitmq 建议设置中间件为 BrokerEnum.RABBITMQ_AMQPSTORM')
+        self.logger.critical('pika has issues operating the same channel across multiple threads. If using rabbitmq, it is recommended to set middleware to BrokerEnum.RABBITMQ_AMQPSTORM')
         os._exit(444) # noqa
 
     def _dispatch_task(self):
@@ -46,7 +46,7 @@ class RabbitmqConsumer(AbstractConsumer):
         while True:
             # 文档例子  https://github.com/pika/pika
             try:
-                self.logger.warning(f'使用pika 链接mq')
+                self.logger.warning(f'Connecting to mq using pika')
                 # self.rabbit_client = RabbitMqFactory(is_use_rabbitpy=0).get_rabbit_cleint()
                 # self.channel = self.rabbit_client.creat_a_channel()
 
@@ -76,9 +76,9 @@ class RabbitmqConsumer(AbstractConsumer):
     def _confirm_consume000(self, kw):
         with self._lock_for_pika:
             try:
-                kw['ch'].basic_ack(delivery_tag=kw['method'].delivery_tag)  # 确认消费
+                kw['ch'].basic_ack(delivery_tag=kw['method'].delivery_tag)  # Confirm consumption
             except AMQPError as e:
-                self.logger.error(f'pika确认消费失败  {e}')
+                self.logger.error(f'pika confirm consumption failed  {e}')
 
     def _confirm_consume(self, kw):
         # with self._lock_for_pika:

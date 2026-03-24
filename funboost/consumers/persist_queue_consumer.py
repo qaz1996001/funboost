@@ -10,7 +10,7 @@ from persistqueue import Empty
 
 class PersistQueueConsumer(AbstractConsumer):
     """
-    persist queue包实现的本地持久化消息队列。
+    Local persistent message queue implemented using the persist queue package.
     """
 
     def _dispatch_task(self):

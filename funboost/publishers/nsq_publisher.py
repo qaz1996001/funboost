@@ -8,7 +8,7 @@ from funboost.funboost_config_deafult import BrokerConnConfig
 
 class NsqPublisher(AbstractPublisher, ):
     """
-    使用nsq作为中间件
+    Uses NSQ as the broker.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -25,8 +25,8 @@ class NsqPublisher(AbstractPublisher, ):
         try:
             self._nsqd_cleint.empty_topic(self._queue_name)
         except GnsqImporter().NSQHttpError as e:
-            self.logger.exception(e)  # 不能清除一个不存在的topoc会报错，和其他消息队列中间件不同。
-        self.logger.warning(f'清除 {self._queue_name} topic中的消息成功')
+            self.logger.exception(e)  # Cannot clear a non-existent topic; it will raise an error, unlike other message queue brokers.
+        self.logger.warning(f'Successfully cleared messages in topic {self._queue_name}')
 
     def get_message_count(self):
         return -1

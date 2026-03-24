@@ -12,7 +12,7 @@ from funboost.core.func_params_model import PublisherParams
 from funboost.utils import system_util
 
 if system_util.is_windows():
-    raise ImportError('rocketmq包 只支持linux和mac')
+    raise ImportError('The rocketmq package only supports Linux and macOS')
 
 from rocketmq.client import PushConsumer
 

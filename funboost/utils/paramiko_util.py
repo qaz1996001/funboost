@@ -9,7 +9,7 @@ import paramiko
 
 class ParamikoFolderUploader(LoggerMixin, LoggerLevelSetterMixin):
     """
-    paramoki 实现的文件夹上传
+    Folder upload implemented with paramiko.
     """
 
     def __init__(self, host, port, user, password, local_dir: str, remote_dir: str,
@@ -25,12 +25,12 @@ class ParamikoFolderUploader(LoggerMixin, LoggerLevelSetterMixin):
         :param password:
         :param local_dir:
         :param remote_dir:
-        :param path_pattern_exluded_tuple: 命中了这些正则的直接排除
-        :param file_suffix_tuple_exluded: 这些结尾的文件排除
-        :param only_upload_within_the_last_modify_time: 仅仅上传最近多少天修改的文件
-        :param file_volume_limit: 大于这个体积的不上传，单位b。
-        :param sftp_log_level:日志级别
-        :param pkey_file_path: 私钥文件路径，如果设置了这个，那么使用私钥登录。
+        :param path_pattern_exluded_tuple: Files matching these regex patterns are excluded
+        :param file_suffix_tuple_exluded: Files with these suffixes are excluded
+        :param only_upload_within_the_last_modify_time: Only upload files modified within this many seconds
+        :param file_volume_limit: Files larger than this size (in bytes) are not uploaded
+        :param sftp_log_level: Log level
+        :param pkey_file_path: Private key file path. If set, uses private key authentication.
         """
         self._host = host
         self._port = port
@@ -82,7 +82,7 @@ class ParamikoFolderUploader(LoggerMixin, LoggerLevelSetterMixin):
 
     def _make_dir(self, dirc, final_dir):
         """
-        sftp.mkdir 不能直接越级创建深层级文件夹。
+        sftp.mkdir cannot directly create deeply nested directories.
         :param dirc:
         :param final_dir:
         :return:
@@ -103,7 +103,7 @@ class ParamikoFolderUploader(LoggerMixin, LoggerLevelSetterMixin):
                 if not self._judge_need_filter_a_file(file_full_name):
                     remote_full_file_name = re.sub(f'^{self._local_dir}', self._remote_dir, file_full_name)
                     try:
-                        self.logger.debug(f'本地：{file_full_name}   远程： {remote_full_file_name}')
+                        self.logger.debug(f'Local: {file_full_name}   Remote: {remote_full_file_name}')
                         self.sftp.put(file_full_name, remote_full_file_name)
                     except (FileNotFoundError,) as e:
                         # self.logger.warning(remote_full_file_name)
@@ -111,7 +111,7 @@ class ParamikoFolderUploader(LoggerMixin, LoggerLevelSetterMixin):
                         self.sftp.put(file_full_name, remote_full_file_name)
                 else:
                     if '/.git' not in file_full_name and '.pyc' not in file_full_name:
-                        self.logger.debug(f'根据过滤规则，不上传这个文件 {file_full_name}')
+                        self.logger.debug(f'Skipping upload of this file based on filter rules: {file_full_name}')
 
 
 if __name__ == '__main__':

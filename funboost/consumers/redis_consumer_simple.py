@@ -10,7 +10,7 @@ from funboost.utils.redis_manager import RedisMixin
 
 class RedisConsumer(AbstractConsumer, RedisMixin):
     """
-    redis作为中间件实现的。
+    Consumer implemented using Redis as middleware.
     """
 
 
@@ -22,7 +22,7 @@ class RedisConsumer(AbstractConsumer, RedisMixin):
                 self._submit_task(kw)
 
     def _confirm_consume(self, kw):
-        pass  # redis没有确认消费的功能。
+        pass  # Redis does not have consumption confirmation functionality.
 
     def _requeue(self, kw):
         self.redis_db_frame.rpush(self._queue_name, Serialization.to_json_str(kw['body']))

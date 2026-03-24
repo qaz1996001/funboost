@@ -11,7 +11,7 @@ from funboost.publishers import meomory_deque_publisher
 
 class LocalPythonQueueConsumer(AbstractConsumer):
     """
-    python 内置queue对象作为消息队列，这个要求发布和消费必须在同一python解释器内部运行，不支持分布式。
+    Uses Python's built-in deque object as message queue. This requires publishing and consuming to run within the same Python interpreter, does not support distributed mode.
     """
 
     @property

@@ -19,7 +19,7 @@ def get_nameko_config():
 
 class NamekoPublisher(AbstractPublisher, ):
     """
-    使用nameko作为中间件
+    Uses nameko as the broker.
     """
 
     def custom_init(self):
@@ -31,14 +31,14 @@ class NamekoPublisher(AbstractPublisher, ):
         t_start = time.time()
         with self._rpc as rpc:
             res = getattr(rpc, self.queue_name).call(**msg_function_kw)
-        self.logger.debug(f'调用nameko的 {self.queue_name} service 的 call方法 耗时{round(time.time() - t_start, 4)}秒，入参  {msg_function_kw}')  # 显示msg太长了。
+        self.logger.debug(f'Called nameko {self.queue_name} service call method, took {round(time.time() - t_start, 4)} seconds, params  {msg_function_kw}')  # Full msg is too long to display.
         return res
 
     def _publish_impl(self, msg):
         pass
 
     def clear(self):
-        self.logger.warning('還沒開始實現')
+        self.logger.warning('Not yet implemented')
 
     def get_message_count(self):
         return -1

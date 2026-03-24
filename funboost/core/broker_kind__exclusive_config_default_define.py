@@ -78,7 +78,7 @@ register_broker_exclusive_config_default(BrokerEnum.HUEY, {"huey_task_kwargs": {
 
 
 """
-auto_offset_reset 介绍
+auto_offset_reset description
 
 auto_offset_reset (str): A policy for resetting offsets on
 OffsetOutOfRange errors: 'earliest' will move to the oldest
@@ -107,17 +107,17 @@ register_broker_exclusive_config_default(
 )
 
 
-""" 
-# prefetch_count 是预获取消息数量
-transport_options是kombu的transport_options 。 
-例如使用kombu使用redis作为中间件时候，可以设置 visibility_timeout 来决定消息取出多久没有ack，就自动重回队列。
-kombu的每个中间件能设置什么 transport_options 可以看 kombu的源码中的 transport_options 参数说明。
+"""
+# prefetch_count is the number of messages to prefetch
+transport_options is kombu's transport_options.
+For example, when using kombu with redis as the broker, you can set visibility_timeout to determine how long after a message is taken out without being acked it will automatically return to the queue.
+For what transport_options each broker supports, see the transport_options parameter documentation in kombu's source code.
 """
 register_broker_exclusive_config_default(
     BrokerEnum.KOMBU,
     {
-        "kombu_url": None,  # 如果这里也配置了kombu_url,则优先使用跟着你的kombu_url，否则使用funboost_config. KOMBU_URL
-        "transport_options": {},  # transport_options是kombu的transport_options 。
+        "kombu_url": None,  # If kombu_url is also configured here, it takes priority; otherwise funboost_config.KOMBU_URL is used
+        "transport_options": {},  # transport_options is kombu's transport_options.
         "prefetch_count": 500,
     },
 )
@@ -125,7 +125,7 @@ register_broker_exclusive_config_default(
 
 register_broker_exclusive_config_default(
     BrokerEnum.MYSQL_CDC, {"BinLogStreamReaderConfig": {}}
-)  # 入参是 BinLogStreamReader 的入参BinLogStreamReader
+)  # Parameters are the same as BinLogStreamReader's parameters
 
 
 """
@@ -146,18 +146,18 @@ register_broker_exclusive_config_default(
     BrokerEnum.RABBITMQ_AMQPSTORM,
     {
         "queue_durable": True,
-        "x-max-priority": None,  # x-max-priority 是 rabbitmq的优先级队列配置，必须为整数，强烈建议要小于5。为None就代表队列不支持优先级。
+        "x-max-priority": None,  # x-max-priority is the RabbitMQ priority queue config, must be an integer, strongly recommended to be less than 5. None means the queue does not support priority.
         "no_ack": False,
     },
 )
 
 
-# RABBITMQ_AMQP 使用 amqp 包，配置与 RABBITMQ_AMQPSTORM 一致
+# RABBITMQ_AMQP uses the amqp package, configuration is the same as RABBITMQ_AMQPSTORM
 register_broker_exclusive_config_default(
     BrokerEnum.RABBITMQ_AMQP,
     {
         "queue_durable": True,
-        "x-max-priority": None,  # x-max-priority 是 rabbitmq的优先级队列配置，必须为整数，强烈建议要小于5。为None就代表队列不支持优先级。
+        "x-max-priority": None,  # x-max-priority is the RabbitMQ priority queue config, must be an integer, strongly recommended to be less than 5. None means the queue does not support priority.
         "no_ack": False,
     },
 )
@@ -167,11 +167,11 @@ register_broker_exclusive_config_default(
     BrokerEnum.RABBITMQ_COMPLEX_ROUTING,
     {
         "queue_durable": True,
-        "x-max-priority": None,  # x-max-priority 是 rabbitmq的优先级队列配置，必须为整数，强烈建议要小于5。为None就代表队列不支持优先级。
+        "x-max-priority": None,  # x-max-priority is the RabbitMQ priority queue config, must be an integer, strongly recommended to be less than 5. None means the queue does not support priority.
         "no_ack": False,
         "exchange_name": "",
         "exchange_type": "direct",
-        "routing_key_for_bind": None,  # 绑定交换机和队列时使用的key。None表示使用queue_name作为绑定键；""(空字符串)也表示使用queue_name。对于fanout和headers交换机，此值会被忽略。对于topic交换机，可以使用通配符*和#。
+        "routing_key_for_bind": None,  # Key used when binding exchange and queue. None means using queue_name as the binding key; "" (empty string) also means using queue_name. For fanout and headers exchanges, this value is ignored. For topic exchanges, wildcards * and # can be used.
         "routing_key_for_publish": None,
         # for headers exchange
         "headers_for_bind": {},
@@ -187,21 +187,21 @@ register_broker_exclusive_config_default(
         "redis_bulk_push": 1,
         "pull_msg_batch_size": 100,
     },
-)  # redis_bulk_push 是否redis批量推送
+)  # redis_bulk_push whether to use redis bulk push
 
 
 register_broker_exclusive_config_default(
     BrokerEnum.REDIS_ACK_ABLE, {
-    "pull_msg_batch_size": 100,  # redis_ack_able 中间件可以设置每次批量拉取的消息数量
+    "pull_msg_batch_size": 100,  # redis_ack_able broker can set the number of messages to pull in batch
 
-    "pull_base_interval": 0.01, # 如果上一次没消息，那么下次拉取消息的初始间隔时间，每次都乘以2，指数退避
-    "pull_max_interval": 2, # 如果上一次没消息，那么下次拉取消息的间隔时间最大值，使指数退避不无限加大。 这比固定休眠0.1秒，对redis压力小。
+    "pull_base_interval": 0.01, # If there were no messages last time, the initial interval for the next pull, doubles each time (exponential backoff)
+    "pull_max_interval": 2, # If there were no messages last time, the maximum interval for the next pull, prevents exponential backoff from growing indefinitely. Less pressure on redis than a fixed 0.1s sleep.
     }
 )
 
-# RedisConsumerAckUsingTimeout的ack timeot 是代表消息取出后过了多少秒还未ack，就自动重回队列。这个配置一定要大于函数消耗时间，否则不停的重回队列。
+# RedisConsumerAckUsingTimeout's ack timeout means how many seconds after a message is taken out without being acked it will automatically return to the queue. This must be greater than the function execution time, otherwise messages will keep returning to the queue.
 """
-用法，如何设置ack_timeout，是使用 broker_exclusive_config 中传递，就能覆盖这里的3600，用户不用改BROKER_EXCLUSIVE_CONFIG_DEFAULT的源码。
+Usage: how to set ack_timeout, pass it in broker_exclusive_config to override the default 3600, no need to modify BROKER_EXCLUSIVE_CONFIG_DEFAULT source code.
 @boost(BoosterParams(queue_name='test_redis_ack__use_timeout', broker_kind=BrokerEnum.REIDS_ACK_USING_TIMEOUT,
                         concurrent_num=5, log_level=20, broker_exclusive_config={'ack_timeout': 30}))
 """
@@ -212,7 +212,7 @@ register_broker_exclusive_config_default(
 
 register_broker_exclusive_config_default(
     BrokerEnum.REDIS_PRIORITY, {"x-max-priority": None}
-)  # x-max-priority 是 rabbitmq的优先级队列配置，必须为整数，强烈建议要小于5。为None就代表队列不支持优先级。
+)  # x-max-priority is the RabbitMQ priority queue config, must be an integer, strongly recommended to be less than 5. None means the queue does not support priority.
 
 
 register_broker_exclusive_config_default(
@@ -246,79 +246,79 @@ register_broker_exclusive_config_default(
 register_broker_exclusive_config_default(BrokerEnum.ZEROMQ, {"port": None})
 
 
-# 高性能内存队列专有配置
-# pull_msg_batch_size: 每次批量拉取的消息数量，默认1（单条拉取）
-# ultra_fast_mode: 极速模式，跳过大部分框架开销，性能提升 3-10 倍
-#   注意：极速模式不支持重试、过滤、延时任务、RPC、结果持久化等功能
+# High-performance memory queue exclusive configuration
+# pull_msg_batch_size: number of messages to pull in batch, default 1 (single pull)
+# ultra_fast_mode: ultra-fast mode, skips most framework overhead, 3-10x performance improvement
+#   Note: ultra-fast mode does not support retry, filtering, delayed tasks, RPC, result persistence, etc.
 register_broker_exclusive_config_default(
     BrokerEnum.FASTEST_MEM_QUEUE,
     {
-        "pull_msg_batch_size": 1,  # 默认单条拉取，批量建议设置 100-5000
-        "ultra_fast_mode": False,  # 极速模式，跳过框架开销
+        "pull_msg_batch_size": 1,  # Default single pull, recommended 100-5000 for batch mode
+        "ultra_fast_mode": False,  # Ultra-fast mode, skips framework overhead
     },
 )
 
 
-# AWS SQS 专有配置
-# wait_time_seconds: 长轮询等待时间（秒），最大20秒，0表示短轮询
-# max_number_of_messages: 每次 receive_message 拉取的最大消息数，范围1-10
-# visibility_timeout: 消息可见性超时（秒），消息被取出后在此时间内对其他消费者不可见
-# message_retention_period: 消息保留期（秒），默认14天(1209600秒)，范围60-1209600
-# content_based_deduplication: FIFO队列是否启用基于内容的去重，默认True
+# AWS SQS exclusive configuration
+# wait_time_seconds: long polling wait time (seconds), max 20 seconds, 0 for short polling
+# max_number_of_messages: max messages per receive_message call, range 1-10
+# visibility_timeout: message visibility timeout (seconds), messages are invisible to other consumers during this time
+# message_retention_period: message retention period (seconds), default 14 days (1209600 seconds), range 60-1209600
+# content_based_deduplication: whether to enable content-based deduplication for FIFO queues, default True
 register_broker_exclusive_config_default(
     BrokerEnum.SQS,
     {
-        "wait_time_seconds": 20,  # 长轮询等待时间，最大20秒
-        "max_number_of_messages": 10,  # 每次拉取的最大消息数，最大10
-        "visibility_timeout": 300,  # 可见性超时，默认5分钟
-        "message_retention_period": 1209600,  # 消息保留期，默认14天
-        "content_based_deduplication": True,  # FIFO队列是否启用基于内容的去重
+        "wait_time_seconds": 20,  # Long polling wait time, max 20 seconds
+        "max_number_of_messages": 10,  # Max messages per pull, max 10
+        "visibility_timeout": 300,  # Visibility timeout, default 5 minutes
+        "message_retention_period": 1209600,  # Message retention period, default 14 days
+        "content_based_deduplication": True,  # Whether to enable content-based deduplication for FIFO queues
     },
 )
 
 
-# PostgreSQL 原生队列专有配置
-# 充分利用 PostgreSQL 的 FOR UPDATE SKIP LOCKED 和 LISTEN/NOTIFY 特性
+# PostgreSQL native queue exclusive configuration
+# Fully utilizes PostgreSQL's FOR UPDATE SKIP LOCKED and LISTEN/NOTIFY features
 register_broker_exclusive_config_default(
     BrokerEnum.POSTGRES,
     {
-        "use_listen_notify": True,  # 是否使用 LISTEN/NOTIFY 实时推送，比轮询更高效
-        "poll_interval": 30,  # 轮询/等待通知的超时时间（秒）
-        "timeout_minutes": 10,  # 超时未确认的任务自动重回队列（分钟）
-        "min_connections": 2,  # 连接池最小连接数
-        "max_connections": 20,  # 连接池最大连接数
-        "priority": 0,  # 默认任务优先级
+        "use_listen_notify": True,  # Whether to use LISTEN/NOTIFY for real-time push, more efficient than polling
+        "poll_interval": 30,  # Polling/notification wait timeout (seconds)
+        "timeout_minutes": 10,  # Tasks not acknowledged within this time automatically return to queue (minutes)
+        "min_connections": 2,  # Connection pool minimum connections
+        "max_connections": 20,  # Connection pool maximum connections
+        "priority": 0,  # Default task priority
     },
 )
 
 
-# 内存队列(MEMORY_QUEUE/LOCAL_PYTHON_QUEUE)专有配置
-# maxsize: 队列最大容量，0表示无界队列（默认），正整数表示有界队列
-#   当队列已满时，put操作会阻塞直到有空位
+# Memory queue (MEMORY_QUEUE/LOCAL_PYTHON_QUEUE) exclusive configuration
+# maxsize: maximum queue capacity, 0 means unbounded queue (default), positive integer means bounded queue
+#   When the queue is full, put operations will block until there is space
 register_broker_exclusive_config_default(
     BrokerEnum.MEMORY_QUEUE,
     {
-        "maxsize": 0,  # 队列最大容量，0表示无界队列
+        "maxsize": 0,  # Maximum queue capacity, 0 means unbounded queue
     },
 )
 
 
-# RocketMQ 5.x 专有配置
-# 使用 rocketmq-python-client 包（pip install rocketmq-python-client）
-# 基于 gRPC 协议，纯 Python 实现，支持 Windows/Linux/macOS
-# SimpleConsumer 模式：支持单条消息乱序 ACK，不依赖 offset
+# RocketMQ 5.x exclusive configuration
+# Uses rocketmq-python-client package (pip install rocketmq-python-client)
+# Based on gRPC protocol, pure Python implementation, supports Windows/Linux/macOS
+# SimpleConsumer mode: supports out-of-order single message ACK, does not depend on offset
 register_broker_exclusive_config_default(
     BrokerEnum.ROCKETMQ5,
     {
-        "endpoints": "127.0.0.1:8081",  # RocketMQ 5.x gRPC Proxy 端点地址
-        "consumer_group": "funboost_consumer_group",  # 消费者组名
-        "access_key": None,  # 访问密钥（可选，阿里云等需要）
-        "secret_key": None,  # 密钥（可选）
-        "namespace": None,  # 命名空间（可选）
-        "invisible_duration": 15,  # 消息不可见时间（秒），消息取出后在此时间内对其他消费者不可见
-        "max_message_num": 32,  # 每次拉取的最大消息数
-        "tag": "*",  # 消息过滤 tag，'*' 表示不过滤
-        "namesrv_addr": None,  # NameServer 地址，用于自动创建 Topic，默认从 endpoints 推断
-        "cluster_name": "DefaultCluster",  # 集群名称，用于自动创建 Topic
+        "endpoints": "127.0.0.1:8081",  # RocketMQ 5.x gRPC Proxy endpoint address
+        "consumer_group": "funboost_consumer_group",  # Consumer group name
+        "access_key": None,  # Access key (optional, required for Alibaba Cloud etc.)
+        "secret_key": None,  # Secret key (optional)
+        "namespace": None,  # Namespace (optional)
+        "invisible_duration": 15,  # Message invisible duration (seconds), messages are invisible to other consumers during this time
+        "max_message_num": 32,  # Max messages per pull
+        "tag": "*",  # Message filter tag, '*' means no filtering
+        "namesrv_addr": None,  # NameServer address, used for auto-creating Topics, defaults to inferring from endpoints
+        "cluster_name": "DefaultCluster",  # Cluster name, used for auto-creating Topics
     },
 )

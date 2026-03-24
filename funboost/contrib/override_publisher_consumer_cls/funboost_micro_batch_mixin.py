@@ -2,15 +2,15 @@
 # @Author  : AI Assistant
 # @Time    : 2026/1/18
 """
-微批消费者 Mixin (Micro-Batch Consumer Mixin)
+Micro-Batch Consumer Mixin
 
-功能：累积 N 条消息后批量处理，而不是逐条消费。
-适用场景：批量写入数据库、批量调用 API、批量发送通知等。
+Functionality: Accumulates N messages before batch processing, instead of consuming one by one.
+Applicable scenarios: Batch database writes, batch API calls, batch notifications, etc.
 
-用法见 test_frame/test_micro_batch/test_micro_batch_consumer.py
+Usage: see test_frame/test_micro_batch/test_micro_batch_consumer.py
 
-使用方式：
-1. 使用 BoosterParams + MicroBatchConsumerMixin (推荐)
+Usage method:
+1. Using BoosterParams + MicroBatchConsumerMixin (recommended)
    @boost(BoosterParams(
        queue_name='batch_queue',
        consumer_override_cls=MicroBatchConsumerMixin,
@@ -36,40 +36,40 @@ from funboost.core.helper_funs import get_func_only_params
 
 class MicroBatchConsumerMixin(AbstractConsumer):
     """
-    微批消费者 Mixin
-    
-    核心原理：
-    1. 重写 _submit_task 方法，将消息累积到缓冲区
-    2. 达到 batch_size 条消息或超过 timeout 秒后，批量调用消费函数
-    3. 消费函数的入参从单个对象变为 list[dict]
-    
-    配置参数（通过 user_options 传递）：
-    - micro_batch_size: 批量大小，默认 100
-    - micro_batch_timeout: 超时时间（秒），默认 5.0
-    
-    支持的并发模式：
-    - THREADING: 使用 _run_batch (同步)
-    - ASYNC: 使用 _async_run_batch (异步)
+    Micro-Batch Consumer Mixin
+
+    Core principle:
+    1. Overrides _submit_task method to accumulate messages in a buffer
+    2. When batch_size messages are reached or timeout seconds have elapsed, batch-calls the consuming function
+    3. The consuming function's input changes from a single object to list[dict]
+
+    Configuration parameters (passed via user_options):
+    - micro_batch_size: Batch size, default 100
+    - micro_batch_timeout: Timeout in seconds, default 5.0
+
+    Supported concurrency modes:
+    - THREADING: Uses _run_batch (synchronous)
+    - ASYNC: Uses _async_run_batch (asynchronous)
     """
     
     def custom_init(self):
-        """初始化微批相关配置"""
+        """Initialize micro-batch related configuration"""
         super().custom_init()
         
-        # 从 user_options 读取配置（funboost 推荐用 user_options 传递自定义配置）
+        # Read configuration from user_options (funboost recommends using user_options for custom configuration)
         user_options = self.consumer_params.user_options
         self._batch_size = user_options.get('micro_batch_size', 100)
         self._batch_timeout = user_options.get('micro_batch_timeout', 5.0)
         
-        # 消息缓冲区和锁
+        # Message buffer and lock
         self._batch_buffer: list = []
         self._batch_lock = threading.Lock()
         self._last_batch_time = time.time()
         
-        # 判断是否使用异步模式
+        # Determine if using async mode
         self._is_async_mode = self.consumer_params.concurrent_mode == ConcurrentModeEnum.ASYNC
         
-        # 启动超时刷新线程
+        # Start timeout flush thread
         self._start_timeout_flush_thread()
         
         self.logger.info(
@@ -77,7 +77,7 @@ class MicroBatchConsumerMixin(AbstractConsumer):
         )
     
     def _start_timeout_flush_thread(self):
-        """启动超时刷新后台线程"""
+        """Start timeout flush background thread"""
         def timeout_flush_loop():
             while True:
                 time.sleep(min(1.0, self._batch_timeout / 2))
@@ -93,23 +93,23 @@ class MicroBatchConsumerMixin(AbstractConsumer):
         t.start()
     
     def _is_timeout(self) -> bool:
-        """判断是否超时"""
+        """Check if timeout has been reached"""
         return time.time() - self._last_batch_time >= self._batch_timeout
     
     def _should_flush_batch(self) -> bool:
-        """判断是否应该刷新批次"""
+        """Check if the batch should be flushed"""
         return len(self._batch_buffer) >= self._batch_size
     
     def _submit_task(self, kw):
         """
-        重写 _submit_task 方法，累积消息到缓冲区
-        而不是立即提交到并发池执行
+        Override _submit_task method to accumulate messages in the buffer
+        instead of immediately submitting to the concurrent pool for execution
         """
-        # 先进行消息转换和过滤（复用父类逻辑）
+        # First perform message conversion and filtering (reuse parent class logic)
         kw['body'] = self._convert_msg_before_run(kw['body'])
         self._print_message_get_from_broker(kw['body'])
         
-        # 暂停消费检查
+        # Pause consumption check
         # if self._judge_is_daylight():
         #     self._requeue(kw)
         #     time.sleep(self.time_interval_for_check_do_not_run_time)
@@ -121,20 +121,20 @@ class MicroBatchConsumerMixin(AbstractConsumer):
             time.sleep(self._time_interval_for_check_allow_run_by_cron)
             return
         
-        # 提取函数参数
+        # Extract function parameters
         
         function_only_params = get_func_only_params(kw['body'])
         kw['function_only_params'] = function_only_params
         
-        # 累积到缓冲区
+        # Accumulate to buffer
         with self._batch_lock:
             self._batch_buffer.append(kw)
             
-            # 检查是否触发批量处理
+            # Check if batch processing should be triggered
             if self._should_flush_batch():
                 self._flush_batch()
         
-        # 频率控制
+        # Frequency control
         if self.consumer_params.is_using_distributed_frequency_control:
             active_num = self._distributed_consumer_statistics.active_consumer_num
             self._frequency_control(self.consumer_params.qps / active_num, self._msg_schedule_time_intercal * active_num)
@@ -143,14 +143,14 @@ class MicroBatchConsumerMixin(AbstractConsumer):
     
     def _flush_batch(self):
         """
-        执行批量处理
-        
-        注意：调用此方法时必须已持有 _batch_lock 锁
+        Execute batch processing
+
+        Note: The _batch_lock must already be held when calling this method
         """
         if not self._batch_buffer:
             return
         
-        # 取出所有缓冲消息
+        # Take out all buffered messages
         batch = self._batch_buffer[:]
         self._batch_buffer.clear()
         self._last_batch_time = time.time()
@@ -158,7 +158,7 @@ class MicroBatchConsumerMixin(AbstractConsumer):
         batch_size = len(batch)
         self.logger.debug(f"Starting batch processing for {batch_size} messages")
         
-        # 根据并发模式选择同步或异步执行
+        # Choose synchronous or asynchronous execution based on concurrency mode
         if self._is_async_mode:
             self.concurrent_pool.submit(self._async_run_batch, batch)
         else:
@@ -166,21 +166,21 @@ class MicroBatchConsumerMixin(AbstractConsumer):
     
     def _run_batch(self, batch: list):
         """
-        同步批量运行消费函数
-        
-        :param batch: 包含多个 kw 字典的列表
+        Synchronously run consuming function in batch
+
+        :param batch: List containing multiple kw dictionaries
         """
         t_start = time.time()
         batch_size = len(batch)
         
-        # 提取所有消息的函数参数
+        # Extract function parameters from all messages
         items = [kw['function_only_params'] for kw in batch]
-        
+
         try:
-            # 调用消费函数（入参是 list）
+            # Call consuming function (input is a list)
             result = self.consuming_function(items)
-            
-            # 批量确认消费
+
+            # Batch confirm consumption
             for kw in batch:
                 self._confirm_consume(kw)
             

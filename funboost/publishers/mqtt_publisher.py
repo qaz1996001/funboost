@@ -6,11 +6,11 @@ from funboost.publishers.base_publisher import AbstractPublisher
 from funboost.funboost_config_deafult import BrokerConnConfig
 
 """
-首先安装mqtt模块：
+First install the mqtt module:
 
 
 pip install paho-mqtt
-写一个发布客户端pub.py：
+Write a publish client pub.py:
 
 import paho.mqtt.client as mqtt
 
@@ -23,7 +23,7 @@ def on_message(client, userdata, msg):
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
-client.connect('127.0.0.1', 1883, 600) # 600为keepalive的时间间隔
+client.connect('127.0.0.1', 1883, 600) # 600 is the keepalive interval
 client.publish('fifa', payload='amazing', qos=0)
 
 
@@ -31,7 +31,7 @@ client.publish('fifa', payload='amazing', qos=0)
 
 
 
-再写一个接受客户端sub.py：
+Then write a subscriber client sub.py:
 
 import paho.mqtt.client as mqtt
 
@@ -44,14 +44,14 @@ def on_message(client, userdata, msg):
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
-client.connect('127.0.0.1', 1883, 600) # 600为keepalive的时间间隔
+client.connect('127.0.0.1', 1883, 600) # 600 is the keepalive interval
 client.subscribe('fifa', qos=0)
-client.loop_forever() # 保持连接
+client.loop_forever() # keep connection alive
 
-作者：赤色要塞满了
-链接：https://www.jianshu.com/p/0ed4e59b1e8f
-来源：简书
-著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+Author: Red Fortress Full
+Link: https://www.jianshu.com/p/0ed4e59b1e8f
+Source: Jianshu
+Copyright belongs to the author. For commercial use, please contact the author for authorization; for non-commercial use, please cite the source.
 """
 
 # import paho.mqtt.client as mqtt
@@ -67,7 +67,7 @@ client.loop_forever() # 保持连接
 
 class MqttPublisher(AbstractPublisher, ):
     """
-    使用 emq 作为中间件
+    Uses EMQ as the broker.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -78,7 +78,7 @@ class MqttPublisher(AbstractPublisher, ):
         client.on_socket_close = self._on_socket_close
         # client.on_message = on_message
         # print(frame_config.MQTT_HOST)
-        client.connect(BrokerConnConfig.MQTT_HOST, BrokerConnConfig.MQTT_TCP_PORT, 600)  # 600为keepalive的时间间隔
+        client.connect(BrokerConnConfig.MQTT_HOST, BrokerConnConfig.MQTT_TCP_PORT, 600)  # 600 is the keepalive interval
         self._client = client
 
     def _on_socket_close(self, client, userdata, socket):
@@ -86,14 +86,14 @@ class MqttPublisher(AbstractPublisher, ):
         self.custom_init()
 
     def _on_connect(self, client, userdata, flags, rc):
-        self.logger.info(f'连接mqtt服务端成功, {client, userdata, flags, rc}')
+        self.logger.info(f'Successfully connected to MQTT server, {client, userdata, flags, rc}')
 
     def _publish_impl(self, msg):
         self._client.publish(self._queue_name, payload=msg, qos=0, retain=False)
 
     def clear(self):
         pass
-        self.logger.warning(f'清除 {self._queue_name} 队列中的消息成功')
+        self.logger.warning(f'Successfully cleared messages in queue {self._queue_name}')
 
     def get_message_count(self):
         # nb_print(self.redis_db7,self._queue_name)

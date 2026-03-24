@@ -14,10 +14,10 @@ from funboost.core.serialization import Serialization
 
 class RedisConsumer(AbstractConsumer, RedisMixin):
     """
-    redis作为中间件实现的，使用redis list 结构实现的。
-    这个如果消费脚本在运行时候随意反复重启或者非正常关闭或者消费宕机，会丢失大批任务。高可靠需要用rabbitmq或者redis_ack_able或者redis_stream的中间件方式。
+    Consumer implemented using Redis as middleware, using Redis list structure.
+    If the consuming script is randomly restarted, abnormally closed, or crashes while running, a large batch of tasks will be lost. For high reliability, use rabbitmq, redis_ack_able, or redis_stream middleware.
 
-    这个是复杂版，一次性拉取100个,减少和redis的交互，简单版在 funboost/consumers/redis_consumer_simple.py
+    This is the complex version, pulling 100 messages at once to reduce Redis interactions. The simple version is in funboost/consumers/redis_consumer_simple.py
     """
 
 
@@ -54,7 +54,7 @@ class RedisConsumer(AbstractConsumer, RedisMixin):
                 self._submit_task(kw)
 
     def _confirm_consume(self, kw):
-        pass  # redis没有确认消费的功能。
+        pass  # Redis does not have consumption confirmation functionality.
 
     def _requeue(self, kw):
         self.redis_db_frame.rpush(self._queue_name,Serialization.to_json_str(kw['body']))

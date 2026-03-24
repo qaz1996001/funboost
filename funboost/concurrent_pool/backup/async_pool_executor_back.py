@@ -11,10 +11,12 @@ from funboost.concurrent_pool.async_helper import get_or_create_event_loop  # no
 # if os.name == 'posix':
 #     import uvloop
 #
-#     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())  # 打猴子补丁最好放在代码顶层，否则很大机会出问题。
+#     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())  # Monkey patching is best placed at the top of the code, otherwise there's a high chance of issues.
 
 """
-# 也可以采用 janus 的 线程安全的queue方式来实现异步池，此queue性能和本模块实现的生产 消费相比，性能并没有提高，所以就不重新用这这个包来实现一次了。
+# An alternative approach using janus thread-safe queue to implement async pool.
+# However, the queue performance is not better than the producer-consumer implementation in this module,
+# so we don't reimplement it using this package.
 import janus
 import asyncio
 import time
@@ -25,14 +27,14 @@ queue = janus.Queue(maxsize=6000)
 async def consume():
     while 1:
         # time.sleep(1)
-        val = await queue.async_q.get() # 这是async，不要看错了
+        val = await queue.async_q.get() # This is async, don't confuse it
         print(val)
 
 def push():
     for i in range(50000):
         # time.sleep(0.2)
         # print(i)
-        queue.sync_q.put(i)  # 这是sync。不要看错了。
+        queue.sync_q.put(i)  # This is sync, don't confuse it.
 
 
 if __name__ == '__main__':
@@ -71,13 +73,15 @@ class AsyncPoolExecutor2:
 
 class AsyncPoolExecutor(nb_log.LoggerMixin):
     """
-    使api和线程池一样，最好的性能做法是submit也弄成 async def，生产和消费在同一个线程同一个loop一起运行，但会对调用链路的兼容性产生破坏，从而调用方式不兼容线程池。
+    Makes the API similar to a thread pool. The best performance approach would be to make submit an async def too,
+    running production and consumption in the same thread and same loop, but this would break call chain compatibility,
+    making the calling pattern incompatible with thread pools.
     """
 
     def __init__(self, size, loop=None):
         """
 
-        :param size: 同时并发运行的协程任务数量。
+        :param size: Number of coroutine tasks to run concurrently.
         :param loop:
         """
         self._size = size
@@ -86,7 +90,7 @@ class AsyncPoolExecutor(nb_log.LoggerMixin):
         self._queue = asyncio.Queue(maxsize=size, loop=self.loop)
         self._lock = threading.Lock()
         t = Thread(target=self._start_loop_in_new_thread,daemon=True)
-        # t.setDaemon(True)  # 设置守护线程是为了有机会触发atexit，使程序自动结束，不用手动调用shutdown
+        # t.setDaemon(True)  # Setting daemon thread allows atexit to trigger, enabling automatic program exit without manually calling shutdown
         t.start()
         self._can_be_closed_flag = False
         atexit.register(self.shutdown)
@@ -96,7 +100,7 @@ class AsyncPoolExecutor(nb_log.LoggerMixin):
         self._event.set()
 
     def submit000(self, func, *args, **kwargs):
-        # 这个性能比下面的采用 run_coroutine_threadsafe + result返回快了3倍多。
+        # This performs 3x faster than the approach below using run_coroutine_threadsafe + result return.
         with self._lock:
             while 1:
                 if not self._queue.full():
@@ -106,8 +110,8 @@ class AsyncPoolExecutor(nb_log.LoggerMixin):
                     time.sleep(0.01)
 
     def submit(self, func, *args, **kwargs):
-        future = asyncio.run_coroutine_threadsafe(self._produce(func, *args, **kwargs), self.loop)  # 这个 run_coroutine_threadsafe 方法也有缺点，消耗的性能巨大。
-        future.result()  # 阻止过快放入，放入超过队列大小后，使submit阻塞。
+        future = asyncio.run_coroutine_threadsafe(self._produce(func, *args, **kwargs), self.loop)  # The run_coroutine_threadsafe method also has drawbacks, consuming significant performance.
+        future.result()  # Prevents submitting too fast; blocks submit when queue is full.
 
     async def _produce(self, func, *args, **kwargs):
         await self._queue.put((func, args, kwargs))
@@ -130,7 +134,7 @@ class AsyncPoolExecutor(nb_log.LoggerMixin):
             asyncio.ensure_future(self._consume())
 
     def _start_loop_in_new_thread(self, ):
-        # self._loop.run_until_complete(self.__run())  # 这种也可以。
+        # self._loop.run_until_complete(self.__run())  # This approach also works.
         # self._loop.run_forever()
 
         # asyncio.set_event_loop(self.loop)
@@ -138,32 +142,33 @@ class AsyncPoolExecutor(nb_log.LoggerMixin):
         self._can_be_closed_flag = True
 
     def shutdown(self):
-        if self.loop.is_running():  # 这个可能是atregster触发，也可能是用户手动调用，需要判断一下，不能关闭两次。
+        if self.loop.is_running():  # This may be triggered by atexit register or manually called by the user; need to check to avoid closing twice.
             for i in range(self._size):
                 self.submit(f'stop{i}', )
             while not self._can_be_closed_flag:
                 time.sleep(0.1)
             self.loop.stop()
             self.loop.close()
-            print('关闭循环')
+            print('Closing loop')
 
 
 class AsyncProducerConsumer:
     """
-    参考 https://asyncio.readthedocs.io/en/latest/producer_consumer.html 官方文档。
+    Reference: https://asyncio.readthedocs.io/en/latest/producer_consumer.html official documentation.
     A simple producer/consumer example, using an asyncio.Queue:
     """
 
     """
-    边生产边消费。此框架没用到这个类，这个要求生产和消费在同一个线程里面，对原有同步方式的框架代码改造不方便。
+    Produce and consume simultaneously. This framework doesn't use this class because it requires production and
+    consumption to be in the same thread, making it inconvenient to refactor the existing synchronous framework code.
     """
 
     def __init__(self, items, concurrent_num=200, consume_fun_specify=None):
         """
 
-        :param items: 要消费的参数列表
-        :param concurrent_num: 并发数量
-        :param consume_fun_specify: 指定的异步消费函数对象，如果不指定就要继承并重写consume_fun函数。
+        :param items: List of parameters to consume
+        :param concurrent_num: Concurrency count
+        :param consume_fun_specify: Specified async consumer function object. If not specified, inherit and override consume_fun.
         """
         self.queue = asyncio.Queue()
         self.items = items
@@ -195,11 +200,11 @@ class AsyncProducerConsumer:
     @staticmethod
     async def consume_fun(item):
         """
-        要么继承此类重写此方法，要么在类的初始化时候指定consume_fun_specify为一个异步函数。
+        Either inherit this class and override this method, or specify consume_fun_specify as an async function during initialization.
         :param item:
         :return:
         """
-        print(item, '请重写 consume_fun 方法')
+        print(item, 'Please override the consume_fun method')
         await asyncio.sleep(1)
 
     async def __run(self):
@@ -230,22 +235,22 @@ if __name__ == '__main__':
         async def f(x):
             # await asyncio.sleep(0.1)
             pass
-            print('打印', x)
+            print('print', x)
             # await asyncio.sleep(1)
             # raise Exception('aaa')
 
         def f2(x):
             pass
             # time.sleep(0.001)
-            print('打印', x)
+            print('print', x)
 
         print(1111)
 
         t1 = time.time()
         pool = AsyncPoolExecutor(20)
-        # pool = ThreadPoolExecutor(200)  # 协程不能用线程池运行，否则压根不会执行print打印，对于一部函数 f(x)得到的是一个协程，必须进一步把协程编排成任务放在loop循环里面运行。
+        # pool = ThreadPoolExecutor(200)  # Coroutines cannot be run using a thread pool, otherwise print won't execute at all. For an async function f(x), you get a coroutine, which must be further scheduled as a task in the loop to run.
         for i in range(1, 501):
-            print('放入', i)
+            print('submitting', i)
             pool.submit(f, i)
         # time.sleep(5)
         # pool.submit(f, 'hi')
@@ -257,7 +262,7 @@ if __name__ == '__main__':
 
 
     async def _my_fun(item):
-        print('嘻嘻', item)
+        print('hehe', item)
         # await asyncio.sleep(1)
 
 

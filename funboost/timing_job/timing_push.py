@@ -10,17 +10,16 @@ from funboost.constant import RedisKeys
 
 class ApsJobAdder:
     """
-    20250116新增加的统一的新增定时任务的方式，推荐这种方式。
-    用户不用像之前再去关心使用哪个apscheduler对象去添加定时任务了。
+    Unified way to add scheduled tasks, added on 2025-01-16. This approach is recommended.
+    Users no longer need to worry about which apscheduler object to use for adding scheduled tasks.
 
-    例如 add_numbers 是@boost装饰的消费函数
-    ApsJobAdder(add_numbers,job_store_kind='memory').add_push_job(
+    For example, if add_numbers is a consumer function decorated with @boost:
+    ApsJobAdder(add_numbers, job_store_kind='memory').add_push_job(
         args=(1, 2),
-        trigger='date',  # 使用日期触发器
-        run_date='2025-01-16 18:23:50',  # 设置运行时间
-        # id='add_numbers_job'  # 任务ID
+        trigger='date',  # Use date trigger
+        run_date='2025-01-16 18:23:50',  # Set run time
+        # id='add_numbers_job'  # Task ID
     )
-
     """
 
     queue__redis_aps_map = {}
@@ -32,12 +31,15 @@ class ApsJobAdder:
         :param booster: A Booster object representing the function to be scheduled.
         :param job_store_kind: The type of job store to use. Default is 'memory'.
                                Can be 'memory' or 'redis'.
-        :param is_auto_start: 实例化时候，是否顺带启动定时器，这个在任何情况下请确保永远是True。如果是False，压根无法实现最基本的增删改查定时任务，更无法运行定时任务
-        :param is_auto_paused: 实例化时候，是否顺带暂停定时器。这个你可以自己按需选择，如果你希望当前程序里面只是增删改查定时计划，但不想真的运行定时任务函数，可以设置为True，暂停定时器执行函数。
-        
-        apscheduler 的 .start() 和 pause() 是两个独立的含义，不要以为他们是同一个操作的一对反义词。 
-        pause 对应的相反操作是 resume，前提条件是 apscheduler.start() 了，pause和resume才有意义。 
-        这些是 apscheduler 的原生概念，用户需要先学习 apscheduler 的基本概念和用法。
+        :param is_auto_start: Whether to automatically start the scheduler on instantiation. Always ensure this is True.
+                              If False, even basic CRUD operations on scheduled tasks won't work, let alone running them.
+        :param is_auto_paused: Whether to automatically pause the scheduler on instantiation. You can choose as needed.
+                               If you only want to perform CRUD on schedules without actually executing task functions,
+                               set this to True to pause the scheduler's function execution.
+
+        apscheduler's .start() and pause() have two independent meanings - don't assume they are antonyms of the same operation.
+        The opposite of pause is resume, and the prerequisite is that apscheduler.start() has been called first.
+        These are native apscheduler concepts that users should learn beforehand.
         """
         self.booster = booster
         self.job_store_kind = job_store_kind
@@ -50,10 +52,12 @@ class ApsJobAdder:
 
     @classmethod
     def get_funboost_redis_apscheduler(cls, queue_name):
-        """ 
-        每个队列名字的定时任务有自己单独的 aspchedule r定时器,
-        每隔定时器用不同的redis jobstore的 jobs_key 和 run_times_key，防止互相干扰和取出不属于自己的任务.
-        如果所有函数使用同一个定时器和一个jobs_key ,当用户只想运行f1定时任务,如果用户把f2删了,或者不需要运行f2定时任务,那就报错或者不方便.
+        """
+        Each queue name's scheduled tasks have their own separate apscheduler timer.
+        Each timer uses different Redis jobstore jobs_key and run_times_key to prevent mutual interference
+        and retrieving tasks that don't belong to it.
+        If all functions share the same timer and jobs_key, when a user only wants to run f1's scheduled task
+        and deletes f2 or doesn't need f2's scheduled task, it would cause errors or inconvenience.
         """
         if queue_name in cls.queue__redis_aps_map:
             return cls.queue__redis_aps_map[queue_name]
@@ -90,23 +94,26 @@ class ApsJobAdder:
                      next_run_time=undefined, jobstore='default', executor='default',
                      replace_existing=False, **trigger_args, ):
         """
-        1. 这里的入参都是和apscheduler的add_job的入参一样的，funboost作者没有创造新的入参。
-        但是官方apscheduler的入参第一个入参是函数，
-        funboost的ApsJobAdder对象.add_push_job入参去掉了函数，因为类的实例化时候会把函数传进来，不需要再麻烦用户一次了。
-        
+        1. The parameters here are the same as apscheduler's add_job parameters - the funboost author did not create new parameters.
+        However, the official apscheduler's first parameter is the function itself.
+        funboost's ApsJobAdder.add_push_job removes the function parameter because it's passed during class instantiation,
+        so there's no need to bother the user again.
 
-        2. add_push_job目的是 定时运行 消费函数.push方法发布消息到消费队列， 而不是 定时直接运行 消费函数自身。
+        2. add_push_job's purpose is to periodically run consumer_function.push to publish messages to the consumption queue,
+        NOT to directly run the consumer function itself on schedule.
 
-        相当于 aps_obj.add_job(消费函数.push, trigger, args, kwargs, id, name, .....)
-        那为什么 不直接使用 aps_obj.add_job(消费函数.push, trigger, args, kwargs, id, name, .....) 呢？因为 消费函数.push是实例方法，
-        如果redis作为 jobstore， 消费函数.push 会报错，因为 消费函数.push 是实例方法，不能被序列化。只有普通函数和静态方法才能被序列化。
-        所以开发了一个 add_push_job方法， 里面再去用 add_job， 使用 push_fun_params_to_broker 这个普通函数作为 add_job 的第一个入参，
-        这个普通函数里面再去调用 消费函数.push 方法， 相当于是曲线救国避免 aps_obj.add_job(消费函数.push 不可序列化问题。
+        It's equivalent to aps_obj.add_job(consumer_function.push, trigger, args, kwargs, id, name, .....)
+        So why not directly use aps_obj.add_job(consumer_function.push, ...)? Because consumer_function.push is an instance method.
+        If Redis is used as the jobstore, consumer_function.push will error because instance methods cannot be serialized.
+        Only regular functions and static methods can be serialized.
+        So add_push_job was developed, which internally uses add_job with push_fun_params_to_broker (a regular function)
+        as the first parameter. This function then calls consumer_function.push, effectively working around
+        the serialization issue of aps_obj.add_job(consumer_function.push).
 
-
-        3. 用户也可以自己定义一个普通函数my_push，你这个普通函数my_push 里面去调用消费函数.push方法；然后使用 aps_obj.add_job 使用你自己定义的这个my_push作为第一个入参。
-        这种方式更容易你去理解，和apscheduler 官方库的原生写法一模一样。 但是不如 add_push_job 方便，因为 需要你亲自给每个消费函数分别定义一个普通函数my_push。
-
+        3. Users can also define their own regular function my_push that internally calls consumer_function.push,
+        then use aps_obj.add_job with their my_push as the first parameter.
+        This approach is easier to understand and identical to apscheduler's native usage.
+        But it's less convenient than add_push_job because you need to define a separate my_push function for each consumer function.
         """
 
         # if not getattr(self.aps_obj, 'has_started_flag', False):
@@ -120,30 +127,31 @@ class ApsJobAdder:
 
 if __name__ == '__main__':
     """
-    2025年后定时任务现在推荐使用 ApsJobAdder 写法 ，用户不需要亲自选择使用 apscheduler对象来添加定时任务
-    特别是使用redis作为jobstores时候，你可以看源码就知道了。
+    After 2025, the recommended way to add scheduled tasks is using ApsJobAdder.
+    Users no longer need to manually choose which apscheduler object to use for adding scheduled tasks,
+    especially when using Redis as jobstores - you can see this from the source code.
     """
     from funboost import boost, BrokerEnum, ctrl_c_recv, BoosterParams, ApsJobAdder
 
 
-    # 定义任务处理函数
+    # Define task processing function
     @BoosterParams(queue_name='sum_queue3', broker_kind=BrokerEnum.REDIS)
     def sum_two_numbers(x, y):
         result = x + y
         print(f'The sum of {x} and {y} is {result}')
 
-    # 启动消费者
+    # Start consumer
     # sum_two_numbers.consume()
 
-    # 发布任务
+    # Publish tasks
     sum_two_numbers.push(3, 5)
     sum_two_numbers.push(10, 20)
 
 
 
-    # 使用ApsJobAdder添加定时任务， 里面的定时语法，和apscheduler是一样的，用户需要自己熟悉知名框架apscheduler的add_job定时入参
+    # Use ApsJobAdder to add scheduled tasks. The scheduling syntax inside is the same as apscheduler's - users need to be familiar with the well-known apscheduler framework's add_job scheduling parameters.
 
-    # 方式1：指定日期执行一次
+    # Method 1: Execute once at a specified date
     ApsJobAdder(sum_two_numbers, job_store_kind='redis').add_push_job(
         trigger='date',
         run_date='2025-01-17 23:25:40',
@@ -151,7 +159,7 @@ if __name__ == '__main__':
         id='date_job1'
     )
 
-    # 方式2：固定间隔执行
+    # Method 2: Execute at fixed intervals
     ApsJobAdder(sum_two_numbers, job_store_kind='memory').add_push_job(
         trigger='interval',
         seconds=5,
@@ -159,7 +167,7 @@ if __name__ == '__main__':
         id='interval_job1'
     )
 
-    # 方式3：使用cron表达式定时执行,周期运行
+    # Method 3: Periodic execution using cron expression
     ApsJobAdder(sum_two_numbers, job_store_kind='redis').add_push_job(
         trigger='cron',
         day_of_week='*',
@@ -172,4 +180,4 @@ if __name__ == '__main__':
     
 
 
-    # ctrl_c_recv() # 启动了守护线程的定时器，一定要阻止主线程退出。 你可以代码最末尾加这个 ctrl_c_recv() 或者加个 while 1:time.sleep(10)
+    # ctrl_c_recv() # When using a scheduler with daemon threads, you must prevent the main thread from exiting. You can add ctrl_c_recv() at the end of your code or add while 1:time.sleep(10)

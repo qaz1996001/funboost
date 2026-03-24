@@ -5,7 +5,7 @@ from funboost.funboost_config_deafult import BrokerConnConfig
 
 class NatsPublisher(AbstractPublisher, ):
     """
-    使用nats作为中间件
+    Uses NATS as the broker.
     """
 
     # noinspection PyAttributeOutsideInit

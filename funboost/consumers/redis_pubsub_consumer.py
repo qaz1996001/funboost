@@ -9,7 +9,7 @@ from funboost.utils.redis_manager import RedisMixin
 
 class RedisPbSubConsumer(AbstractConsumer, RedisMixin):
     """
-    redis作为中间件实现的。
+    Consumer implemented using Redis pub/sub as middleware.
     """
 
 

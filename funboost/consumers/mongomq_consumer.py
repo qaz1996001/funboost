@@ -9,7 +9,7 @@ from funboost.core.func_params_model import PublisherParams
 
 class MongoMqConsumer(AbstractConsumer, MongoMixin):
     """
-    Mongo queue包实现的基于mongo的消息队列，支持消费确认。
+    Mongo-based message queue implemented using the Mongo queue package, supports consumption confirmation.
     """
 
 

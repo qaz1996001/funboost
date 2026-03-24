@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Funboost Workflow 示例 - 视频处理 Pipeline
+Funboost Workflow Example - Video Processing Pipeline
 
-演示使用 chain + chord 实现经典的视频处理工作流：
-1. 下载视频
-2. 并行转码为多种分辨率
-3. 汇总结果并发送通知
+Demonstrates using chain + chord to implement a classic video processing workflow:
+1. Download video
+2. Transcode to multiple resolutions in parallel
+3. Aggregate results and send notification
 
-这是 Celery Canvas 的经典用例，用 Funboost Workflow 实现。
+This is a classic Celery Canvas use case, implemented with Funboost Workflow.
 
-运行方式：
+How to run:
     cd d:\\codes\\funboost
     D:\\ProgramData\\Miniconda3\\envs\\py39b\\python.exe funboost/workflow/examples/video_pipeline.py
 """
@@ -22,11 +22,11 @@ from funboost.workflow import chain, group, chord, WorkflowBoosterParams
 
 
 # ============================================================
-# 定义工作流任务
+# Define workflow tasks
 # ============================================================
 
 class VideoWorkflowParams(WorkflowBoosterParams):
-    """视频处理工作流的公共参数"""
+    """Common parameters for the video processing workflow"""
     broker_kind: str = BrokerEnum.SQLITE_QUEUE
     broker_exclusive_config: dict = {'pull_msg_batch_size': 1}
     max_retry_times: int = 0
@@ -35,19 +35,19 @@ class VideoWorkflowParams(WorkflowBoosterParams):
 @boost(VideoWorkflowParams(queue_name='wf_download_video'))
 def download_video(url: str) -> str:
     """
-    步骤1：下载视频
-    
-    :param url: 视频 URL
-    :return: 下载后的本地文件路径
+    Step 1: Download video
+
+    :param url: Video URL
+    :return: Local file path after download
     """
     print(fct.full_msg)
-    fct.logger.info(f'📥 开始下载视频: {url}')
-    
-    # 模拟下载耗时
+    fct.logger.info(f'Starting video download: {url}')
+
+    # Simulate download time
     time.sleep(2)
     
     file_path = f'/downloads/{url.replace("://", "_").replace("/", "_")}'
-    fct.logger.info(f'✅ 下载完成: {file_path}')
+    fct.logger.info(f'Download complete: {file_path}')
     
     return file_path
 
@@ -55,20 +55,20 @@ def download_video(url: str) -> str:
 @boost(VideoWorkflowParams(queue_name='wf_transform_video'))
 def transform_video(video_file: str, resolution: str = '360p') -> str:
     """
-    步骤2：转码视频
-    
-    :param video_file: 输入视频文件路径
-    :param resolution: 目标分辨率
-    :return: 转码后的文件路径
+    Step 2: Transcode video
+
+    :param video_file: Input video file path
+    :param resolution: Target resolution
+    :return: Transcoded file path
     """
     print(fct.full_msg)
-    fct.logger.info(f'🔄 开始转码: {video_file} -> {resolution}')
-    
-    # 模拟转码耗时
+    fct.logger.info(f'Starting transcode: {video_file} -> {resolution}')
+
+    # Simulate transcode time
     time.sleep(3)
     
     output_file = f'{video_file}_{resolution}.mp4'
-    fct.logger.info(f'✅ 转码完成: {output_file}')
+    fct.logger.info(f'Transcode complete: {output_file}')
     
     return output_file
 
@@ -76,35 +76,35 @@ def transform_video(video_file: str, resolution: str = '360p') -> str:
 @boost(VideoWorkflowParams(queue_name='wf_send_finish_msg'))
 def send_finish_msg(video_list: typing.List[str], url: str) -> str:
     """
-    步骤3：发送完成通知
-    
-    :param video_list: 转码后的视频文件列表
-    :param url: 原始视频 URL
-    :return: 完成消息
+    Step 3: Send completion notification
+
+    :param video_list: List of transcoded video files
+    :param url: Original video URL
+    :return: Completion message
     """
     print(fct.full_msg)
-    fct.logger.info('📧 发送完成通知...')
-    fct.logger.info(f'   原始视频: {url}')
-    fct.logger.info(f'   转码结果: {video_list}')
+    fct.logger.info('Sending completion notification...')
+    fct.logger.info(f'   Original video: {url}')
+    fct.logger.info(f'   Transcode results: {video_list}')
     
-    # 模拟发送通知
+    # Simulate sending notification
     time.sleep(1)
     
-    msg = f'🎉 视频处理完成！{url} -> {len(video_list)} 个分辨率版本'
-    fct.logger.info(f'✅ {msg}')
+    msg = f'Video processing complete! {url} -> {len(video_list)} resolution versions'
+    fct.logger.info(f'{msg}')
     
     return msg
 
 
 # ============================================================
-# 工作流编排
+# Workflow orchestration
 # ============================================================
 
 def create_video_pipeline(url: str):
     """
-    创建视频处理工作流
-    
-    等价于 Celery Canvas:
+    Create a video processing workflow
+
+    Equivalent to Celery Canvas:
     ```python
     chain(
         download_video.s(url),
@@ -115,10 +115,10 @@ def create_video_pipeline(url: str):
     )
     ```
     
-    注意：导入 funboost.workflow 后，所有 @boost 装饰的函数自动拥有 .s() 和 .si() 方法
-    无需手动添加！
+    Note: After importing funboost.workflow, all @boost decorated functions automatically have .s() and .si() methods.
+    No manual addition needed!
     """
-    # 定义工作流
+    # Define workflow
     resolutions = ['360p', '720p', '1080p']
     
     workflow = chain(
@@ -133,37 +133,37 @@ def create_video_pipeline(url: str):
 
 
 # ============================================================
-# 主程序
+# Main program
 # ============================================================
 
 if __name__ == '__main__':
     print('=' * 60)
-    print('🎬 Funboost Workflow 示例 - 视频处理 Pipeline')
+    print('Funboost Workflow Example - Video Processing Pipeline')
     print('=' * 60)
     
-    # 启动消费者
-    print('\n📡 启动消费者...')
+    # Start consumers
+    print('\nStarting consumers...')
     download_video.consume()
     transform_video.consume()
     send_finish_msg.consume()
     
-    # 等待消费者就绪
+    # Wait for consumers to be ready
     time.sleep(3)
     
-    # 创建并执行工作流
-    print('\n🚀 执行视频处理工作流...')
+    # Create and execute workflow
+    print('\nExecuting video processing workflow...')
     print('-' * 60)
     
     url = 'https://example.com/video.mp4'
     workflow = create_video_pipeline(url)
     
-    # 同步执行工作流
+    # Execute workflow synchronously
     rpc_data = workflow.apply()
     
     print('-' * 60)
-    print('\n🏁 工作流执行完成！')
-    print(f'   最终结果: {rpc_data}')
+    print('\nWorkflow execution complete!')
+    print(f'   Final result: {rpc_data}')
     print('=' * 60)
     
-    # 保持运行
+    # Keep running
     ctrl_c_recv()

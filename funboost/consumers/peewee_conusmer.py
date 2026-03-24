@@ -10,7 +10,7 @@ from funboost.queues.peewee_queue import PeeweeQueue,TaskStatus
 
 class PeeweeConsumer(AbstractConsumer):
     """
-    peewee实现的操作5种数据库模拟消息队列，支持消费确认。
+    Message queue simulated using peewee to operate 5 types of databases, supports consumption confirmation.
     """
 
 

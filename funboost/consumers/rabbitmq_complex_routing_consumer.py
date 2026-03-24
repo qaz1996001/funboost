@@ -13,14 +13,14 @@ class RabbitmqComplexRoutingConsumer(RabbitmqConsumerAmqpStorm):
     def custom_init(self):
         super().custom_init()
         rp = self.bulid_a_new_publisher_of_same_queue()
-        rp.init_broker()  # 发布者那边只声明了交换机
+        rp.init_broker()  # Publisher side only declares the exchange
 
-        # 消费者负责声明队列和唯一的绑定逻辑
+        # Consumer is responsible for declaring queue and unique binding logic
         AmqpStormQueue(rp.channel).declare(**rp.queue_declare_params)
         
-        # 消费者负责唯一的绑定逻辑
+        # Consumer is responsible for the unique binding logic
         if rp._exchange_name:
-            self.logger.info(f'消费者开始绑定: 队列 [{self._queue_name}] <--> 交换机 [{rp._exchange_name}] (类型: {rp._exchange_type})')
+            self.logger.info(f'Consumer starting binding: queue [{self._queue_name}] <--> exchange [{rp._exchange_name}] (type: {rp._exchange_type})')
             
             routing_key_bind = self.consumer_params.broker_exclusive_config.get('routing_key_for_bind')
             arguments_for_bind = None
@@ -31,7 +31,7 @@ class RabbitmqComplexRoutingConsumer(RabbitmqConsumerAmqpStorm):
                 routing_key_bind = ''  # headers 必须使用空 routing_key
                 arguments_for_bind = self.consumer_params.broker_exclusive_config.get('headers_for_bind', {})
                 arguments_for_bind['x-match'] = self.consumer_params.broker_exclusive_config.get('x_match_for_bind', 'all')
-            elif routing_key_bind is None:  # 用户未指定绑定键时，根据交换机类型设置默认值
+            elif routing_key_bind is None:  # When user hasn't specified binding key, set defaults based on exchange type
                 if rp._exchange_type == 'topic':
                     routing_key_bind = '#'  # topic 默认订阅所有
                 else:  # direct
@@ -42,7 +42,7 @@ class RabbitmqComplexRoutingConsumer(RabbitmqConsumerAmqpStorm):
         self._rp = rp
 
     def _dispatch_task(self):
-        # 重写父类的方法，以支持更复杂的绑定逻辑
+        # Override parent's method to support more complex binding logic
         def callback(amqpstorm_message: amqpstorm.Message):
             body = amqpstorm_message.body
             kw = {'amqpstorm_message': amqpstorm_message, 'body': body}

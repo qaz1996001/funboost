@@ -10,8 +10,8 @@ from funboost.utils import decorators
 
 
 class RabbitmqComplexRoutingPublisher(AbstractPublisher):
-    # 使用amqpstorm包实现的mq操作。
-    # 实例属性没在__init__里面写，造成代码补全很麻烦，写在这里做类属性，方便pycharm补全
+    # MQ operations implemented using the amqpstorm package.
+    # Instance attributes not written in __init__ cause inconvenient code completion; written here as class attributes for PyCharm auto-completion
     connection : amqpstorm.UriConnection
     channel : amqpstorm.Channel
     channel_wrapper_by_ampqstormbaic : AmqpStormBasic
@@ -28,8 +28,8 @@ class RabbitmqComplexRoutingPublisher(AbstractPublisher):
         
         self._exchange_name = self.publisher_params.broker_exclusive_config['exchange_name']
         self._exchange_type = self.publisher_params.broker_exclusive_config['exchange_type']
-        # 如果用户没有在 broker_exclusive_config 中指定 routing_key_for_publish，则默认使用队列名作为 routing_key
-        self._routing_key_for_publish = self.publisher_params.broker_exclusive_config.get('routing_key_for_publish') or self._queue_name  # 这里你已经用了很好的实践
+        # If the user didn't specify routing_key_for_publish in broker_exclusive_config, default to using the queue name as routing_key
+        self._routing_key_for_publish = self.publisher_params.broker_exclusive_config.get('routing_key_for_publish') or self._queue_name
 
         self._exchange_declare_durable = self.publisher_params.broker_exclusive_config['exchange_declare_durable']
 
@@ -40,13 +40,13 @@ class RabbitmqComplexRoutingPublisher(AbstractPublisher):
     # @decorators.synchronized
     def init_broker(self):
         # username=app_config.RABBITMQ_USER, password=app_config.RABBITMQ_PASS, host=app_config.RABBITMQ_HOST, port=app_config.RABBITMQ_PORT, virtual_host=app_config.RABBITMQ_VIRTUAL_HOST, heartbeat=60 * 10
-        self.logger.warning(f'使用AmqpStorm包 链接mq')
+        self.logger.warning(f'Connecting to MQ using AmqpStorm package')
         self.connection = amqpstorm.UriConnection(
             f'amqp://{BrokerConnConfig.RABBITMQ_USER}:{BrokerConnConfig.RABBITMQ_PASS}@{BrokerConnConfig.RABBITMQ_HOST}:{BrokerConnConfig.RABBITMQ_PORT}/{BrokerConnConfig.RABBITMQ_VIRTUAL_HOST}?heartbeat={60 * 10}&timeout=20000'
         )
         self.channel = self.connection.channel()  # type:amqpstorm.Channel
         self.channel_wrapper_by_ampqstormbaic = AmqpStormBasic(self.channel)
-        # 发布者不声明队列，队列的声明和绑定完全由消费者负责。
+        # Publisher does not declare queues; queue declaration and binding are entirely the consumer's responsibility.
         if self._exchange_name:
             self.channel.exchange.declare(exchange=self._exchange_name, exchange_type=self._exchange_type,
                                           durable=self._exchange_declare_durable)
@@ -56,7 +56,7 @@ class RabbitmqComplexRoutingPublisher(AbstractPublisher):
     def _publish_impl(self, msg: str):
         routing_key_publish_dynamic = self._get_from_other_extra_params('routing_key_for_publish', msg)
         routing_key_publish = routing_key_publish_dynamic if routing_key_publish_dynamic is not None else self._routing_key_for_publish
-        # 核心修正2：为 headers 交换机添加 headers 支持
+        # Core fix 2: Add headers support for headers exchange
         headers = self._get_from_other_extra_params('headers_for_publish', msg)
 
         self.channel_wrapper_by_ampqstormbaic.publish(exchange=self._exchange_name,
@@ -70,7 +70,7 @@ class RabbitmqComplexRoutingPublisher(AbstractPublisher):
     @deco_mq_conn_error
     def clear(self):
         AmqpStormQueue(self.channel).purge(self._queue_name)
-        self.logger.warning(f'清除 {self._queue_name} 队列中的消息成功')
+        self.logger.warning(f'Successfully cleared messages in queue {self._queue_name}')
 
     @deco_mq_conn_error
     def get_message_count(self):
@@ -81,4 +81,4 @@ class RabbitmqComplexRoutingPublisher(AbstractPublisher):
     def close(self):
         self.channel.close()
         self.connection.close()
-        self.logger.warning('关闭amqpstorm包 链接mq')
+        self.logger.warning('Closing amqpstorm MQ connection')

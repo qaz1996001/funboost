@@ -2,15 +2,15 @@
 # @Author  : ydf
 # @Time    : 2026
 """
-RocketMQ 5.x 发布者实现，使用最新版 rocketmq-python-client SDK
+RocketMQ 5.x publisher implementation using the latest rocketmq-python-client SDK.
 pip install rocketmq-python-client
 
-支持 RocketMQ 5.x 版本，基于 gRPC 协议
-支持 Windows / Linux / macOS
+Supports RocketMQ 5.x version, based on gRPC protocol.
+Supports Windows / Linux / macOS.
 """
 
 """
-ai写得，等有时间需要测试
+AI-generated, needs testing when time permits.
 """
 
 import time
@@ -23,56 +23,56 @@ from rocketmq import ClientConfiguration, Credentials, Producer, Message
 
 class RocketmqPublisher(AbstractPublisher):
     """
-    RocketMQ 5.x 发布者，使用 rocketmq-python-client 包
-    
-    安装方式:
+    RocketMQ 5.x publisher using the rocketmq-python-client package.
+
+    Installation:
         pip install rocketmq-python-client
-        
-    特性: 
-        - 基于 gRPC 协议，纯 Python 实现
-        - 支持 Windows / Linux / macOS
-        - 支持 RocketMQ 5.x 版本
-        - 支持自动创建 Topic
+
+    Features:
+        - Based on gRPC protocol, pure Python implementation
+        - Supports Windows / Linux / macOS
+        - Supports RocketMQ 5.x version
+        - Supports automatic Topic creation
     """
 
     _topic__rocketmq_producer = {}
-    _created_topics = set()  # 记录已创建的 topic
+    _created_topics = set()  # Track already created topics
 
     def custom_init(self):
         if self._queue_name not in self.__class__._topic__rocketmq_producer:
-            # 获取配置
+            # Get configuration
             endpoints = self.publisher_params.broker_exclusive_config['endpoints']
             access_key = self.publisher_params.broker_exclusive_config['access_key']
             secret_key = self.publisher_params.broker_exclusive_config['secret_key']
             namespace = self.publisher_params.broker_exclusive_config['namespace']
             
-            # 自动创建 Topic
+            # Auto-create Topic
             self._auto_create_topic(endpoints)
             
-            # 创建凭证
+            # Create credentials
             if access_key and secret_key:
                 credentials = Credentials(access_key, secret_key)
             else:
                 credentials = Credentials()
             
-            # 创建客户端配置
+            # Create client configuration
             if namespace:
                 config = ClientConfiguration(endpoints, credentials, namespace)
             else:
                 config = ClientConfiguration(endpoints, credentials)
             
-            # 创建 Producer
+            # Create Producer
             producer = Producer(config, [self._queue_name])
             producer.startup()
             
             self.__class__._topic__rocketmq_producer[self._queue_name] = producer
-            self.logger.info(f'RocketMQ 5.x Producer 已启动，topic: {self._queue_name}, endpoints: {endpoints}')
+            self.logger.info(f'RocketMQ 5.x Producer started, topic: {self._queue_name}, endpoints: {endpoints}')
         
         self._producer = self.__class__._topic__rocketmq_producer[self._queue_name]
 
     def _auto_create_topic(self, endpoints: str):
         """
-        自动创建 Topic - 通过 HTTP API
+        Auto-create Topic via HTTP API.
         """
         if self._queue_name in self.__class__._created_topics:
             return
@@ -85,17 +85,17 @@ class RocketmqPublisher(AbstractPublisher):
             self._create_topic_via_http(host, namesrv_addr, cluster_name)
         except Exception as e:
             self.logger.warning(
-                f'自动创建 Topic 失败: {e}\n'
-                f'请手动创建: docker exec -it rmq-broker sh mqadmin updateTopic -n localhost:9876 -t {self._queue_name} -c {cluster_name}'
+                f'Failed to auto-create Topic: {e}\n'
+                f'Please create manually: docker exec -it rmq-broker sh mqadmin updateTopic -n localhost:9876 -t {self._queue_name} -c {cluster_name}'
             )
 
     def _create_topic_via_http(self, host: str, namesrv_addr: str, cluster_name: str):
-        """通过 HTTP API 创建 Topic"""
+        """Create Topic via HTTP API"""
         import urllib.request
         import urllib.parse
         import json
         
-        # 尝试多个可能的端口和 API
+        # Try multiple possible ports and APIs
         apis_to_try = [
             # RocketMQ Dashboard API
             (8080, '/topic/createOrUpdate', 'form'),
@@ -128,42 +128,42 @@ class RocketmqPublisher(AbstractPublisher):
                 
                 with urllib.request.urlopen(req, timeout=5) as response:
                     if response.status == 200:
-                        self.logger.info(f'通过 HTTP API ({host}:{port}) 创建 Topic 成功: {self._queue_name}')
+                        self.logger.info(f'Successfully created Topic via HTTP API ({host}:{port}): {self._queue_name}')
                         self.__class__._created_topics.add(self._queue_name)
                         return
             except Exception:
                 continue
         
-        # 所有方式都失败
+        # All methods failed
         self.logger.warning(
-            f'无法自动创建 Topic: {self._queue_name}\n'
-            f'请手动执行: docker exec -it <container> sh mqadmin updateTopic -n {namesrv_addr} -t {self._queue_name} -c {cluster_name}'
+            f'Unable to auto-create Topic: {self._queue_name}\n'
+            f'Please execute manually: docker exec -it <container> sh mqadmin updateTopic -n {namesrv_addr} -t {self._queue_name} -c {cluster_name}'
         )
 
     def _publish_impl(self, msg: str):
-        """发布消息到 RocketMQ Topic"""
+        """Publish message to RocketMQ Topic"""
         message = Message()
         message.topic = self._queue_name
         message.body = msg.encode('utf-8') if isinstance(msg, str) else msg
         self._producer.send(message)
 
     def clear(self):
-        """清空队列 - RocketMQ 不支持通过 Python SDK 删除消息"""
+        """Clear queue - RocketMQ does not support deleting messages via Python SDK"""
         self.logger.warning(
-            'RocketMQ Python SDK 不支持清空队列/删除消息功能，'
-            '如需清空请通过 RocketMQ Console 或 Admin API 操作'
+            'RocketMQ Python SDK does not support clearing queue/deleting messages. '
+            'To clear, please use RocketMQ Console or Admin API.'
         )
 
     def get_message_count(self):
-        """获取队列消息数量 - RocketMQ Python SDK 不直接支持此功能"""
+        """Get queue message count - RocketMQ Python SDK does not directly support this feature"""
         if time.time() - getattr(self, '_last_warning_count', 0) > 300:
             setattr(self, '_last_warning_count', time.time())
             self.logger.debug(
-                'RocketMQ Python SDK 暂不支持获取队列消息数量，'
-                '如需查看请使用 RocketMQ Console'
+                'RocketMQ Python SDK does not yet support getting queue message count. '
+                'To check, please use RocketMQ Console.'
             )
         return -1
 
     def close(self):
-        """关闭生产者连接"""
+        """Close producer connection"""
         pass

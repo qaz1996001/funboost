@@ -12,14 +12,14 @@ from funboost.funboost_config_deafult import BrokerConnConfig
 
 class MqttConsumer(AbstractConsumer):
     """
-    emq 作为中间件 实现的消费者 ，使用共享订阅。
+    Consumer implemented using EMQ as middleware, using shared subscriptions.
     """
 
 
     # noinspection PyAttributeOutsideInit
     def custom_init(self):
-        # fsdf 表示 funboost.相当于kafka的消费者组作用。
-        # 这个是共享订阅，见  https://blog.csdn.net/emqx_broker/article/details/103027813
+        # fsdf stands for funboost. Equivalent to kafka's consumer group functionality.
+        # This is a shared subscription, see https://blog.csdn.net/emqx_broker/article/details/103027813
         self._topic_shared = f'$share/fsdf/{self._queue_name}'
 
     # noinspection DuplicatedCode
@@ -30,9 +30,9 @@ class MqttConsumer(AbstractConsumer):
         client.on_message = self._on_message
         client.on_disconnect = self._on_socket_close
         client.on_socket_close = self._on_socket_close
-        client.connect(BrokerConnConfig.MQTT_HOST, BrokerConnConfig.MQTT_TCP_PORT, 600)  # 600为keepalive的时间间隔
-        client.subscribe(self._topic_shared, qos=0)  # on message 是异把消息丢到线程池，本身不可能失败。
-        client.loop_forever(retry_first_connection=True)  # 保持连接
+        client.connect(BrokerConnConfig.MQTT_HOST, BrokerConnConfig.MQTT_TCP_PORT, 600)  # 600 is the keepalive interval
+        client.subscribe(self._topic_shared, qos=0)  # on_message asynchronously puts messages into thread pool, itself cannot fail.
+        client.loop_forever(retry_first_connection=True)  # Maintain connection
 
     def _on_socket_close(self, client, userdata, socket):
         self.logger.critical(f'{client, userdata, socket}')
@@ -43,7 +43,7 @@ class MqttConsumer(AbstractConsumer):
         self.logger.critical(f'{client, userdata, reasonCode, properties}')
 
     def _on_connect(self, client, userdata, flags, rc):
-        self.logger.info(f'连接mqtt服务端成功, {client, userdata, flags, rc}')
+        self.logger.info(f'Successfully connected to mqtt server, {client, userdata, flags, rc}')
 
     # noinspection PyUnusedLocal
     def _on_message(self, client, userdata, msg):

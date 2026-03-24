@@ -323,4 +323,4 @@
 #     return _deco  # noqa
 #
 #
-# task_deco = boost  # 两个装饰器名字都可以。task_deco是原来名字，兼容一下。
+# task_deco = boost  # Both decorator names work. task_deco is the original name, kept for backward compatibility.

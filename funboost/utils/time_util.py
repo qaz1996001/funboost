@@ -16,7 +16,7 @@ def _get_funboost_timezone():
 
 def build_defualt_date():
     """
-    获取今天和明天的日期
+    Get today's and tomorrow's date.
     :return:
     """
     today = datetime.date.today()
@@ -28,7 +28,7 @@ def build_defualt_date():
 
 def get_day_by_interval(n):
     """
-    :param n: 离当天的日期，可为正负整数
+    :param n: Number of days from today, can be positive or negative integer
     :return:
     """
     today = datetime.date.today()
@@ -39,7 +39,7 @@ def get_day_by_interval(n):
 
 def get_ahead_one_hour(datetime_str):
     """
-    获得提前一小时的时间字符串和时间戳
+    Get the datetime string and timestamp for one hour earlier.
     :return:
     """
     datetime_obj = datetime.datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
@@ -49,13 +49,13 @@ def get_ahead_one_hour(datetime_str):
 
 def timestamp_to_datetime_str(timestamp):
     time_local = time.localtime(timestamp)
-    # 转换成新的时间格式(2016-05-05 20:28:54)
+    # Convert to new time format (2016-05-05 20:28:54)
     return time.strftime("%Y-%m-%d %H:%M:%S", time_local)
 
 
 class DatetimeConverter:
     """
-    最爽的时间操作方式。使用真oop需要实例化，调用方式比纯静态方法工具类好太多。
+    The most convenient datetime manipulation approach. Uses real OOP with instantiation; much better calling style than pure static utility classes.
     """
     DATETIME_FORMATTER = "%Y-%m-%d %H:%M:%S"
     DATETIME_FORMATTER2 = "%Y-%m-%d"
@@ -64,32 +64,32 @@ class DatetimeConverter:
     @classmethod
     def bulid_conveter_with_other_formatter(cls, datetime_str, datetime_formatter):
         """
-        :param datetime_str: 时间字符串
-        :param datetime_formatter: 能够格式化该字符串的模板
+        :param datetime_str: Datetime string
+        :param datetime_formatter: Format template that can parse the string
         :return:
         """
         datetime_obj = datetime.datetime.strptime(datetime_str, datetime_formatter)
         return cls(datetime_obj)
 
-    def __init__(self, datetimex: typing.Union[int, float, datetime.datetime, str] = None):  # REMIND 不要写成默认 datetime.datetime.now()或time.time()，否则默认参数值运行一次
+    def __init__(self, datetimex: typing.Union[int, float, datetime.datetime, str] = None):  # REMIND Do not set default to datetime.datetime.now() or time.time(), otherwise the default parameter value is evaluated only once
         """
-        :param datetimex: 接受时间戳  datatime类型 和 时间字符串三种类型
+        :param datetimex: Accepts timestamp, datetime object, and datetime string types
         """
         # if isinstance(datetimex, str):
         #     if not re.match(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', datetimex):
-        #         raise ValueError('时间字符串的格式不符合此传参的规定')
+        #         raise ValueError('The datetime string format does not match the parameter requirements')
         #     else:
         #         self.datetime_obj = datetime.datetime.strptime(datetimex, self.DATETIME_FORMATTER)
         # elif isinstance(datetimex, (int, float)):
         #     if datetimex < 1:
         #         datetimex += 86400
-        #     self.datetime_obj = datetime.datetime.fromtimestamp(datetimex, tz=pytz.timezone(_get_funboost_timezone()))  # 时间戳0在windows会出错。
+        #     self.datetime_obj = datetime.datetime.fromtimestamp(datetimex, tz=pytz.timezone(_get_funboost_timezone()))  # Timestamp 0 causes errors on Windows.
         # elif isinstance(datetimex, datetime.datetime):
         #     self.datetime_obj = datetimex
         # elif datetimex is None:
         #     self.datetime_obj = datetime.datetime.now(tz=pytz.timezone(_get_funboost_timezone()))
         # else:
-        #     raise ValueError('实例化时候的传参不符合规定')
+        #     raise ValueError('The parameter passed during instantiation does not meet requirements')
         self.datetime_obj = FunboostTime(datetimex).datetime_obj
 
     @property
@@ -111,7 +111,7 @@ class DatetimeConverter:
     @property
     def one_hour_ago_datetime_converter(self):
         """
-        酒店经常需要提前一小时免费取消，直接封装在这里
+        Hotels often require free cancellation one hour in advance; encapsulated here for convenience.
         :return:
         """
         one_hour_ago_datetime_obj = self.datetime_obj + datetime.timedelta(hours=-1)
@@ -129,7 +129,7 @@ class DatetimeConverter:
 
 def seconds_to_hour_minute_second(seconds):
     """
-    把秒转化成还需要的时间
+    Convert seconds to hours:minutes:seconds format.
     :param seconds:
     :return:
     """

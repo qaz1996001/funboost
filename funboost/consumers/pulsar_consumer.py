@@ -29,7 +29,7 @@ from funboost.funboost_config_deafult import BrokerConnConfig
 
 class PulsarConsumer(AbstractConsumer, ):
     """
-    pulsar作为中间件实现的。
+    Consumer implemented using Pulsar as middleware.
     """
 
 
@@ -39,9 +39,9 @@ class PulsarConsumer(AbstractConsumer, ):
 
     def _dispatch_task(self):
         try:
-            import pulsar  # 需要用户自己 pip install pulsar-client ，目前20221206只支持linux安装此python包。
+            import pulsar  # Users need to pip install pulsar-client themselves; as of 20221206 only Linux supports this Python package.
         except ImportError:
-            raise ImportError('需要用户自己 pip install pulsar-client ，')
+            raise ImportError('You need to install pulsar-client yourself: pip install pulsar-client')
         self._client = pulsar.Client(BrokerConnConfig.PULSAR_URL, )
 
         consumer_type_map = {

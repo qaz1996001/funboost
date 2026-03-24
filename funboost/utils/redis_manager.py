@@ -18,10 +18,10 @@ def get_redis_conn_kwargs():
             'username': BrokerConnConfig.REDIS_USERNAME,'ssl' : BrokerConnConfig.REDIS_SSL,
             'password': BrokerConnConfig.REDIS_PASSWORD, 'db': BrokerConnConfig.REDIS_DB,
             
-            # 增强redis稳定性的，尤其外网redis
+            # Enhance redis stability, especially for remote/public redis
             'health_check_interval' :30,
             'socket_keepalive' :True,
-            # 'socket_timeout':120,  # 不要设置socket_timeout，rpc blpop 等待可以设置很长的时间,和这冲突
+            # 'socket_timeout':120,  # Do not set socket_timeout, rpc blpop wait can be set to very long durations, which conflicts with this
 
             }
 
@@ -76,7 +76,7 @@ class RedisManager(object):
 # noinspection PyArgumentEqualDefault
 class RedisMixin(object):
     """
-    可以被作为万能mixin能被继承，也可以单独实例化使用。
+    Can be used as a universal mixin for inheritance, or instantiated directly.
     """
 
     def redis_db_n(self, db):
@@ -93,7 +93,7 @@ class RedisMixin(object):
         return RedisManager(**_get_redis_conn_kwargs_by_db(BrokerConnConfig.REDIS_DB_FILTER_AND_RPC_RESULT)).get_redis()
 
     def timestamp(self):
-        """ 如果是多台机器做分布式控频 乃至确认消费，每台机器取自己的时间，如果各机器的时间戳不一致会发生问题，改成统一使用从redis服务端获取时间，单位是时间戳秒。"""
+        """For distributed rate limiting or consumption acknowledgment across multiple machines, using each machine's own time can cause issues if timestamps are inconsistent. Changed to uniformly use time from the Redis server, in seconds (timestamp)."""
         time_tuple = self.redis_db_frame.time()
         # print(time_tuple)
         return time_tuple[0] + time_tuple[1] / 1000000
@@ -103,6 +103,6 @@ class AioRedisMixin(object):
     @property
     @decorators.cached_method_result
     def aioredis_db_filter_and_rpc_result(self):
-        # aioredis 包已经不再更新了,推荐使用redis包的asyncio中的类
+        # aioredis package is no longer maintained, recommend using asyncio classes from the redis package
         # return AioRedisManager(**_get_redis_conn_kwargs_by_db(BrokerConnConfig.REDIS_DB_FILTER_AND_RPC_RESULT)).get_redis()
         return redis5.asyncio.Redis(**_get_redis_conn_kwargs_by_db(BrokerConnConfig.REDIS_DB_FILTER_AND_RPC_RESULT),decode_responses=True)

@@ -8,13 +8,13 @@ from funboost.constant import BrokerEnum
 from funboost.consumers.base_consumer import AbstractConsumer
 from funboost.utils.rabbitmq_factory import RabbitMqFactory
 
-@deprecated('不建议使用这个中间件模式，建议使用 BrokerEnum.RABBITMQ_AMQPSTORM 操作rabbitmq')
+@deprecated('This middleware mode is not recommended. Please use BrokerEnum.RABBITMQ_AMQPSTORM to operate rabbitmq')
 class RabbitmqConsumerRabbitpy(AbstractConsumer):
     """
-    使用rabbitpy实现的
+    Implemented using rabbitpy
     """
     def custom_init(self):
-        raise Exception('不建议使用这个中间件模式，建议使用 BrokerEnum.RABBITMQ_AMQPSTORM 操作rabbitmq')
+        raise Exception('This middleware mode is not recommended. Please use BrokerEnum.RABBITMQ_AMQPSTORM to operate rabbitmq')
 
     def _dispatch_task(self):
         # noinspection PyTypeChecker
