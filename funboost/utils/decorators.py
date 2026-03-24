@@ -713,7 +713,7 @@ def timeout(seconds):
 class _Test(unittest.TestCase):
     @unittest.skip
     def test_superposition(self):
-        """测试多次运行和异常重试,测试装饰器叠加"""
+        """Test multiple runs and exception retry, test decorator stacking"""
 
         @run_many_times(3)
         @handle_exception(2, 1)
@@ -725,7 +725,7 @@ class _Test(unittest.TestCase):
 
     @unittest.skip
     def test_run_many_times(self):
-        """测试运行5次"""
+        """Test running 5 times"""
 
         @run_many_times(5)
         def f1():
@@ -736,7 +736,7 @@ class _Test(unittest.TestCase):
 
     @unittest.skip
     def test_tomorrow_threads(self):
-        """测试多线程装饰器,每2秒打印5次"""
+        """Test multi-thread decorator, print 5 times every 2 seconds"""
 
         @tomorrow_threads(5)
         def f2():
@@ -747,7 +747,7 @@ class _Test(unittest.TestCase):
 
     @unittest.skip
     def test_singleton(self):
-        """测试单例模式的装饰器"""
+        """Test singleton pattern decorator"""
 
         @singleton
         class A(object):
@@ -765,13 +765,13 @@ class _Test(unittest.TestCase):
         class A:
             def __init__(self, x, y, z, q=4):
                 in_param = copy.deepcopy(locals())
-                nb_print(f'执行初始化啦, {in_param}')
+                nb_print(f'Initialization executed, {in_param}')
 
         @flyweight
         class B:
             def __init__(self, x, y, z):
                 in_param = copy.deepcopy(locals())
-                nb_print(f'执行初始化啦, {in_param}')
+                nb_print(f'Initialization executed, {in_param}')
 
         A(1, 2, 3)
         A(1, 2, 3)
@@ -780,17 +780,17 @@ class _Test(unittest.TestCase):
 
     @unittest.skip
     def test_keep_circulating(self):
-        """测试间隔时间，循环运行"""
+        """Test interval time, looping execution"""
 
         @keep_circulating(3)
         def f6():
-            print("每隔3秒，一直打印   " + time.strftime('%H:%M:%S'))
+            print("Printing every 3 seconds   " + time.strftime('%H:%M:%S'))
 
         f6()
 
     @unittest.skip
     def test_timer(self):
-        """测试计时器装饰器"""
+        """Test timer decorator"""
 
         @timer
         def f7():
@@ -801,7 +801,7 @@ class _Test(unittest.TestCase):
     @unittest.skip
     def test_timer_context(self):
         """
-        测试上下文，对代码片段进行计时
+        Test context manager for timing code snippets
         """
         with TimerContextManager(is_print_log=False) as tc:
             time.sleep(2)

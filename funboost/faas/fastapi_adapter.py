@@ -61,27 +61,27 @@ fastapi_router = APIRouter(prefix='/funboost', tags=['funboost'])
 
 
 
-# ==================== fastapi app 处理装饰器 ====================
-# 会影响用户自己的 app，看用户自己喜好了，因为有的用户的response是自定义的，不是funboost fatapi_router的BaseResponse。
+# ==================== FastAPI app exception handler decorators ====================
+# This will affect the user's own app; it depends on user preference, since some users have custom responses, not funboost fastapi_router's BaseResponse.
 
 async def funboost_exception_handler(request: Request, exc: FunboostException) -> JSONResponse:
     """
-    统一处理 FunboostException 类型的异常
-    自动提取异常的 code、message、data 等信息返回给前端
+    Unified handler for FunboostException type exceptions.
+    Automatically extracts the exception's code, message, data, etc. and returns them to the frontend.
     """
-    # 注意：这里不能直接返回 BaseResponse，因为FastAPI的异常处理器需要返回Response对象
-    # 但我们可以使用BaseResponse的结构来保持格式一致
+    # Note: we cannot directly return BaseResponse here because FastAPI's exception handler requires returning a Response object
+    # But we can use BaseResponse's structure to maintain format consistency
     response_data = {
         "succ": False,
         "msg": exc.message,
         "code": exc.code or 5000,
         "error_data": exc.error_data,
         "error": exc.__class__.__name__,
-        "traceback": None,  # FunboostException不返回traceback
+        "traceback": None,  # FunboostException does not return traceback
         "trace_id": getattr(exc, "trace_id", None)
     }
     return JSONResponse(
-        status_code=200,  # HTTP状态码仍然返回200,业务错误通过code区分
+        status_code=200,  # HTTP status code still returns 200, business errors are distinguished by code
         content=response_data
     )
 
@@ -102,7 +102,7 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
         "trace_id": None
     }
     return JSONResponse(
-        status_code=200,  # HTTP状态码仍然返回200,业务错误通过code区分
+        status_code=200,  # HTTP status code still returns 200, business errors are distinguished by code
         content=response_data
     )
 

@@ -304,38 +304,38 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
     def _format_alert_message(self, info_dict: dict) -> str:
         now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         msg_lines = [
-            "🚨 [告警] 队列任务异常",
-            f"队列名: {info_dict['queue_name']}",
-            f"策略: {info_dict['strategy']}",
+            "🚨 [ALERT] Queue Task Exception",
+            f"Queue name: {info_dict['queue_name']}",
+            f"Strategy: {info_dict['strategy']}",
         ]
         if info_dict['strategy'] == 'consecutive':
-            msg_lines.append(f"连续失败次数: {info_dict['consecutive_failure_count']}")
+            msg_lines.append(f"Consecutive failures: {info_dict['consecutive_failure_count']}")
         if 'error_rate_info' in info_dict:
             ri = info_dict['error_rate_info']
-            msg_lines.append(f"错误率: {ri['rate']:.2%} ({ri['failures']}/{ri['total']})")
-        msg_lines.append(f"累计失败次数: {info_dict['total_failure_count']}")
-        msg_lines.append(f"告警时间: {now_str}")
+            msg_lines.append(f"Error rate: {ri['rate']:.2%} ({ri['failures']}/{ri['total']})")
+        msg_lines.append(f"Total failures: {info_dict['total_failure_count']}")
+        msg_lines.append(f"Alert time: {now_str}")
         return '\n'.join(msg_lines)
 
     def _format_recovery_message(self, info_dict: dict) -> str:
         now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         msg_lines = [
-            "✅ [恢复] 队列任务已恢复正常",
-            f"队列名: {info_dict['queue_name']}",
-            f"策略: {info_dict['strategy']}",
-            f"恢复时间: {now_str}",
+            "✅ [RECOVERY] Queue Task Has Recovered",
+            f"Queue name: {info_dict['queue_name']}",
+            f"Strategy: {info_dict['strategy']}",
+            f"Recovery time: {now_str}",
         ]
         return '\n'.join(msg_lines)
 
     def custom_send_notification(self, message: str):
         """
-        用户自定义告警发送钩子，当 alert_app='custom' 时自动调用。
-        继承 AlertNotifierConsumerMixin 并重写此方法，可实现任意告警方式（邮件、短信、企业内部系统等）。
+        User-defined alert sending hook, automatically called when alert_app='custom'.
+        Inherit AlertNotifierConsumerMixin and override this method to implement any alert method (email, SMS, internal systems, etc.).
 
-        示例：
+        Example:
             class EmailAlertConsumer(AlertNotifierConsumerMixin):
                 def custom_send_notification(self, message: str):
-                    send_email(to='ops@example.com', subject='任务告警', body=message)
+                    send_email(to='ops@example.com', subject='Task Alert', body=message)
 
             @boost(BoosterParams(
                 queue_name='my_task',
@@ -346,7 +346,7 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
                 ...
         """
         raise NotImplementedError(
-            "alert_app='custom' 时需要继承 AlertNotifierConsumerMixin 并重写 custom_send_notification 方法"
+            "When alert_app='custom', you need to inherit AlertNotifierConsumerMixin and override the custom_send_notification method"
         )
 
     def _send_notification(self, message: str):

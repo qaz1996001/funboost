@@ -154,7 +154,7 @@ class FunboostBackgroundScheduler(BackgroundScheduler):
         # self._daemon = False
         # def _when_exit():
         #     while 1:
-        #         # print('阻止退出')
+        #         # print('prevent exit')
         #         time.sleep(100)
 
         # if block_exit:
@@ -197,27 +197,29 @@ class FunboostBackgroundScheduler(BackgroundScheduler):
         return ThreadPoolExecutorForAps()  # Must be a subclass of apscheduler pool
 
 
-FsdfBackgroundScheduler = FunboostBackgroundScheduler  # 兼容一下名字，fsdf是 function-scheduling-distributed-framework 老框架名字的缩写
-# funboost_aps_scheduler定时配置基于内存的，不可以跨机器远程动态添加/修改/删除定时任务配置。如果需要动态增删改查定时任务，可以使用funboost_background_scheduler_redis_store
+FsdfBackgroundScheduler = FunboostBackgroundScheduler  # Backward compatibility for the name, fsdf is the abbreviation of function-scheduling-distributed-framework (the old framework name)
+# funboost_aps_scheduler's scheduled configuration is memory-based, cannot remotely add/modify/delete scheduled task configurations across machines. For dynamic CRUD of scheduled tasks, use funboost_background_scheduler_redis_store
 
 """
-建议不要亲自使用这个 funboost_aps_scheduler 对象，而是 ApsJobAdder来添加定时任务，自动多个apscheduler对象实例，
-尤其是redis作为jobstores时候，使用不同的jobstores，每个消费函数使用各自单独的jobs_key和 run_times_key
+It is recommended not to use this funboost_aps_scheduler object directly, but instead use ApsJobAdder
+to add scheduled tasks, which automatically creates multiple apscheduler object instances.
+Especially when using Redis as jobstores, it uses different jobstores with separate jobs_key and run_times_key
+for each consumer function.
 """
-# funboost_aps_scheduler是使用内存作为 job_store
+# funboost_aps_scheduler uses memory as job_store
 funboost_aps_scheduler = FunboostBackgroundScheduler(timezone=FunboostCommonConfig.TIMEZONE, daemon=False, )
-fsdf_background_scheduler = funboost_aps_scheduler  # 兼容一下老名字。
+fsdf_background_scheduler = funboost_aps_scheduler  # Backward compatibility for the old name.
 
 
 
 if __name__ == '__main__':
 
     """
-    下面的例子过时了，可以用但不建议，建议统一使用 ApsJobAdder 来添加定时任务。
-
+    The examples below are outdated. They still work but are not recommended.
+    It is recommended to use ApsJobAdder uniformly to add scheduled tasks.
     """
 
-    # 定时运行消费演示
+    # Scheduled consumption demo
     import datetime
     from funboost import boost, BrokerEnum, fsdf_background_scheduler, timing_publish_deco, run_forever
 
@@ -229,21 +231,21 @@ if __name__ == '__main__':
 
     print(consume_func, type(consume_func))
 
-    # 定时每隔3秒执行一次。
+    # Schedule to run every 3 seconds.
     funboost_aps_scheduler.add_push_job(consume_func,
                                         'interval', id='3_second_job', seconds=3, kwargs={"x": 5, "y": 6})
 
-    # 定时，只执行一次
+    # Schedule to run only once
     funboost_aps_scheduler.add_push_job(consume_func,
                                         'date', run_date=datetime.datetime(2020, 7, 24, 13, 53, 6), args=(5, 6,))
 
-    # 定时，每天的11点32分20秒都执行一次。
+    # Schedule to run every day at 11:32:20.
     funboost_aps_scheduler.add_push_job(consume_func,
                                         'cron', day_of_week='*', hour=18, minute=22, second=20, args=(5, 6,))
 
-    # 启动定时
+    # Start scheduler
     funboost_aps_scheduler.start()
 
-    # 启动消费
+    # Start consuming
     consume_func.consume()
     run_forever()

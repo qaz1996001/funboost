@@ -5,12 +5,12 @@ from collections import deque
 
 from funboost.publishers.base_publisher import AbstractPublisher
 
-deque_queue_name__deque_obj_map = dict()  # 使local queue和其他中间件完全一样的使用方式，使用映射保存队列的名字，使消费和发布通过队列名字能找到队列对象。
+deque_queue_name__deque_obj_map = dict()  # Use the same pattern as other brokers, using a mapping to save queue names so consumers and publishers can find queue objects by name.
 
 
 class DequePublisher(AbstractPublisher):
     """
-    使用python内置queue对象作为中间件。方便测试，每个中间件的消费者类是鸭子类，多态可以互相替换。
+    Uses Python's built-in deque object as the broker. Convenient for testing; each broker's consumer class uses duck typing and can be interchangeably substituted via polymorphism.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -27,7 +27,7 @@ class DequePublisher(AbstractPublisher):
         pass
         # noinspection PyUnresolvedReferences
         self.queue.clear()
-        self.logger.warning(f'清除 本地队列中的消息成功')
+        self.logger.warning(f'Successfully cleared messages in local queue')
 
     def get_message_count(self):
         return len(self.queue)

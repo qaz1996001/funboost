@@ -276,11 +276,11 @@ if __name__ == '__main__':
     # pool = ThreadPoolExecutor(200)  # For comparison testing with the official built-in pool
 
     for i in range(30):
-        time.sleep(0.1)  # 这里的间隔时间模拟，当任务来临不密集，只需要少量线程就能搞定f1了，因为f1的消耗时间短，
-        # 不需要开那么多线程，CustomThreadPoolExecutor比ThreadPoolExecutor 优势之一。
+        time.sleep(0.1)  # This interval simulates infrequent task arrival; only a few threads are needed since f1 runs quickly.
+        # No need to create so many threads - this is one advantage of CustomThreadPoolExecutor over ThreadPoolExecutor.
         futurex = pool.submit(f1, i)
         # print(futurex.result())
 
-    # 1/下面测试阻塞主线程退出的情况。注释掉可以测主线程退出的情况。
-    # 2/此代码可以证明，在一段时间后，连续长时间没任务，官方线程池的线程数目还是保持在最大数量了。而此线程池会自动缩小，实现了java线程池的keppalivetime功能。
+    # 1/ Below tests blocking the main thread from exiting. Comment out to test main thread exit behavior.
+    # 2/ This code proves that after a long period without tasks, the official pool maintains max thread count, while this pool auto-shrinks, implementing Java's ThreadPoolExecutor keepAliveTime feature.
     time.sleep(1000000)

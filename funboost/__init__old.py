@@ -280,10 +280,10 @@
 #     for k, v in consumer_init_params0.items():
 #         if v == _Undefined:
 #             # print(k,v,boost_decorator_default_params[k])
-#             consumer_init_params[k] = boost_decorator_default_params[k]  # boost装饰器没有亲指定某个传参，就使用funboost_config.py的BoostDecoratorDefaultParams的全局配置。
+#             consumer_init_params[k] = boost_decorator_default_params[k]  # If the boost decorator didn't explicitly specify a parameter, use the global config from funboost_config.py's BoostDecoratorDefaultParams.
 #
 #     # print(consumer_init_params)
-#     def _deco(func) -> Booster:  # 加这个-> 可以实现pycahrm动态补全
+#     def _deco(func) -> Booster:  # Adding this -> enables PyCharm dynamic auto-completion
 #
 #         func.init_params = consumer_init_params
 #         consumer = get_consumer(consuming_function=func, **consumer_init_params)  # type: AbstractConsumer
@@ -313,7 +313,7 @@
 #         GlobalBoosters.regist(queue_name,func)
 #
 #         # @wraps(func)
-#         # def __deco(*args, **kwargs):  # 这样函数的id变化了，导致win在装饰器内部开多进程不方便。
+#         # def __deco(*args, **kwargs):  # This changes the function's id, making it inconvenient to start multiprocessing inside the decorator on Windows.
 #         #     return func(*args, **kwargs)
 #         return func
 #

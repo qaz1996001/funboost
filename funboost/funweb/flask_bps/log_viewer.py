@@ -405,7 +405,7 @@ def read_content():
         file_size = file_stat.st_size
         file_mtime = datetime.datetime.fromtimestamp(file_stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
     except OSError:
-        return jsonify({'succ': False, 'msg': '无法读取文件信息'})
+        return jsonify({'succ': False, 'msg': 'Unable to read file information'})
 
     dt_start = _parse_dt(time_start)
     dt_end = _parse_dt(time_end)
@@ -482,11 +482,11 @@ def read_content():
 @log_bp.route('/logview/stream', methods=['GET'])
 @login_required
 def log_stream():
-    """SSE 端点：实时推送日志新增内容（类似 tail -f）"""
+    """SSE endpoint: push new log content in real-time (similar to tail -f)"""
     filepath = request.args.get('file', '').strip()
 
     if not filepath or not _validate_file(filepath):
-        return Response('data: {"error": "无权访问"}\n\n',
+        return Response('data: {"error": "Access denied"}\n\n',
                         mimetype='text/event-stream', status=403)
     if not os.path.isfile(filepath):
         return Response('data: {"error": "文件不存在"}\n\n',
@@ -533,7 +533,7 @@ def log_stream():
                 'data: '
                 + json.dumps({
                     'event': 'timeout',
-                    'msg': f'已持续实时推送 {_m} 分钟，已自动停止。需要请再次开启实时。',
+                    'msg': f'Real-time streaming has been active for {_m} minute(s) and has been automatically stopped. Please re-enable if needed.',
                 }, ensure_ascii=False)
                 + '\n\n'
             )

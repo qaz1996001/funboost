@@ -1,7 +1,7 @@
 
 """
-这个文件决定了，每种broker对应的能额外传递哪些独特特殊的中间件配置，
-从BoosterParams 的 broker_exclusive_config 入参中传递一个字典
+This file defines what unique/special broker configurations can be additionally passed for each broker type,
+via a dictionary in the broker_exclusive_config parameter of BoosterParams.
 """
 
 from logging import Logger
@@ -30,23 +30,23 @@ def generate_broker_exclusive_config(
     if user_broker_exclusive_config:
         if set(user_broker_exclusive_config).issubset(broker_exclusive_config_keys):
             logger.info(
-                f"当前消息队列中间件能支持特殊独有配置 {broker_exclusive_config_default.keys()}"
+                f"Current message queue broker supports special exclusive configurations: {broker_exclusive_config_default.keys()}"
             )
         else:
-            logger.warning(f"""当前消息队列中间件含有不支持的特殊配置 {user_broker_exclusive_config.keys()} ,
-            能支持的特殊独有配置包括 {broker_exclusive_config_keys}""")
+            logger.warning(f"""Current message queue broker contains unsupported special configurations {user_broker_exclusive_config.keys()},
+            supported special exclusive configurations include {broker_exclusive_config_keys}""")
     broker_exclusive_config_merge = dict()
     broker_exclusive_config_merge.update(broker_exclusive_config_default)
     broker_exclusive_config_merge.update(user_broker_exclusive_config)
     return broker_exclusive_config_merge
 
 
-# celery的可以配置项大全  https://docs.celeryq.dev/en/stable/userguide/configuration.html#new-lowercase-settings
-# celery @app.task() 所有可以配置项可以看  D:\ProgramData\Miniconda3\Lib\site-packages\celery\app\task.py
+# Full list of celery configuration options: https://docs.celeryq.dev/en/stable/userguide/configuration.html#new-lowercase-settings
+# All @app.task() configuration options can be found in: D:\ProgramData\Miniconda3\Lib\site-packages\celery\app\task.py
 register_broker_exclusive_config_default(BrokerEnum.CELERY, {"celery_task_config": {}})
 
 
-# dramatiq_actor_options 的值可以是：
+# dramatiq_actor_options possible values:
 # {'max_age', 'throws', 'pipe_target', 'pipe_ignore', 'on_success', 'retry_when', 'time_limit', 'min_backoff', 'max_retries', 'max_backoff', 'notify_shutdown', 'on_failure'}
 register_broker_exclusive_config_default(
     BrokerEnum.DRAMATIQ, {"dramatiq_actor_options": {}}
