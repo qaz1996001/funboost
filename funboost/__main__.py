@@ -13,7 +13,7 @@ def _check_pass_params():
             sys.path.insert(1, project_root_path)
             env_dict['project_root_path'] = project_root_path
     if has_passing_arguments_project_root_path is False:
-        raise Exception('命令行没有传参 --project_root_path=')
+        raise Exception('Command line argument --project_root_path= was not provided')
 
 
 def main():

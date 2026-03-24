@@ -1,8 +1,9 @@
 """
-这是个简单例子，演示web中如何发布和获取结果。
+This is a simple example demonstrating how to publish messages and retrieve results in a web context.
 
-更建议使用  from funboost.fass ,见教程第15章节。
-因为是一键开箱即用，还能更好的和你的fastapi 融合成一个服务端口，而且支持的url路由更多
+It is recommended to use `from funboost.fass` instead, as described in tutorial chapter 15.
+It provides out-of-the-box functionality, better integration with your FastAPI service on a single port,
+and supports more URL routes.
 
 """
 
@@ -18,10 +19,10 @@ from pydantic import BaseModel
 
 
 class MsgItem(BaseModel):
-    queue_name: str  # 队列名
-    msg_body: dict  # 消息体,就是boost函数的入参字典,例如 {"x":1,"y":2}
-    need_result: bool = False  # 发布消息后,是否需要返回结果
-    timeout: int = 60  # 等待结果返回的最大等待时间.
+    queue_name: str  # Queue name
+    msg_body: dict  # Message body, i.e. the input parameter dict of the boost function, e.g. {"x":1,"y":2}
+    need_result: bool = False  # Whether to return the result after publishing the message
+    timeout: int = 60  # Maximum wait time for the result to be returned.
 
 
 class PublishResponse(BaseModel):

@@ -37,13 +37,13 @@ from funboost.core.msg_result_getter import AsyncResult, AioAsyncResult
 
 class Booster:
     """
-    funboost极其重视代码能在pycharm下自动补全。元编程经常造成在pycharm下代码无法自动补全提示，主要是实现代码补全难。
-    这种__call__写法在pycahrm下 不仅能补全消费函数的 push consume等方法，也能补全函数本身的入参，一举两得。代码能自动补全很重要。
-    一个函数fun被 boost装饰器装饰后， isinstance(fun,Booster) 为True.
+    funboost places great emphasis on code auto-completion in PyCharm. Metaprogramming often makes auto-completion difficult in PyCharm.
+    This __call__ approach enables auto-completion for both the consuming function's push/consume methods and the function's own parameters in PyCharm - a two-in-one benefit. Auto-completion is very important.
+    After a function `fun` is decorated with the `boost` decorator, isinstance(fun, Booster) returns True.
 
-    pydatinc pycharm编程代码补全,请安装 pydantic插件, 在pycharm的  file -> settings -> Plugins -> 输入 pydantic 搜索,点击安装 pydantic 插件.
+    For pydantic PyCharm code auto-completion, install the pydantic plugin: PyCharm -> File -> Settings -> Plugins -> search for "pydantic" and install it.
 
-    Booster 是把Consumer 和 Publisher的方法集为一体。
+    Booster combines Consumer and Publisher methods into a single entity.
     """
 
 
@@ -55,20 +55,20 @@ class Booster:
         **kwargs,
     ):
         """
-        @boost 这是funboost框架最重要的一个函数，必须看懂BoosterParams里面的入参有哪些。
-        建议永远使用 @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, )) 这种传参方式。
+        @boost is the most important function in the funboost framework. You must understand the parameters in BoosterParams.
+        It is recommended to always use @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, )) style parameter passing.
 
 
-        pydatinc pycharm编程代码补全,请安装 pydantic插件, 在pycharm的  file -> settings -> Plugins -> 输入 pydantic 搜索,点击安装 pydantic 插件.
-        (高版本的pycharm pydantic是内置支持代码补全的,由此可见,pydantic太好了,pycharm官方都来支持)
+        For pydantic PyCharm code auto-completion, install the pydantic plugin: PyCharm -> File -> Settings -> Plugins -> search for "pydantic" and install it.
+        (Newer versions of PyCharm have built-in pydantic support for auto-completion, showing how excellent pydantic is.)
 
-        强烈建议所有入参放在 BoosterParams() 中,不要直接在BoosterParams之外传参.现在是兼容老的直接在@boost中传参方式.
-        建议不要给第一个入参queue_name传递字符串，而是永远传递BoosterParams类型， 例如 @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, ))
+        It is strongly recommended to put all parameters in BoosterParams(), not pass them directly outside BoosterParams. The old direct parameter passing in @boost is still supported for backward compatibility.
+        It is recommended to always pass a BoosterParams type instead of a string for the first parameter queue_name, e.g. @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, ))
 
 
         ```python
-        # @boost('queue_test_f01', qps=0.2, ) # 老的入参方式
-        @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, )) # 新的入参方式,所有入参放在 最流行的三方包 pydantic model BoosterParams 里面.
+        # @boost('queue_test_f01', qps=0.2, ) # old parameter style
+        @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, )) # new parameter style, all params in the popular pydantic model BoosterParams.
         def f(a, b):
             print(a + b)
 
@@ -76,7 +76,7 @@ class Booster:
             f.pub(dict(a=i, b=i * 2))
             f.push(i, i * 2)
         f.consume()
-        # f.multi_process_conusme(8)             # # 这个是新加的方法，细粒度 线程 协程并发 同时叠加8个进程，速度炸裂。
+        # f.multi_process_conusme(8)             # This is a newly added method, fine-grained thread/coroutine concurrency combined with 8 processes, blazing fast.
         ```
 
 
@@ -84,7 +84,7 @@ class Booster:
         @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, ))
         @Booster(BoosterParams(queue_name='queue_test_f01', qps=0.2, ))
         @BoosterParams(queue_name='queue_test_f01', qps=0.2, )
-        以上4种写法等效。
+        The above 4 forms are equivalent.
         """
 
         # 以下代码很复杂，主要是兼容老的在@boost直接传参的方式,强烈建议使用新的入参方式,所有入参放在一个 BoosterParams 中，那就不需要理会下面这段逻辑.

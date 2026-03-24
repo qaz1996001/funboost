@@ -4,29 +4,29 @@ from concurrent.futures import Executor
 from funboost.concurrent_pool.custom_threadpool_executor import ThreadPoolExecutorShrinkAble
 # from funboost.concurrent_pool.flexible_thread_pool import FlexibleThreadPool
 
-# 没有使用内置的concurrent.futures.ThreadpoolExecutor线程池，而是使用智能伸缩线程池。
+# Instead of using the built-in concurrent.futures.ThreadPoolExecutor, we use the smart auto-scaling thread pool.
 async_executor_default = ThreadPoolExecutorShrinkAble(500)
-# async_executor_default = FlexibleThreadPool(50)  # 这个不支持future特性
+# async_executor_default = FlexibleThreadPool(50)  # This one does not support the future feature
 
 
 def get_or_create_event_loop():
     """
-    Python 3.7 风格的 get_event_loop。
-    作用：
-    - 有 running loop → 返回当前 loop
-    - 没有 loop → 自动创建一个新的 loop 并 set
-    python3.10后的get_event_loop和python3.7的区别很大
+    Python 3.7 style get_event_loop.
+    Behavior:
+    - If there is a running loop -> return the current loop
+    - If there is no loop -> automatically create a new loop and set it
+    The behavior of get_event_loop changed significantly after Python 3.10 compared to Python 3.7
     """
     try:
         # Python 3.7+
         return asyncio.get_running_loop()
     except RuntimeError:
-        # 没有正在运行的 loop
+        # No running loop
         try:
-            # Python 3.6~3.9：get_event_loop 会自动创建
+            # Python 3.6~3.9: get_event_loop automatically creates a loop
             return asyncio.get_event_loop()
         except RuntimeError:
-            # Python 3.10+：get_event_loop 不再自动创建
+            # Python 3.10+: get_event_loop no longer automatically creates a loop
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             return loop

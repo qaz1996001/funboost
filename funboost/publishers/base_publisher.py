@@ -36,19 +36,20 @@ from funboost.funboost_config_deafult import BrokerConnConfig, FunboostCommonCon
 from nb_libs.path_helper import PathHelper
 from funboost.core.consuming_func_iniput_params_check import ConsumingFuncInputParamsChecker
 
-RedisAsyncResult = AsyncResult  # 别名
-RedisAioAsyncResult = AioAsyncResult  # 别名
+RedisAsyncResult = AsyncResult  # alias
+RedisAioAsyncResult = AioAsyncResult  # alias
 
 
 class AbstractPublisher(metaclass=abc.ABCMeta, ):
     """
-    发布消息到消息队列
-    同步编程，最重要的方法有 push publish，
-    asyncio异步编程，最重要的方法有 aio_push aio_publish，
-    
-    用法是 booster.push(1,y=2)
-    或者 booster.publish({"x":1,"y":2},task_options=TaskOptions(max_retry_times=3,...)) 
-    总结就是push更简单更魔法，publish是更强大更灵活，因为publish除了发布函数入参自身，还可以传递task_options参数。
+    Publish messages to a message queue.
+    For synchronous programming, the most important methods are push and publish.
+    For asyncio asynchronous programming, the most important methods are aio_push and aio_publish.
+
+    Usage: booster.push(1, y=2)
+    Or: booster.publish({"x":1,"y":2}, task_options=TaskOptions(max_retry_times=3,...))
+    In summary, push is simpler and more magical, while publish is more powerful and flexible,
+    because publish can pass task_options parameters in addition to the function input parameters.
     """
     def __init__(self, publisher_params: PublisherParams, ):
         self.publisher_params = publisher_params
@@ -64,7 +65,7 @@ class AbstractPublisher(metaclass=abc.ABCMeta, ):
         self.count_per_minute = None
         self._init_count()
         self.custom_init()
-        self.logger.info(f'{self.__class__} 被实例化了')
+        self.logger.info(f'{self.__class__} has been instantiated')
         self.publish_msg_num_total = 0
         
         ConsumingFuncInputParamsChecker.gen_final_func_input_params_info(publisher_params)
@@ -78,11 +79,11 @@ class AbstractPublisher(metaclass=abc.ABCMeta, ):
         # 
         self._is_memory_queue = self.publisher_params.broker_kind in [BrokerEnum.MEMORY_QUEUE, BrokerEnum.FASTEST_MEM_QUEUE]
         
-        # 优化：内存队列不需要装饰器（不会有网络异常），直接调用更快
+        # Optimization: memory queues don't need decorators (no network exceptions), direct call is faster
         if self._is_memory_queue:
             self._wrapped_publish_impl = self._publish_impl
         else:
-            # 优化：缓存包装后的 _publish_impl 方法，避免每次发布都重新应用装饰器
+            # Optimization: cache the wrapped _publish_impl method to avoid reapplying decorators on every publish
             self._wrapped_publish_impl = decorators.handle_exception(
                 retry_times=10, is_throw_error=True, time_sleep=0.1
             )(self._publish_impl)
@@ -141,10 +142,10 @@ class AbstractPublisher(metaclass=abc.ABCMeta, ):
     def _convert_msg(self, msg: typing.Union[str, dict], task_id=None,
                      task_options: TaskOptions = None) -> (typing.Dict, typing.Dict, typing.Dict, str):
         """
-        优化：减少不必要的深拷贝，使用字典推导式创建 msg_function_kw
+        Optimization: reduce unnecessary deep copies, use dict comprehension to create msg_function_kw
         """
         msg = Serialization.to_dict(msg)
-        # 使用字典推导式代替 deepcopy，排除 extra 键
+        # Use dict comprehension instead of deepcopy, excluding the extra key
         raw_extra = msg.get('extra', {})
         msg_function_kw = get_func_only_params(msg)
         self.check_func_msg_dict(msg_function_kw)
@@ -160,7 +161,7 @@ class AbstractPublisher(metaclass=abc.ABCMeta, ):
     
         new_extra = {}
         new_extra.update(raw_extra)
-        new_extra.update(task_options_dict) # task_options.json 是为了充分使用 pydantic的自定义时间格式化字符串
+        new_extra.update(task_options_dict) # task_options.json is to fully utilize pydantic's custom time formatting strings
         msg['extra'] = new_extra
         extra_params = new_extra
         return msg, msg_function_kw, extra_params, task_id

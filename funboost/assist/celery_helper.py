@@ -30,38 +30,38 @@ logger = get_funboost_file_logger('funboost.CeleryHelper')
 
 class CeleryHelper:
     celery_app = celery_app
-    to_be_start_work_celery_queue_name_set = set()  # start_consuming_message时候，添加需要worker运行的queue name。
+    to_be_start_work_celery_queue_name_set = set()  # When start_consuming_message is called, add queue names that need to be run by the worker.
 
     concurrent_mode = None
 
     @staticmethod
     def update_celery_app_conf(celery_app_conf: dict):
         """
-        更新celery app的配置，celery app配置大全见 https://docs.celeryq.dev/en/stable/userguide/configuration.html
-        :param celery_app_conf: celery app 配置，字典
+        Update celery app configuration. Full celery app configuration reference: https://docs.celeryq.dev/en/stable/userguide/configuration.html
+        :param celery_app_conf: celery app configuration, dictionary
         :return:
         """
         celery_app.conf.update(celery_app_conf)
-        # 例如  celery_app.conf.update({'broker_transport_options':{'visibility_timeout': 18000,'max_retries':5}})
+        # Example: celery_app.conf.update({'broker_transport_options':{'visibility_timeout': 18000,'max_retries':5}})
 
     @staticmethod
     def show_celery_app_conf():
-        logger.debug('展示celery app的配置')
+        logger.debug('Displaying celery app configuration')
         conf_dict_json_able = {}
         for k, v in celery_app.conf.items():
             conf_dict_json_able[k] = str(v)
             # print(k, ' : ', v)
-        print('celery app 的配置是：', json.dumps(conf_dict_json_able, ensure_ascii=False, indent=4))
+        print('celery app configuration:', json.dumps(conf_dict_json_able, ensure_ascii=False, indent=4))
 
     @staticmethod
     def celery_start_beat(beat_schedule: dict):
-        celery_app.conf.beat_schedule = beat_schedule  # 配置celery定时任务
+        celery_app.conf.beat_schedule = beat_schedule  # Configure celery periodic tasks
 
         def _f():
             beat = partial(celery_app.Beat, loglevel='INFO', )
             beat().run()
 
-        threading.Thread(target=_f).start()  # 使得可以很方便启动定时任务，继续启动函数消费
+        threading.Thread(target=_f).start()  # Makes it easy to start periodic tasks and continue starting function consumption
 
     @staticmethod
     def start_flower(port=5555):
