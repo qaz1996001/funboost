@@ -2,8 +2,8 @@
 # @Author  : ydf
 # @Time    : 2022/8/8 0008 13:10
 """
-任务消费完成后，如果重复发布则过滤。分别实现永久性过滤重复任务和过滤有效期内的重复任务。
-任务过滤 = 函数参数过滤 = 字典过滤 = 排序后的键值对json字符串过滤。
+After task consumption is completed, duplicate publications are filtered. Implements both permanent duplicate task filtering and time-limited duplicate task filtering.
+Task filtering = function parameter filtering = dictionary filtering = sorted key-value pair JSON string filtering.
 """
 
 import json
@@ -20,14 +20,14 @@ from funboost.utils.redis_manager import RedisMixin
 
 class RedisFilter(RedisMixin, FunboostFileLoggerMixin):
     """
-    使用set结构，
-    基于函数参数的任务过滤。这个是永久性的过滤，除非自己手动删除这个键。
+    Uses set structure.
+    Task filtering based on function parameters. This is permanent filtering unless the key is manually deleted.
     """
 
     def __init__(self, redis_key_name, redis_filter_task_expire_seconds):
         """
-        :param redis_key_name: 任务过滤键
-        :param redis_filter_task_expire_seconds: 任务过滤的过期时间
+        :param redis_key_name: Task filter key
+        :param redis_filter_task_expire_seconds: Task filter expiration time
         """
         self._redis_key_name = redis_key_name
         self._redis_filter_task_expire_seconds = redis_filter_task_expire_seconds
@@ -43,8 +43,8 @@ class RedisFilter(RedisMixin, FunboostFileLoggerMixin):
     
     @staticmethod
     def generate_filter_str(value: typing.Union[str, dict],  filter_str: typing.Optional[str] = None):
-        """对json的键值对在redis中进行过滤，需要先把键值对排序，否则过滤会不准确如 {"a":1,"b":2} 和 {"b":2,"a":1}"""
-        if filter_str: # 如果用户单独指定了过滤字符串，就使用使用户指定的过滤字符串，否则使用排序后的键值对字符串
+        """When filtering JSON key-value pairs in Redis, keys must be sorted first, otherwise filtering will be inaccurate, e.g. {"a":1,"b":2} and {"b":2,"a":1}"""
+        if filter_str: # If user specified a filter string, use it; otherwise use the sorted key-value pair string
             return filter_str
         value = Serialization.to_dict(value)
         ordered_dict = OrderedDict()

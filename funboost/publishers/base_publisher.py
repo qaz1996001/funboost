@@ -170,79 +170,79 @@ class AbstractPublisher(metaclass=abc.ABCMeta, ):
                 task_options: TaskOptions = None):
         """
 
-        :param msg:函数的入参字典或者字典转json。,例如消费函数是 def add(x,y)，你就发布 {"x":1,"y":2}
-        :param task_id:可以指定task_id,也可以不指定就随机生产uuid
-        :param task_options:优先级配置，消息可以携带优先级配置，覆盖boost的配置。
-        :return: AsyncResult 对象，可以用于等待结果。 例如 status_and_result =  async_result.status_and_result 来等待返回结果。
+        :param msg: Function input parameter dict or dict-to-json. E.g., if the consuming function is def add(x,y), you publish {"x":1,"y":2}
+        :param task_id: Can specify a task_id, or leave it unspecified to auto-generate a uuid
+        :param task_options: Priority configuration; messages can carry priority config to override boost settings.
+        :return: AsyncResult object that can be used to wait for results. E.g., status_and_result = async_result.status_and_result to wait for the return result.
 
-        funboost 消息体中的extra字典，包含的key就是 TaskOptions 中声明的字段。例如 task_id, publish_time, publish_time_format 等。
-        如果用户传递了 task_options，则以 task_options 为准。
-        如果用户没有传递 task_options，则以消息体中的extra字典为准。
-        如果最终还是没有 task_id, publish_time, publish_time_format 等字段，则自动生成。
+        The extra dict in the funboost message body contains keys declared in TaskOptions fields, such as task_id, publish_time, publish_time_format, etc.
+        If the user passes task_options, task_options takes precedence.
+        If the user does not pass task_options, the extra dict in the message body is used.
+        If task_id, publish_time, publish_time_format, etc. are still missing, they are auto-generated.
 
-        意味着如果你想传递 task_options 中的值，你的msg字典，
-        第一种：你可以有一个extra字段，里面存放 task_options的各种字段，（适合跨编程语言）
-        第二种：你可以通过publish方法的 task_options指定一个 TaskOptions pydantic模型对象 （适合python语言，因为能章节用funboost）
+        This means if you want to pass values from task_options, your msg dict can either:
+        Option 1: Have an extra field containing various task_options fields (suitable for cross-language scenarios)
+        Option 2: Specify a TaskOptions pydantic model object via the publish method's task_options parameter (suitable for Python, since funboost can be used directly)
 
-        如果是跨业务跨编程语言，由于java不能调用python funboost的publish方法:
-        java可以这样通过http接口或者funboost.faas  来发布消息 {"user_id":123,"name":"张三","extra": {"task_id":"1234567890","max_retry_times":3}} 
+        For cross-business, cross-language scenarios where Java cannot call Python funboost's publish method:
+        Java can publish messages via HTTP interface or funboost.faas like this: {"user_id":123,"name":"John","extra": {"task_id":"1234567890","max_retry_times":3}}
 
         """
-        # 优化：使用浅拷贝代替深拷贝，_convert_msg 内部不再做拷贝
-        # 对于嵌套的 extra 字典，在需要修改时会创建新字典
+        # Optimization: use shallow copy instead of deep copy, _convert_msg no longer copies internally
+        # For nested extra dicts, a new dict is created when modification is needed
         if isinstance(msg, str):
             msg = Serialization.to_dict(msg)
         else:
-            msg = dict(msg)  # 浅拷贝，不改变用户传入的原始字典
+            msg = dict(msg)  # shallow copy, don't modify the user's original dict
         msg, msg_function_kw, extra_params, task_id = self._convert_msg(msg, task_id, task_options)
         t_start = time.time()
 
-        if self._is_memory_queue: # 内存队列不需要序列化
+        if self._is_memory_queue: # memory queue doesn't need serialization
             msg_json =msg
         else:
             try:
                 msg_json = Serialization.to_json_str(msg)
             except Exception as e:
                 can_not_json_serializable_keys = Serialization.find_can_not_json_serializable_keys(msg)
-                self.logger.warning(f'msg 中包含不能序列化的键: {can_not_json_serializable_keys}')
-                # raise ValueError(f'msg 中包含不能序列化的键: {can_not_json_serializable_keys}')
+                self.logger.warning(f'msg contains keys that cannot be serialized: {can_not_json_serializable_keys}')
+                # raise ValueError(f'msg contains keys that cannot be serialized: {can_not_json_serializable_keys}')
                 new_msg = copy.deepcopy(Serialization.to_dict(msg))
                 for key in can_not_json_serializable_keys:
                     new_msg[key] = PickleHelper.to_str(new_msg[key])
                 new_msg['extra']['can_not_json_serializable_keys'] = can_not_json_serializable_keys
                 msg_json = Serialization.to_json_str(new_msg)
         # print(msg_json)
-        # 优化：使用缓存的包装方法，避免每次重新应用装饰器
+        # Optimization: use cached wrapped method to avoid reapplying decorators each time
         self._wrapped_publish_impl(msg_json)
 
-        # 优化：先获取当前时间用于后续判断，减少 time.time() 调用
+        # Optimization: get current time first for subsequent checks, reduce time.time() calls
         current_time = time.time()
         if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug(f'向{self._queue_name} 队列，推送消息 耗时{round(current_time - t_start, 4)}秒  {msg_json if self.publisher_params.publish_msg_log_use_full_msg else msg_function_kw}',
+            self.logger.debug(f'Pushed message to queue {self._queue_name}, took {round(current_time - t_start, 4)} seconds  {msg_json if self.publisher_params.publish_msg_log_use_full_msg else msg_function_kw}',
                               extra={'task_id': task_id})
         
-        # 优化：减少锁内操作，先计数再判断是否需要输出日志
+        # Optimization: reduce in-lock operations, count first then check if logging is needed
         self.count_per_minute += 1
         self.publish_msg_num_total += 1
-        # 每10秒输出一次统计日志，减少锁竞争
+        # Output statistics log every 10 seconds, reduce lock contention
         if current_time - self._current_time > 10:
             with self._lock_for_count:
-                # 双重检查，避免多线程重复输出
+                # Double-check to avoid duplicate output in multi-threading
                 if current_time - self._current_time > 10:
                     self.logger.info(
-                        f'10秒内推送了 {self.count_per_minute} 条消息,累计推送了 {self.publish_msg_num_total} 条消息到 {self._queue_name} 队列中')
+                        f'Pushed {self.count_per_minute} messages in 10 seconds, total {self.publish_msg_num_total} messages pushed to queue {self._queue_name}')
                     self._init_count()
         self._after_publish(msg, msg_function_kw, task_id)
-        # AsyncResult 本身就是懒加载的，只有访问 result 等属性时才建立 redis 连接
+        # AsyncResult itself is lazy-loaded, redis connection is only established when accessing result and other attributes
         return AsyncResult(task_id, timeout=self.publisher_params.rpc_timeout)
     
     def _after_publish(self, msg: dict, msg_function_kw: dict, task_id: str):
-        """发布消息后的钩子方法，子类可以覆写此方法来实现自定义逻辑，例如记录指标"""
+        """Hook method after publishing a message. Subclasses can override this to implement custom logic, e.g., recording metrics."""
         pass
 
     def send_msg(self, msg: typing.Union[dict, str]):
-        """直接发送任意原始的消息内容到消息队列,不生成辅助参数,无视函数入参名字,不校验入参个数和键名"""
-        # 优化：使用缓存的包装方法
+        """Directly send any raw message content to the message queue, without generating auxiliary parameters, ignoring function parameter names, without validating parameter count or key names."""
+        # Optimization: use cached wrapped method
         self._wrapped_publish_impl(Serialization.to_json_str(msg))
 
     @staticmethod
@@ -255,14 +255,14 @@ class AbstractPublisher(metaclass=abc.ABCMeta, ):
 
     def push(self, *func_args, **func_kwargs):
         """
-        简写，只支持传递消费函数的本身参数，不支持task_options参数。
-        类似于 publish和push的关系类似 apply_async 和 delay的关系。前者更强大，后者更简略。
+        Shorthand that only supports passing the consuming function's own parameters, without task_options.
+        The relationship between publish and push is similar to apply_async and delay. The former is more powerful, the latter is simpler.
 
-        例如消费函数是
-        def add(x,y):
-            print(x+y)
+        For example, if the consuming function is:
+        def add(x, y):
+            print(x + y)
 
-        publish({"x":1,'y':2}) 和 push(1,2)是等效的。但前者可以传递task_options参数。后者只能穿add函数所接受的入参。
+        publish({"x":1,'y':2}) and push(1,2) are equivalent. But the former can pass task_options. The latter can only pass parameters accepted by the add function.
         :param func_args:
         :param func_kwargs:
         :return:
@@ -313,14 +313,14 @@ The first argument of the push method must be the instance of the class.
         # print(msg_dict)
         return self.publish(msg_dict)
 
-    delay = push  # 那就来个别名吧，两者都可以。
+    delay = push  # An alias, both can be used.
 
     @abc.abstractmethod
     def _publish_impl(self, msg: str):
         raise NotImplementedError
 
     def sync_call(self, msg_dict: dict, is_return_rpc_data_obj=True) -> typing.Union[dict, FunctionResultStatus]:
-        """仅有部分中间件支持同步调用并阻塞等待返回结果,不依赖AsyncResult + redis作为rpc，例如 http grpc 等"""
+        """Only some brokers support synchronous call with blocking wait for results, not relying on AsyncResult + redis as RPC, e.g., http, grpc, etc."""
         raise NotImplementedError(f'broker  {self.publisher_params.broker_kind} not support sync_call method')
 
     @abc.abstractmethod
@@ -340,41 +340,41 @@ The first argument of the push method must be the instance of the class.
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-        self.logger.warning(f'with中自动关闭publisher连接，累计推送了 {self.publish_msg_num_total} 条消息 ')
+        self.logger.warning(f'Auto-closed publisher connection in with block, total {self.publish_msg_num_total} messages pushed')
 
     def _at_exit(self):
         if multiprocessing.current_process().name == 'MainProcess':
             self.logger.warning(
-                f'程序关闭前，{round(time.time() - self.__init_time)} 秒内，累计推送了 {self.publish_msg_num_total} 条消息 到 {self._queue_name} 中')
+                f'Before program shutdown, pushed {self.publish_msg_num_total} messages to {self._queue_name} in {round(time.time() - self.__init_time)} seconds')
 
     async def aio_push(self, *func_args, **func_kwargs) -> AioAsyncResult:
-        """asyncio 生态下发布消息,因为同步push只需要消耗不到1毫秒,所以基本上大概可以直接在asyncio异步生态中直接调用同步的push方法,
-        但为了更好的防止网络波动(例如发布消息到外网的消息队列耗时达到10毫秒),可以使用aio_push"""
+        """Publish messages in asyncio ecosystem. Since synchronous push takes less than 1ms, you can generally call the synchronous push method directly in asyncio,
+        but to better handle network fluctuations (e.g., publishing to a remote message queue takes up to 10ms), use aio_push."""
         async_result = await simple_run_in_executor(self.push, *func_args, **func_kwargs)
         return AioAsyncResult(async_result.task_id,timeout=async_result.timeout )
 
     async def aio_publish(self, msg: typing.Union[str, dict], task_id=None,
                           task_options: TaskOptions = None) -> AioAsyncResult:
-        """asyncio 生态下发布消息,因为同步push只需要消耗不到1毫秒,所以基本上大概可以直接在asyncio异步生态中直接调用同步的push方法,
-        但为了更好的防止网络波动(例如发布消息到外网的消息队列耗时达到10毫秒),可以使用aio_push"""
+        """Publish messages in asyncio ecosystem. Since synchronous push takes less than 1ms, you can generally call the synchronous push method directly in asyncio,
+        but to better handle network fluctuations (e.g., publishing to a remote message queue takes up to 10ms), use aio_publish."""
         async_result = await simple_run_in_executor(self.publish, msg, task_id, task_options)
         return AioAsyncResult(async_result.task_id, timeout=async_result.timeout)
 
     def check_func_msg_dict(self, msg_dict: dict):
         if self.publish_params_checker and self.publisher_params.should_check_publish_func_params:
             if not isinstance(msg_dict, dict):
-                raise ValueError(f"check_func_msg_dict 入参必须是字典, 当前是: {type(msg_dict)}")
+                raise ValueError(f"check_func_msg_dict input must be a dict, current type is: {type(msg_dict)}")
             msg_function_kw = get_func_only_params(msg_dict)
             self.publish_params_checker.check_func_msg_dict(msg_function_kw)
         return True
 
     def check_func_input_params(self, *args, **kwargs):
         """
-        校验 push 风格的参数: f.check_params(1, y=2)
-        利用框架启动时已经解析好的 final_func_input_params_info 进行参数映射和校验。
-        :param args: 位置参数
-        :param kwargs: 关键字参数
-        :return: 校验通过返回 True，失败抛出异常
+        Validate push-style parameters: f.check_params(1, y=2)
+        Uses the final_func_input_params_info parsed at framework startup for parameter mapping and validation.
+        :param args: positional arguments
+        :param kwargs: keyword arguments
+        :return: Returns True if validation passes, raises exception on failure
         """
 
         params_dict = dict(zip(self.publish_params_checker.all_arg_name_list, args))
@@ -396,7 +396,7 @@ def deco_mq_conn_error(f):
     def _deco_mq_conn_error(self, *args, **kwargs):
         with has_init_broker_lock:
             if not self.has_init_broker:
-                self.logger.warning(f'对象的方法 【{f.__name__}】 首次使用 进行初始化执行 init_broker 方法')
+                self.logger.warning(f'Method [{f.__name__}] first use, initializing by executing init_broker method')
                 self.init_broker()
                 self.has_init_broker = 1
                 return f(self, *args, **kwargs)
@@ -404,21 +404,21 @@ def deco_mq_conn_error(f):
             try:
                 return f(self, *args, **kwargs)
             except Exception as e:
-                # 通过异常类的模块名和类名判断，不需要导入包
+                # Determine by exception class module name and class name, no need to import packages
                 exc_module = type(e).__module__
                 exc_name = type(e).__name__
                 
-                # 只要是这些包的 AMQP/Connection 相关异常都重连
+                # Reconnect for any AMQP/Connection related exceptions from these packages
                 is_amqp_error = (
                     ('amqpstorm' in exc_module or 'pika' in exc_module or 'amqp' in exc_module)
                     and ('AMQP' in exc_name or 'Connection' in exc_name or 'Channel' in exc_name)
                 )
                 
                 if is_amqp_error:
-                    self.logger.error(f'中间件链接出错, 方法 {f.__name__} 出错, {e}')
+                    self.logger.error(f'Broker connection error, method {f.__name__} failed, {e}')
                     self.init_broker()
                     return f(self, *args, **kwargs)
-                raise  # 其他异常继续抛出
+                raise  # Re-raise other exceptions
             except BaseException as e:
                 self.logger.critical(e, exc_info=True)
 

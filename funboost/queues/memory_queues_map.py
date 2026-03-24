@@ -7,12 +7,12 @@ class PythonQueues:
     @classmethod
     def get_queue(cls, queue_name, maxsize=0):
         """
-        获取或创建一个内存队列
-        
-        :param queue_name: 队列名称
-        :param maxsize: 队列最大容量，0表示无界队列（默认），正整数表示有界队列
-                       当队列已满时，put操作会阻塞直到有空位
-        :return: queue.Queue 对象
+        Get or create an in-memory queue
+
+        :param queue_name: Queue name
+        :param maxsize: Maximum queue capacity, 0 means unbounded queue (default), positive integer means bounded queue.
+                       When the queue is full, put operations will block until space is available.
+        :return: queue.Queue object
         """
         if queue_name not in cls.local_pyhton_queue_name__local_pyhton_queue_obj_map:
             cls.local_pyhton_queue_name__local_pyhton_queue_obj_map[queue_name] = queue.Queue(maxsize=maxsize)

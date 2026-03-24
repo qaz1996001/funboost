@@ -14,7 +14,7 @@ from apscheduler.events import (
 
 def my_run_job(job, jobstore_alias, run_times, logger_name):
     """
-    主要是把函数的入参放到event上，便于listener获取函数对象和函数入参。
+    Mainly puts function input parameters onto the event, so that the listener can access the function object and its parameters.
     """
 
     """
@@ -27,7 +27,7 @@ def my_run_job(job, jobstore_alias, run_times, logger_name):
     for run_time in run_times:
         # See if the job missed its run time window, and handle
         # possible misfires accordingly
-        # print(job.misfire_grace_time) # add_job不设置时候默认为1秒。
+        # print(job.misfire_grace_time) # Default is 1 second when not set in add_job.
         if job.misfire_grace_time is not None:
             # print(job,dir(job),job.args,job.kwargs)
             difference = datetime.now(utc) - run_time

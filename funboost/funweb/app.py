@@ -29,16 +29,16 @@ from flask_login import login_user, logout_user, login_required, LoginManager, U
 import nb_log
 from funboost import (
     nb_print,
-    # ActiveCousumerProcessInfoGetter,  # 已迁移到 faas/flask_adapter.py
-    # BoostersManager,  # 未使用
-    # PublisherParams,  # 未使用
-    # RedisMixin,  # 已废弃的 pause/resume 路由使用，现已注释
+    # ActiveCousumerProcessInfoGetter,  # Moved to faas/flask_adapter.py
+    # BoostersManager,  # Not used
+    # PublisherParams,  # Not used
+    # RedisMixin,  # Used by deprecated pause/resume routes, now commented out
 )
 from funboost.funweb.functions import (
     get_cols,
     query_result,
     get_speed,
-    # Statistic,  # 已废弃，前端不再使用 speed_statistic_for_echarts 路由
+    # Statistic,  # Deprecated, frontend no longer uses speed_statistic_for_echarts route
 )
 from funboost.funweb import functions as app_functions
 from funboost.core.active_cousumer_info_getter import (
@@ -46,7 +46,7 @@ from funboost.core.active_cousumer_info_getter import (
     SingleQueueConusmerParamsGetter,
     CareProjectNameEnv,
 )
-# from funboost.constant import RedisKeys  # 已废弃的 pause/resume 路由使用，现已注释
+# from funboost.constant import RedisKeys  # Used by deprecated pause/resume routes, now commented out
 from funboost.faas import flask_blueprint
 from funboost.funweb.flask_bps.script_deploy import deploy_bp
 from funboost.funweb.flask_bps.system_monitor import monitor_bp
@@ -63,8 +63,8 @@ login_manager.login_message = "Access denied."
 login_manager.init_app(app)
 
 
-# 大部分路由用faas这里面自带的flask蓝图，因为通用的faas接口是2025年12月才有的功能，
-# 一些老的flask接口是在这里单独开发的。
+# Most routes use the built-in Flask blueprint from faas, since the generic faas API was added in December 2025.
+# Some older Flask endpoints were developed separately here.
 app.register_blueprint(flask_blueprint)  
 app.register_blueprint(deploy_bp)
 app.register_blueprint(monitor_bp)
@@ -104,9 +104,9 @@ def load_user(user_id):
 
 
 class LoginForm(FlaskForm):
-    user_name = StringField("用户名", validators=[DataRequired(), Length(3, 64)])
-    password = PasswordField("密码", validators=[DataRequired(), Length(3, 64)])
-    remember_me = BooleanField("记住我")
+    user_name = StringField("Username", validators=[DataRequired(), Length(3, 64)])
+    password = PasswordField("Password", validators=[DataRequired(), Length(3, 64)])
+    remember_me = BooleanField("Remember me")
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -124,7 +124,7 @@ def login():
                 curr_user = User()
                 curr_user.id = form.user_name.data
 
-                # 通过Flask-Login的login_user方法登录用户
+                # Log in user via Flask-Login's login_user method
                 nb_print(form.remember_me.data)
                 login_user(
                     curr_user,
@@ -134,13 +134,13 @@ def login():
 
                 return redirect(url_for("index"))
 
-            flash("用户名或密码错误", category="error")
+            flash("Incorrect username or password", category="error")
 
             # if form.user_name.data == 'user' and form.password.data == 'mtfy123':
             #     login_user(form.user_name.data, form.remember_me.data)
             #     return redirect(url_for('index'))
             # else:
-            #     flash('账号或密码错误',category='error')
+            #     flash('Incorrect account or password',category='error')
             #     return render_template('login4.html', form=form)
 
     return render_template("login.html", form=form)
@@ -183,7 +183,7 @@ def speed_stats():
 @app.route("/consume_speed_curve")
 @login_required
 def consume_speed_curve():
-    """获取消费速率曲线数据"""
+    """Get consumption speed curve data"""
     from funboost.funweb.functions import get_consume_speed_curve
     queue_name = request.args.get("queue_name")
     start_time = request.args.get("start_time")
@@ -191,7 +191,7 @@ def consume_speed_curve():
     granularity = request.args.get("granularity", "auto")
     
     if not queue_name or not start_time or not end_time:
-        return jsonify({"error": "缺少必要参数: queue_name, start_time, end_time"})
+        return jsonify({"error": "Missing required parameters: queue_name, start_time, end_time"})
     
     try:
         result = get_consume_speed_curve(queue_name, start_time, end_time, granularity)

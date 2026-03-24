@@ -93,25 +93,28 @@ for broker_kindx, cls_tuple in broker_kind__publsiher_consumer_type_map.items():
 
 def register_custom_broker(broker_kind, publisher_class: typing.Type[AbstractPublisher], consumer_class: typing.Type[AbstractConsumer]):
     """
-    动态注册中间件到框架中， 方便的增加中间件类型或者修改是自定义消费者逻辑。
+    Dynamically register a broker into the framework, making it easy to add broker types or customize consumer logic.
     :param broker_kind:
     :param publisher_class:
     :param consumer_class:
     :return:
     """
     if not issubclass(publisher_class, AbstractPublisher):
-        raise TypeError(f'publisher_class 必须是 AbstractPublisher 的子或孙类')
+        raise TypeError(f'publisher_class must be a subclass of AbstractPublisher')
     if not issubclass(consumer_class, AbstractConsumer):
-        raise TypeError(f'consumer_class 必须是 AbstractConsumer 的子或孙类')
+        raise TypeError(f'consumer_class must be a subclass of AbstractConsumer')
     broker_kind__publsiher_consumer_type_map[broker_kind] = (publisher_class, consumer_class)
     consumer_class.BROKER_KIND = broker_kind
 
 
 def regist_to_funboost(broker_kind: str):
     """
-    不直接定义在broker_kind__publsiher_consumer_type_map, 延迟导入是因为funboost没有pip自动安装这些三方包，防止一启动就报错。
-    这样当用户需要使用某些三方包中间件作为消息队列时候，按照import报错信息，用户自己去pip安装好。或者 pip install funboost[all] 一次性安装所有中间件。
-    建议按照 https://github.com/ydf0509/funboost/blob/master/setup.py 中的 extra_brokers 和 install_requires 里面的版本号来安装三方包版本.
+    Not defined directly in broker_kind__publsiher_consumer_type_map; lazy imports are used because funboost does not
+    automatically pip install these third-party packages, preventing errors on startup.
+    This way, when users need to use certain third-party broker packages as message queues, they can pip install them
+    based on the import error messages, or use `pip install funboost[all]` to install all broker dependencies at once.
+    It is recommended to install third-party package versions according to extra_brokers and install_requires in
+    https://github.com/ydf0509/funboost/blob/master/setup.py.
     """
     if broker_kind == BrokerEnum.RABBITMQ_AMQPSTORM:
         from funboost.publishers.rabbitmq_amqpstorm_publisher import RabbitmqPublisherUsingAmqpStorm
@@ -224,11 +227,11 @@ def regist_to_funboost(broker_kind: str):
         
     if broker_kind == BrokerEnum.WATCHDOG:
         from funboost.contrib.register_custom_broker_contrib  import watchdog_broker
-        # 无需调用 register_custom_broker ，已经在 watchdog_broker.py 中注册了
+        # No need to call register_custom_broker, it is already registered in watchdog_broker.py
         
     if broker_kind == BrokerEnum.WEBSOCKET:
         from funboost.contrib.register_custom_broker_contrib import websocket_broker
-        # 无需调用 register_custom_broker ，已经在 websocket_broker.py 中注册了
+        # No need to call register_custom_broker, it is already registered in websocket_broker.py
         
         
 

@@ -87,17 +87,17 @@ class Booster:
         The above 4 forms are equivalent.
         """
 
-        # 以下代码很复杂，主要是兼容老的在@boost直接传参的方式,强烈建议使用新的入参方式,所有入参放在一个 BoosterParams 中，那就不需要理会下面这段逻辑.
+        # The following code is complex, mainly for backward compatibility with the old direct parameter passing in @boost. It is strongly recommended to use the new parameter style with all params in a single BoosterParams, then you don't need to worry about the logic below.
         if isinstance(queue_name, str):
             if boost_params is None:
                 boost_params = BoosterParams(queue_name=queue_name)
         elif queue_name is None and boost_params is None:
-            raise ValueError("boost 入参错误")
+            raise ValueError("Invalid boost parameters")
         elif isinstance(queue_name, BoosterParams):
             boost_params = queue_name
         if isinstance(queue_name, str) or kwargs:
             flogger.warning(
-                f"""你的 {queue_name} 队列， funboost 40.0版本以后： {BoostDecoParamsIsOldVersion.default_message}"""
+                f"""Your queue {queue_name}, since funboost version 40.0: {BoostDecoParamsIsOldVersion.default_message}"""
             )
         boost_params_merge = boost_params.copy()
         boost_params_merge.update_from_dict(kwargs)
@@ -105,7 +105,7 @@ class Booster:
         self.queue_name = boost_params_merge.queue_name
 
     def __str__(self):
-        return f"{type(self)}  队列为 {self.queue_name} 函数为 {self.consuming_function} 的 booster"
+        return f"{type(self)}  queue: {self.queue_name} function: {self.consuming_function} booster"
 
     def __get__(self, instance, cls):
         """https://python3-cookbook.readthedocs.io/zh_CN/latest/c09/p09_define_decorators_as_classes.html"""
@@ -116,10 +116,10 @@ class Booster:
 
     def __call__(self, *args, **kwargs) -> Booster:
         """
-        # 第一次调用__call__，是装饰函数,返回了Booster对象,从此之后,被消费函数就变成了Booster类型对象.
-        # Booster类型对象,怎么支持函数原来本身的直接运行功能? 那就是要让他走到 else 分支,直接用 self.consuming_function 函数本身去运行入参
-        # 这里非常巧妙
-        # 如果用户之后不打算使用funboost 的分布式函数调度功能,那么直接运行函数和原来一模一样,用户不需要删除 @boost装饰器 也能直接运行函数本身
+        # The first call to __call__ decorates the function and returns a Booster object. From then on, the consuming function becomes a Booster type object.
+        # How does a Booster type object support the original direct function execution? By going to the else branch, directly using self.consuming_function to run with the parameters.
+        # This is a very clever design.
+        # If the user later decides not to use funboost's distributed function scheduling, they can run the function directly as before without removing the @boost decorator.
         """
         if (
             len(kwargs) == 0
@@ -144,7 +144,7 @@ class Booster:
             #     if self.boost_params.consuming_function_class_name is None:
             #         self.boost_params.consuming_function_class_name = consuming_function.__qualname__.split('.')[0]
             logger_prompt.debug(
-                f""" {self.boost_params.queue_name} booster 配置是 {self.boost_params.json_str_value()}"""
+                f""" {self.boost_params.queue_name} booster configuration is {self.boost_params.json_str_value()}"""
             )
             self.consuming_function = consuming_function
             self.is_decorated_as_consume_function = True
@@ -167,7 +167,7 @@ class Booster:
 
             self.start_consuming_message = self.consume = self.start = (
                 consumer.start_consuming_message
-            ) # consume 是前台线程，非阻塞
+            ) # consume runs in a foreground thread, non-blocking
             self.clear_filter_tasks = consumer.clear_filter_tasks
             self.wait_for_possible_has_finish_all_tasks = (
                 consumer.wait_for_possible_has_finish_all_tasks
@@ -186,7 +186,7 @@ class Booster:
 
     # noinspection PyMethodMayBeStatic
     def multi_process_consume(self, process_num=1):
-        """超高速多进程消费"""
+        """Ultra-fast multi-process consuming"""
         from funboost.core.muliti_process_enhance import run_consumer_with_multi_process
 
         run_consumer_with_multi_process(self, process_num)
@@ -196,12 +196,12 @@ class Booster:
 
     # noinspection PyMethodMayBeStatic
     def multi_process_pub_params_list(self, params_list, process_num=16):
-        """超高速多进程发布，例如先快速发布1000万个任务到中间件，以后慢慢消费"""
+        """Ultra-fast multi-process publishing, e.g. quickly publish 10 million tasks to the broker, then consume them later"""
         """
-        用法例如，快速20进程发布1000万任务，充分利用多核加大cpu使用率。
+        Usage example: quickly publish 10 million tasks using 20 processes, fully utilizing multi-core CPUs.
         @boost('test_queue66c', qps=1/30,broker_kind=BrokerEnum.KAFKA_CONFLUENT)
         def f(x, y):
-            print(f'函数开始执行时间 {time.strftime("%H:%M:%S")}')
+            print(f'Function execution start time {time.strftime("%H:%M:%S")}')
         if __name__ == '__main__':
             f.multi_process_pub_params_list([{'x':i,'y':i*3}  for i in range(10000000)],process_num=20)
             f.consume()
@@ -230,7 +230,7 @@ class Booster:
         pkey_file_path=None,
     ):
         """
-        入参见 fabric_deploy 函数。这里重复入参是为了代码在pycharm补全提示。
+        See fabric_deploy function for parameter details. Parameters are repeated here for PyCharm auto-completion.
         """
         params = copy.copy(locals())
         params.pop("self")
@@ -245,11 +245,11 @@ class Booster:
         return state
 
     def __setstate__(self, state):
-        """非常高级的骚操作,支持booster对象pickle序列化和反序列化,设计非常巧妙，堪称神来之笔
-        这样当使用redis作为apscheduler的 jobstores时候,aps_obj.add_job(booster.push,...) 可以正常工作,
-        使不报错 booster对象无法pickle序列化.
+        """Advanced technique supporting pickle serialization and deserialization of booster objects, a very clever design.
+        This allows aps_obj.add_job(booster.push,...) to work properly when using redis as apscheduler's jobstores,
+        avoiding errors about booster objects being unable to be pickled.
 
-        这个反序列化,没有执着于对 socket threding.Lock 怎么反序列化,而是偷换概念，绕过难题,基于标识的代理反序列化
+        This deserialization doesn't try to serialize socket/threading.Lock directly, but bypasses the problem using identity-based proxy deserialization.
         """
         cur_boosters_manager = BoosterRegistry(
             state["booster_registry_name"]
@@ -260,8 +260,8 @@ class Booster:
         self.__dict__.update(_booster.__dict__)
 
 
-boost = Booster  # @boost 后消费函数.  不能自动补全方法就用 Booster就可以。 2024版本的 pycharm抽风了，@boost的消费函数不能自动补全提示 .consume  .push 这些方法。
-task_deco = boost  # 两个装饰器名字都可以。task_deco是原来名字，兼容一下。
+boost = Booster  # @boost for consuming functions. If auto-completion doesn't work, use Booster directly. Some PyCharm 2024 versions have issues with auto-completing .consume .push methods on @boost decorated functions.
+task_deco = boost  # Both decorator names work. task_deco is the original name, kept for backward compatibility.
 
 
 def gen_pid_queue_name_key(queue_name: str,) -> typing.Tuple[int, str]:

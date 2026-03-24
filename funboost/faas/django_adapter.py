@@ -1,17 +1,17 @@
 """
-django 开箱即用， 用户使用
+Django out-of-the-box usage.
 
 
 
 
-使用说明：
-Django-Ninja 开箱即用 Router
-要求: 
+Usage instructions:
+Django-Ninja out-of-the-box Router
+Requirements:
 1. pip install django-ninja
-2. Django >= 3.1 (支持 async)
+2. Django >= 3.1 (supports async)
 
-使用方法:
-在你的 Django 项目的 api.py (或 urls.py) 中:
+How to use:
+In your Django project's api.py (or urls.py):
 
 from ninja import NinjaAPI
 
@@ -20,7 +20,7 @@ api.add_router("/funboost", django_router)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # 挂载 NinjaAPI
+    # Mount NinjaAPI
     path("api/", api.urls),
 ]
 

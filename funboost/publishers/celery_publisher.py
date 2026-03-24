@@ -14,7 +14,7 @@ from funboost.publishers.base_publisher import AbstractPublisher, TaskOptions
 
 class CeleryPublisher(AbstractPublisher, ):
     """
-    使用celery作为中间件
+    Uses celery as the broker.
     """
 
     def publish(self, msg: typing.Union[str, dict], task_id=None,
@@ -22,7 +22,7 @@ class CeleryPublisher(AbstractPublisher, ):
         msg, msg_function_kw, extra_params,task_id = self._convert_msg(msg, task_id, task_options)
         t_start = time.time()
         celery_result = celery_app.send_task(name=self.queue_name, kwargs=msg_function_kw, task_id=extra_params['task_id'])  # type: celery.result.AsyncResult
-        self.logger.debug(f'向{self._queue_name} 队列，推送消息 耗时{round(time.time() - t_start, 4)}秒  {msg_function_kw}')  # 显示msg太长了。
+        self.logger.debug(f'Pushed message to queue {self._queue_name}, took {round(time.time() - t_start, 4)} seconds  {msg_function_kw}')  # Full msg is too long to display.
         with self._lock_for_count:
             self.count_per_minute += 1
             self.publish_msg_num_total += 1

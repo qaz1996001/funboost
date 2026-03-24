@@ -8,14 +8,14 @@ import threading
 from funboost import get_publisher, get_consumer, BrokerEnum, wait_for_possible_has_finish_all_tasks_by_conusmer_list
 from funboost.core.func_params_model import PublisherParams, BoosterParams
 
-""" 将队列中的消息移到另一个队列名中，例如把死信队列的消息移到正常队列。"""
+""" Move messages from one queue to another, e.g. move messages from a dead letter queue to a normal queue."""
 
 
 def consume_and_push_to_another_queue(source_queue_name: str, source_broker_kind: str,
                                       target_queue_name: str, target_broker_kind: str,
                                       log_level: int = logging.DEBUG,
                                       exit_script_when_finish=False):
-    """ 将队列中的消息移到另一个队列名中，例如把死信队列的消息移到正常队列。"""
+    """ Move messages from one queue to another, e.g. move messages from a dead letter queue to a normal queue."""
     if source_queue_name == target_queue_name and source_broker_kind == target_broker_kind:
         raise ValueError('不能转移消息到当前队列名，否则死循环')
 

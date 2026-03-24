@@ -27,7 +27,7 @@ from funboost.utils import LogManager, nb_print, LoggerMixin
 from nb_log import LoggerLevelSetterMixin
 
 os_name = os.name
-# nb_print(f' 操作系统类型是  {os_name}')
+# nb_print(f' OS type is {os_name}')
 handle_exception_log = LogManager('function_error').get_logger_and_add_handlers()
 run_times_log = LogManager('run_many_times').get_logger_and_add_handlers(20)
 
@@ -39,16 +39,16 @@ class CustomException(Exception):
 
 
 def run_many_times(times=1):
-    """把函数运行times次的装饰器
-    :param times:运行次数
-    没有捕获错误，出错误就中断运行，可以配合handle_exception装饰器不管是否错误都运行n次。
+    """Decorator to run a function multiple times.
+    :param times: number of times to run
+    Does not catch errors; errors will interrupt execution. Can be combined with handle_exception decorator to run n times regardless of errors.
     """
 
     def _run_many_times(func):
         @wraps(func)
         def __run_many_times(*args, **kwargs):
             for i in range(times):
-                run_times_log.debug('* ' * 50 + '当前是第 {} 次运行[ {} ]函数'.format(i + 1, func.__name__))
+                run_times_log.debug('* ' * 50 + 'Currently running function [ {} ] for the {} time'.format(func.__name__, i + 1))
                 func(*args, **kwargs)
 
         return __run_many_times

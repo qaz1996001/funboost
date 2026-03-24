@@ -13,7 +13,7 @@ from nb_log import (LogManager, simple_logger, LoggerMixin, LoggerLevelSetterMix
 from funboost.utils.json_helper import monkey_patch_json
 
 
-#################以下为打猴子补丁#####################
+################# Monkey patches below #####################
 monkey_patch_json()
 
 

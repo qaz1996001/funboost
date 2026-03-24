@@ -24,23 +24,23 @@
 # from funboost.utils import nb_print, patch_print, LogManager, get_logger, LoggerMixin
 #
 #
-# # 有的包默认没加handlers，原始的日志不漂亮且不可跳转不知道哪里发生的。这里把warnning级别以上的日志默认加上handlers。
+# # Some packages don't add handlers by default, making raw logs ugly and non-clickable with no source info. Here we add handlers by default for WARNING level and above.
 # # nb_log.get_logger(name='', log_level_int=30, _log_filename='pywarning.log')
 #
 #
 # class Booster(LoggerMixin):
 #     """
-#     为了被装饰的消费函数的敲代码时候的被pycharm自动补全而写的类。
+#     A class written to enable PyCharm auto-completion for decorated consuming functions.
 #     """
 #
 #     def __init__(self, consuming_func_decorated: callable):
 #         """
-#         :param consuming_func_decorated:   传入被boost装饰的函数
+#         :param consuming_func_decorated:   Pass in the function decorated by boost
 #
-#         此框架非常非常注重，公有函数、方法、类 的名字和入参在ide开发环境下面的自动提示补全效果，如果不是为了这一点，框架能减少很多重复地方。
-#         此类是防止用户调用打错字母或者不知道怎么敲代码不知道有哪些入参。所以才有这个类。
+#         This framework places great emphasis on auto-completion of public function/method/class names and parameters in IDE environments. Without this goal, the framework could have much less repetition.
+#         This class exists to prevent users from mistyping or not knowing what parameters are available.
 #
-#         这个类是个补全类，能够使pycharm自动补全方法名字和入参。可以用，可以不用，用了后在pycharm里面补全效果会起作用。
+#         This is a completion helper class that enables PyCharm auto-completion for method names and parameters. It's optional — using it will enable auto-completion in PyCharm.
 #
 #
 #        from funboost import boost, IdeAutoCompleteHelper
@@ -54,12 +54,12 @@
 #            f(1000, 2000)
 #            IdeAutoCompleteHelper(f).clear()  # f.clear()
 #            for i in range(100, 200):
-#                f.pub(dict(a=i, b=i * 2))  # f.sub方法是强行用元编程加到f上去的，是运行时状态，pycharm只能补全非运行时态的静态东西。
-#                IdeAutoCompleteHelper(f).pub({'a': i * 3, 'b': i * 4})  # 和上面的发布等效，但可以自动补全方法名字和入参。
+#                f.pub(dict(a=i, b=i * 2))  # f.sub method is forcibly added to f via metaprogramming at runtime; PyCharm can only auto-complete static (non-runtime) things.
+#                IdeAutoCompleteHelper(f).pub({'a': i * 3, 'b': i * 4})  # Equivalent to the publish above, but with auto-completion for method names and parameters.
 #                f.push(a=i, b=i * 2)
 #                IdeAutoCompleteHelper(f).delay(i * 3,  i * 4)
 #
-#            IdeAutoCompleteHelper(f).start_consuming_message()  # 和 f.consume()等效
+#            IdeAutoCompleteHelper(f).start_consuming_message()  # Equivalent to f.consume()
 #
 #         """
 #         wraps(consuming_func_decorated)(self)
@@ -87,23 +87,23 @@
 #         self.continue_consume = self.consumer.continue_consume
 #
 #         for k, v in consuming_func_decorated.__dict__.items():
-#             ''' 上面那些手动的是为了代码补全方便 ，这个是自动的补充所有'''
+#             ''' The above manual assignments are for code completion convenience; this loop automatically supplements all remaining attributes '''
 #             if not k.startswith('_'):
 #                 setattr(self, k, v)
 #
 #     def multi_process_consume(self, process_num=1):
-#         """超高速多进程消费"""
+#         """Ultra-high-speed multi-process consuming"""
 #         run_consumer_with_multi_process(self.consuming_func_decorated, process_num)
 #
 #     multi_process_start = multi_process_consume
 #
 #     def multi_process_pub_params_list(self, params_list, process_num=16):
-#         """超高速多进程发布，例如先快速发布1000万个任务到中间件，以后慢慢消费"""
+#         """Ultra-high-speed multi-process publishing, e.g., quickly publish 10 million tasks to the broker, then consume them later"""
 #         """
-#         用法例如，快速20进程发布1000万任务，充分利用多核加大cpu使用率。
+#         Usage example: quickly publish 10 million tasks using 20 processes, fully utilizing multi-core CPUs.
 #         @boost('test_queue66c', qps=1/30,broker_kind=BrokerEnum.KAFKA_CONFLUENT)
 #         def f(x, y):
-#             print(f'函数开始执行时间 {time.strftime("%H:%M:%S")}')
+#             print(f'Function execution start time {time.strftime("%H:%M:%S")}')
 #         if __name__ == '__main__':
 #             f.multi_process_pub_params_list([{'x':i,'y':i*3}  for i in range(10000000)],process_num=20)
 #             f.consume()

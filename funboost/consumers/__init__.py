@@ -2,5 +2,5 @@
 # @Author  : ydf
 # @Time    : 2022/8/8 0008 13:09
 """
-实现基于各种中间件的消费者
+Implementation of consumers based on various middleware
 """

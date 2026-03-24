@@ -8,12 +8,12 @@ from funboost.consumers.base_consumer import AbstractConsumer
 
 class EmptyConsumer(AbstractConsumer, metaclass=abc.ABCMeta):
     """
-    一个空的消费者基类，作为自定义 Broker 的模板。
+    An empty consumer base class, serving as a template for custom Brokers.
 
-    这个类其实是多余的，因为用户完全可以继承AbstractConsumer，然后实现custom_init方法，然后实现_dispatch_task, _confirm_consume, _requeue方法来新增自定义broker。
-    这个类是为了清晰明确的告诉你，仅仅需要下面三个方法，就可以实现一个自定义broker，因为AbstractConsumer基类功能太丰富了，基类方法是在太多了，用户不知道需要继承重写哪方法
-    
-    
+    This class is actually redundant, because users can simply inherit from AbstractConsumer, implement the custom_init method, and implement _dispatch_task, _confirm_consume, _requeue methods to add a custom broker.
+    This class exists to clearly tell you that only the three methods below are needed to implement a custom broker, because the AbstractConsumer base class is feature-rich with too many methods, and users may not know which methods need to be overridden.
+
+
     """
     def custom_init(self):
         pass
@@ -21,17 +21,17 @@ class EmptyConsumer(AbstractConsumer, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def _dispatch_task(self):
         """
-        核心调度任务。此方法需要实现一个循环，负责从你的中间件中获取消息，
-        然后调用 `self._submit_task(msg)` 将任务提交到框架的并发池中执行。 可以参考funboos源码中的各种消费者实现。
+        Core task dispatch. This method needs to implement a loop that fetches messages from your middleware,
+        then calls `self._submit_task(msg)` to submit tasks to the framework's concurrent pool for execution. Refer to various consumer implementations in the funboost source code.
         """
         raise NotImplemented('not realization')
 
     @abc.abstractmethod
     def _confirm_consume(self, kw):
-        """确认消费，就是ack概念"""
+        """Confirm consumption, equivalent to the ACK concept"""
         raise NotImplemented('not realization')
 
     @abc.abstractmethod
     def _requeue(self, kw):
-        """重新入队"""
+        """Requeue the message"""
         raise NotImplemented('not realization')
