@@ -27,8 +27,8 @@ def get_task_id(msg:typing.Union[dict,str]):
 
 def delete_keys_and_return_new_dict(dictx: dict, exclude_keys: list ):
     """
-    返回一个不包含extra字段的新字典,也即是真正的函数入参字典。
-    优化：使用字典推导式代替 deepcopy + pop，性能提升 10-50 倍。
+    Returns a new dictionary without the specified keys, i.e. the actual function input parameter dictionary.
+    Optimization: uses dict comprehension instead of deepcopy + pop, improving performance 10-50x.
     """
     return {k: v for k, v in dictx.items() if k not in exclude_keys}
 
@@ -36,7 +36,7 @@ _DEFAULT_EXCLUDE_KEYS = frozenset(['extra'])
 
 def get_func_only_params(dictx: dict)->dict:
     """
-    消息中剔除 extra 字段，返回真正的函数入参字典。
+    Removes the extra field from the message and returns the actual function input parameter dictionary.
     :param dictx:
     :return:
     """
@@ -49,8 +49,8 @@ def block_python_main_thread_exit():
 
     https://funboost.readthedocs.io/zh-cn/latest/articles/c10.html#runtimeerror-cannot-schedule-new-futures-after-interpreter-shutdown
 
-    主要是用于 python3.9以上 定时任务报错，  定时任务报错 RuntimeError: cannot schedule new futures after interpreter shutdown
-    如果主线程结束了，apscheduler就会报这个错，加上这个while 1 ： time.sleep(100) 目的就是阻止主线程退出。
+    Mainly used for scheduled task errors in Python 3.9+: RuntimeError: cannot schedule new futures after interpreter shutdown.
+    If the main thread exits, apscheduler will throw this error. The while 1: time.sleep(100) loop is intended to prevent the main thread from exiting.
     """
     while 1:
         time.sleep(100)
@@ -62,11 +62,11 @@ run_forever = block_python_main_thread_exit
 class MsgGenerater:
     @staticmethod
     def generate_task_id(queue_name:str) -> str:
-        """
-        UUIDv7 是 时间有序（time-ordered） 的 UUID，新一代 UUID 规范（RFC 9562，已标准化），
-        专门为数据库/分布式系统设计。一句话总结：
-        UUIDv7 = “像 UUID 一样全局唯一 + 像雪花 ID 一样按时间递增”
-        """
+        “””
+        UUIDv7 is a time-ordered UUID, part of the new generation UUID specification (RFC 9562, now standardized),
+        designed specifically for databases/distributed systems. In a nutshell:
+        UUIDv7 = “globally unique like UUID + monotonically increasing like Snowflake ID”
+        “””
         # return f'{queue_name}_result:{uuid.uuid4()}'
         return uuid7.uuid7_str()
 
@@ -77,16 +77,16 @@ class MsgGenerater:
 
     @staticmethod
     def generate_publish_time_format() -> str:
-        # return FunboostTime().get_str()  # 性能不好
-        # return get_now_time_str_by_tz()  # 2秒100万次
-        return fast_get_now_time_str() # 0.4秒100万次
+        # return FunboostTime().get_str()  # Poor performance
+        # return get_now_time_str_by_tz()  # 1 million calls in 2 seconds
+        return fast_get_now_time_str() # 1 million calls in 0.4 seconds
 
 
     @classmethod
     def generate_pulish_time_and_task_id(cls,queue_name:str,task_id=None):
         extra_params = {'task_id': task_id or cls.generate_task_id(queue_name), 
-                        'publish_time': cls.generate_publish_time(),  # 时间戳秒
-                        'publish_time_format': cls.generate_publish_time_format() # 时间字符串 例如 2025-12-25 10:00:00
+                        'publish_time': cls.generate_publish_time(),  # Timestamp in seconds
+                        'publish_time_format': cls.generate_publish_time_format() # Time string, e.g. 2025-12-25 10:00:00
                         
                         }
         return extra_params

@@ -15,8 +15,8 @@ class CeleryConsumer(AbstractConsumer):
 
 
 
-    # celery的可以配置项大全  https://docs.celeryq.dev/en/stable/userguide/configuration.html#new-lowercase-settings
-    # celery @app.task() 所有可以配置项可以看  D:\ProgramData\Miniconda3\Lib\site-packages\celery\app\task.py
+    # Full list of celery configuration options: https://docs.celeryq.dev/en/stable/userguide/configuration.html#new-lowercase-settings
+    # All configurable options for celery @app.task() can be found in D:\ProgramData\Miniconda3\Lib\site-packages\celery\app\task.py
 
     '''
         #: Execution strategy used, or the qualified name of one.

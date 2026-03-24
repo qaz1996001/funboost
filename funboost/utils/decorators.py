@@ -359,7 +359,7 @@ class RedisDistributedLockContextManager(LoggerMixin, LoggerLevelSetterMixin):
     Distributed Redis lock context manager.
     """
     '''
-    redis 官方推荐的 redlock-py
+    Redis officially recommended redlock-py
     https://github.com/SPSCommerce/redlock-py/blob/master/redlock/__init__.py
     '''
     unlock_script = """

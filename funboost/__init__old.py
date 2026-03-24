@@ -317,7 +317,7 @@
 #         #     return func(*args, **kwargs)
 #         return func
 #
-#         # return __deco  # noqa # 两种方式都可以
+#         # return __deco  # noqa # either approach works
 #         # return update_wrapper(__deco, func)
 #
 #     return _deco  # noqa

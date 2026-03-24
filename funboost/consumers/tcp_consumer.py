@@ -10,7 +10,7 @@ from funboost.consumers.base_consumer import AbstractConsumer
 
 class TCPConsumer(AbstractConsumer, ):
     """
-    socket 实现消息队列，不支持持久化，但不需要安装软件。
+    Message queue implemented with socket, does not support persistence, but requires no software installation.
     """
 
 
@@ -29,19 +29,19 @@ class TCPConsumer(AbstractConsumer, ):
     # noinspection DuplicatedCode
     def _dispatch_task(self):
       
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # tcp协议
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP protocol
         server.bind(self._ip_port)
         server.listen(128)
         self._server = server
         while True:
             tcp_cli_sock, addr = self._server.accept()
-            Thread(target=self.__handle_conn, args=(tcp_cli_sock,)).start()  # 服务端多线程，可以同时处理多个tcp长链接客户端发来的消息。
+            Thread(target=self.__handle_conn, args=(tcp_cli_sock,)).start()  # Server-side multi-threading, can simultaneously handle messages from multiple TCP long-connection clients.
 
     def __handle_conn(self, tcp_cli_sock):
         try:
             while True:
                 data = tcp_cli_sock.recv(self.bufsize)
-                # print('server收到的数据', data)
+                # print('server received data', data)
                 if not data:
                     break
                 # self._print_message_get_from_broker(f'udp {self._ip_port_raw}', data.decode())
@@ -54,7 +54,7 @@ class TCPConsumer(AbstractConsumer, ):
             pass
 
     def _confirm_consume(self, kw):
-        pass  # 没有确认消费的功能。
+        pass  # No consumption confirmation functionality.
 
     def _requeue(self, kw):
         pass

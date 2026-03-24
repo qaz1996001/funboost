@@ -26,8 +26,8 @@ class RedisPbSubConsumer(AbstractConsumer, RedisMixin):
         pub = self.redis_db_frame.pubsub()
         pub.subscribe(self.queue_name)
         pub.parse_response()
-        while True:  # 无限循环
-            msg_list = pub.parse_response(timeout=60)  # 得到消息内容
+        while True:  # infinite loop
+            msg_list = pub.parse_response(timeout=60)  # get message content
             if msg_list:
                 kw = {'body': msg_list[2]}
                 self._submit_task(kw)

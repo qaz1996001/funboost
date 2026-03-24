@@ -22,9 +22,9 @@ from funboost.core.function_result_status_saver import FunctionResultStatus
 
 
 
-# LazyAsyncResult 已删除：AsyncResult 本身就是懒加载的
-# RedisMixin 的 redis_db_filter_and_rpc_result 使用 @cached_method_result
-# 只有在访问 status_and_result 等属性时才会建立 Redis 连接
+# LazyAsyncResult has been removed: AsyncResult itself is lazy-loaded.
+# RedisMixin's redis_db_filter_and_rpc_result uses @cached_method_result,
+# so the Redis connection is only established when accessing properties like status_and_result.
 
 
 def _judge_rpc_function_result_status_obj(status_and_result_obj:FunctionResultStatus,raise_exception:bool):
@@ -35,7 +35,7 @@ def _judge_rpc_function_result_status_obj(status_and_result_obj:FunctionResultSt
     else:
         raw_erorr = status_and_result_obj.exception
         if status_and_result_obj.exception_type == 'FunboostRpcResultError':
-            raw_erorr = json.loads(status_and_result_obj.exception_msg) # 使canvas链式报错json显示更美观
+            raw_erorr = json.loads(status_and_result_obj.exception_msg) # Make canvas chained error JSON display more readable
         error_msg_dict = {'task_id':status_and_result_obj.task_id,'raw_error':raw_erorr}
         if raise_exception:
             raise FunboostRpcResultError(json.dumps(error_msg_dict,indent=4,ensure_ascii=False))
@@ -52,8 +52,8 @@ class AsyncResult(RedisMixin):
     @callback_run_executor.setter
     def callback_run_executor(self,thread_pool_executor):
         """
-        用户可以 async_result.callback_run_executor = 你自己的线程池
-        thread_pool_executor 用户可以传递 FlexibleThreadPool或者 ThreadPoolExecutorShrinkAble 或者官方的 concurrent.futures.ThreadPoolExecutor 类型的对象都可以，任意线程池只要实现了submit方法即可。
+        Users can set async_result.callback_run_executor = your own thread pool.
+        thread_pool_executor can be FlexibleThreadPool, ThreadPoolExecutorShrinkAble, or the official concurrent.futures.ThreadPoolExecutor; any thread pool that implements the submit method works.
         :param thread_pool_executor:
         :return:
         """
@@ -76,7 +76,7 @@ class AsyncResult(RedisMixin):
     @property
     def status_and_result(self):
         if not self._has_pop:
-            # print(f'{self.task_id} 正在等待结果')
+            # print(f'{self.task_id} waiting for result')
             redis_value = self.redis_db_filter_and_rpc_result.blpop(self.task_id, self.timeout)
             self._has_pop = True
             if redis_value is not None:
@@ -90,10 +90,10 @@ class AsyncResult(RedisMixin):
     
     @property
     def status_and_result_obj(self) -> FunctionResultStatus:
-        """这个是为了比字典有更好的ide代码补全效果"""
+        """This provides better IDE code completion compared to a plain dictionary."""
         if self.status_and_result is not None:
             return FunctionResultStatus.parse_status_and_result_to_obj(self.status_and_result)
-    
+
     rpc_data =status_and_result_obj
 
     def get(self):
@@ -118,22 +118,22 @@ class AsyncResult(RedisMixin):
 
     def set_callback(self, callback_func: typing.Callable):
         """
-        :param callback_func: 函数结果回调函数，使回调函数自动在线程池中并发运行。
+        :param callback_func: Function result callback, makes the callback run concurrently in a thread pool.
         :return:
         """
 
-        ''' 用法例如
+        ''' Usage example:
         from test_frame.test_rpc.test_consume import add
         def show_result(status_and_result: dict):
             """
-            :param status_and_result: 一个字典包括了函数入参、函数结果、函数是否运行成功、函数运行异常类型
+            :param status_and_result: A dictionary containing the function input params, result, whether it succeeded, and exception type.
             """
             print(status_and_result)
 
         for i in range(100):
             async_result = add.push(i, i * 2)
-            # print(async_result.result)   # 执行 .result是获取函数的运行结果，会阻塞当前发布消息的线程直到函数运行完成。
-            async_result.set_callback(show_result) # 使用回调函数在线程池中并发的运行函数结果
+            # print(async_result.result)   # Accessing .result fetches the function's return value, blocking the current thread until the function completes.
+            async_result.set_callback(show_result) # Use a callback to run function results concurrently in a thread pool.
         '''
         self.callback_run_executor.submit(self._run_callback_func, callback_func)
     
@@ -147,9 +147,9 @@ class AsyncResult(RedisMixin):
 
 
 class AioAsyncResult(AioRedisMixin):
-    """ 这个是可以用于asyncio的语法环境中。"""
+    """ This can be used in asyncio syntax environments."""
     '''
-    用法例子
+    Usage example:
 import asyncio
 
 from funboost import AioAsyncResult
@@ -158,7 +158,7 @@ from test_frame.test_rpc.test_consume import add
 
 async def process_result(status_and_result: dict):
     """
-    :param status_and_result: 一个字典包括了函数入参、函数结果、函数是否运行成功、函数运行异常类型
+    :param status_and_result: A dictionary containing function input params, result, whether it succeeded, and exception type.
     """
     await asyncio.sleep(1)
     print(status_and_result)
@@ -166,10 +166,10 @@ async def process_result(status_and_result: dict):
 
 async def test_get_result(i):
     async_result = add.push(i, i * 2)
-    aio_async_result = AioAsyncResult(task_id=async_result.task_id) # 这里要使用asyncio语法的类，更方便的配合asyncio异步编程生态
-    print(await aio_async_result.result) # 注意这里有个await，如果不await就是打印一个协程对象，不会得到结果。这是asyncio的基本语法，需要用户精通asyncio。
+    aio_async_result = AioAsyncResult(task_id=async_result.task_id) # Use the asyncio-compatible class here for better integration with the asyncio ecosystem.
+    print(await aio_async_result.result) # Note the await here; without it, a coroutine object is printed instead of the actual result. This is basic asyncio syntax — users need to be familiar with it.
     print(await aio_async_result.status_and_result)
-    await aio_async_result.set_callback(process_result)  #  你也可以编排任务到loop中
+    await aio_async_result.set_callback(process_result)  # You can also schedule tasks into the loop.
 
 
 if __name__ == '__main__':
@@ -211,7 +211,7 @@ if __name__ == '__main__':
 
     @property
     async def status_and_result_obj(self) -> FunctionResultStatus:
-        """这个是为了比字典有更好的ide代码补全效果"""
+        """This provides better IDE code completion compared to a plain dictionary."""
         sr = await self.status_and_result
         if sr is not None:
             return FunctionResultStatus.parse_status_and_result_to_obj(sr)
@@ -253,7 +253,7 @@ if __name__ == '__main__':
 
 class ResultFromMongo(MongoMixin):
     """
-    以非阻塞等待的方式从funboost的状态结果持久化的mongodb数据库根据taskid获取结果
+    Retrieve the result by task_id from funboost's status/result persistence MongoDB database in a non-blocking manner.
 
     async_result = add.push(i, i * 2)
     task_id=async_result.task_id
@@ -281,15 +281,15 @@ class ResultFromMongo(MongoMixin):
         return self.mongo_row or StrConst.NO_RESULT
 
     def get_result(self):
-        """以非阻塞等待的方式从funboost的状态结果持久化的mongodb数据库根据taskid获取结果"""
+        """Retrieve the result by task_id from funboost's status/result persistence MongoDB database in a non-blocking manner."""
         self.query_result()
         return (self.mongo_row or {}).get('result', StrConst.NO_RESULT)
 
 
 class FutureStatusResult:
     """
-    用于sync_call模式的结果等待和通知
-    使用threading.Event实现同步等待
+    Used for result waiting and notification in sync_call mode.
+    Uses threading.Event for synchronous waiting.
     """
     def __init__(self, call_type: str):
         self.execute_finish_event = threading.Event()
@@ -297,19 +297,19 @@ class FutureStatusResult:
         self.call_type = call_type  # sync_call or publish
 
     def set_finish(self):
-        """标记任务完成"""
+        """Mark the task as finished."""
         self.execute_finish_event.set()
 
     def wait_finish(self, rpc_timeout):
-        """等待任务完成，带超时"""
+        """Wait for the task to finish, with a timeout."""
         return self.execute_finish_event.wait(rpc_timeout)
 
     def set_staus_result_obj(self, staus_result_obj: FunctionResultStatus):
-        """设置任务执行结果"""
+        """Set the task execution result."""
         self.staus_result_obj = staus_result_obj
 
     def get_staus_result_obj(self):
-        """获取任务执行结果"""
+        """Get the task execution result."""
         return self.staus_result_obj
 
 if __name__ == '__main__':

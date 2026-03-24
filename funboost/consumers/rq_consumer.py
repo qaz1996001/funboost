@@ -10,7 +10,7 @@ from rq.decorators import job
 
 class RqConsumer(AbstractConsumer):
     """
-    redis作为中间件实现的。
+    Implemented using Redis as middleware.
     """
 
     def custom_init(self):

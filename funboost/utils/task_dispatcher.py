@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
     # Synchronous call
     print(dispatcher.run("add", 2, 3))  # 5
-    print(dispatcher.run("mul_task", 4, 5))  # 20，asyncio.run 自动运行
+    print(dispatcher.run("mul_task", 4, 5))  # 20, asyncio.run runs it automatically
 
     # Asynchronous call
     async def main():

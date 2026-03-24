@@ -207,11 +207,11 @@ class WorkflowConsumerMixin(AbstractConsumer):
 def get_current_workflow_context() -> typing.Optional[dict]:
     """
     Get the current workflow context (for use in user code)
-    
-    用法：
+
+    Usage:
     ```python
     from funboost.workflow import get_current_workflow_context
-    
+
     @boost(WorkflowBoosterParams(queue_name='my_task'))
     def my_task(x):
         ctx = get_current_workflow_context()

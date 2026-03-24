@@ -23,7 +23,7 @@ class KafkaConsumer(AbstractConsumer):
     """
 
     """
-    auto_offset_reset 介绍
+    auto_offset_reset description:
       auto_offset_reset (str): A policy for resetting offsets on
             OffsetOutOfRange errors: 'earliest' will move to the oldest
             available message, 'latest' will move to the most recent. Any
@@ -49,7 +49,7 @@ class KafkaConsumer(AbstractConsumer):
         #  auto_offset_reset (str): A policy for resetting offsets on
         #             OffsetOutOfRange errors: 'earliest' will move to the oldest
         #             available message, 'latest' will move to the most recent. Any
-        #             other value will raise the exception. Default: 'latest'.       默认是latest
+        #             other value will raise the exception. Default: 'latest'.       default is latest
 
         # kafka group_id
 

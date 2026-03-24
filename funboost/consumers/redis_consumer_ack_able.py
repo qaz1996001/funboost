@@ -33,7 +33,7 @@ class RedisConsumerAckAble(ConsumerConfirmMixinWithTheHelpOfRedisByHearbeat, Abs
 
 
     # def _dispatch_task000(self):
-    #     # 可以采用lua脚本，也可以采用redis的watch配合pipeline使用。比代码分两行pop和zadd比还能减少一次io交互，还能防止丢失小概率一个任务。
+    #     # Can use lua scripts, or use redis watch with pipeline. Compared to doing pop and zadd in two separate lines, this reduces one IO interaction and prevents the small probability of losing one task.
     #     lua = '''
     #                  local v = redis.call("lpop", KEYS[1])
     #                  if v then
@@ -46,7 +46,7 @@ class RedisConsumerAckAble(ConsumerConfirmMixinWithTheHelpOfRedisByHearbeat, Abs
     #         return_v = script(keys=[self._queue_name, self._unack_zset_name], args=[time.time()])
     #         if return_v:
     #             task_str = return_v
-    #             self.logger.debug(f'从redis的 [{self._queue_name}] 队列中 取出的消息是：     {task_str}  ')
+    #             self.logger.debug(f'Message fetched from redis queue [{self._queue_name}]:     {task_str}  ')
     #             kw = {'body': task_str, 'task_str': task_str}
     #             self._submit_task(kw)
     #         else:
@@ -78,7 +78,7 @@ class RedisConsumerAckAble(ConsumerConfirmMixinWithTheHelpOfRedisByHearbeat, Abs
 
                 '''
         """
-        local v = redis.call("blpop",KEYS[1],60)  # redis 的lua 脚本禁止使用blpop
+        local v = redis.call("blpop",KEYS[1],60)  # Redis lua scripts cannot use blpop
         local v = redis.call("lpop",KEYS[1])
         """
         
@@ -89,7 +89,7 @@ class RedisConsumerAckAble(ConsumerConfirmMixinWithTheHelpOfRedisByHearbeat, Abs
             if task_str_list:
                 sleep_time = self.pull_initial_interval # Has messages, reset to initial value
                 self._print_message_get_from_broker( task_str_list)
-                # self.logger.debug(f'从redis的 [{self._queue_name}] 队列中 取出的消息是：  {task_str_list}  ')
+                # self.logger.debug(f'Message fetched from redis queue [{self._queue_name}]:  {task_str_list}  ')
                 for task_str in task_str_list:
                     kw = {'body': task_str, 'task_str': task_str}
                     self._submit_task(kw)

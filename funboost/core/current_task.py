@@ -137,14 +137,14 @@ class FctContextThread(threading.Thread):
                  args=(), kwargs=None, *, daemon=None):
         super().__init__(group=group, target=target, name=name,
                          args=args, kwargs=kwargs, daemon=daemon)
-        # self._fct_context = get_fct_context() # 这只针对ct
+        # self._fct_context = get_fct_context() # This only targets ct
 
         # 1. Core change: capture a snapshot of all current contextvars context,
         # This is more general-purpose, not just for fct_context, but also for all other contextvars contexts, such as OpenTelemetry's
         self._ctx = contextvars.copy_context()
 
     def run(self):
-        # set_fct_context(self._fct_context) # 这是仅针对fct_context的上下文，其他contextvars上下文不会传递。
+        # set_fct_context(self._fct_context) # This only targets fct_context; other contextvars contexts will not be propagated.
         # super().run()
 
         # 2. Core change: run super().run() within the captured context

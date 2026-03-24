@@ -6,9 +6,10 @@ from funboost.core.current_task import get_current_taskid
 
 class TaskIdLogger(CompatibleLogger):
     """
-    如果你要使用带taskid的日志模板,一定要使用
-     LogManager('namexx',logger_cls=TaskIdLogger).get_logger_and_add_handlers(....)
-     的方式来创建logger, 就是需要指定logger_cls=TaskIdLogger ,否则的话你需要在打印日志时候 手动传递extra logger.info(msg,extra={'task_id':task_idxxx})
+    If you want to use a log template that includes task_id, you must create the logger using:
+     LogManager('namexx', logger_cls=TaskIdLogger).get_logger_and_add_handlers(....)
+     i.e. you must specify logger_cls=TaskIdLogger; otherwise you need to manually pass extra when logging:
+     logger.info(msg, extra={'task_id': task_idxxx})
      """
     def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False):
         extra = extra or {}

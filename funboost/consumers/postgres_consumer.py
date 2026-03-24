@@ -22,7 +22,7 @@ class PostgresConsumer(AbstractConsumer):
     3. Uses native psycopg2 connection pool
     """
 
-    BROKER_KIND = None  # 会被框架自动设置
+    BROKER_KIND = None  # Will be automatically set by the framework
 
     def custom_init(self):
         self._use_listen_notify = self.consumer_params.broker_exclusive_config['use_listen_notify']

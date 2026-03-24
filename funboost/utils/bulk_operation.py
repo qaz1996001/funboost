@@ -223,7 +223,7 @@ class _Test(unittest.TestCase, LoggerMixin):
             # r = redis.Redis(password='123456')
             r = RedisMixin().redis_db0
             redis_helper = RedisBulkWriteHelper(r, 200)
-            # redis_helper = RedisBulkWriteHelper(r, 100)  # 放在外面可以
+            # redis_helper = RedisBulkWriteHelper(r, 100)  # Can also be placed outside
             for i in range(1003):
                 # time.sleep(0.2)
                 # Can also instantiate infinitely here

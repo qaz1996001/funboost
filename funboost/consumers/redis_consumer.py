@@ -33,7 +33,7 @@ class RedisConsumer(AbstractConsumer, RedisMixin):
                 p.ltrim(self._queue_name, pull_msg_batch_size, -1)
                 task_str_list = p.execute()[0]
             if task_str_list:
-                # self.logger.debug(f'从redis的 [{self._queue_name}] 队列中 取出的消息是：  {task_str_list}  ')
+                # self.logger.debug(f'Message fetched from redis queue [{self._queue_name}]:  {task_str_list}  ')
                 self._print_message_get_from_broker( task_str_list)
                 for task_str in task_str_list:
                     kw = {'body': task_str}
@@ -41,7 +41,7 @@ class RedisConsumer(AbstractConsumer, RedisMixin):
             else:
                 result = self.redis_db_frame.brpop(self._queue_name, timeout=60)
                 if result:
-                    # self.logger.debug(f'从redis的 [{self._queue_name}] 队列中 取出的消息是：  {result[1].decode()}  ')
+                    # self.logger.debug(f'Message fetched from redis queue [{self._queue_name}]:  {result[1].decode()}  ')
                     kw = {'body': result[1]}
                     self._submit_task(kw)
 
@@ -49,7 +49,7 @@ class RedisConsumer(AbstractConsumer, RedisMixin):
         while True:
             result = self.redis_db_frame.blpop(self._queue_name, timeout=60)
             if result:
-                # self.logger.debug(f'从redis的 [{self._queue_name}] 队列中 取出的消息是：  {result[1].decode()}  ')
+                # self.logger.debug(f'Message fetched from redis queue [{self._queue_name}]:  {result[1].decode()}  ')
                 kw = {'body': result[1]}
                 self._submit_task(kw)
 

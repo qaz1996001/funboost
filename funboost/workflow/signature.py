@@ -71,8 +71,8 @@ class Signature:
     def s(self, *args, **kwargs) -> 'Signature':
         """
         Create a new signature with merged parameters (similar to Celery's .s() method)
-        
-        用法：
+
+        Usage:
         ```python
         sig = my_task.s(1, 2, name='test')
         ```
@@ -160,8 +160,8 @@ class Signature:
 def signature(booster, *args, **kwargs) -> Signature:
     """
     Convenience function: create a task signature
-    
-    用法：
+
+    Usage:
     ```python
     sig = signature(my_task, 1, 2, name='test')
     ```

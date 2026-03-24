@@ -320,8 +320,8 @@ class Chord:
 def chain(*tasks) -> Chain:
     """
     Create a sequential execution workflow
-    
-    用法：
+
+    Usage:
     ```python
     workflow = chain(task1.s(x), task2.s(), task3.s())
     result = workflow.apply()
@@ -349,8 +349,8 @@ def group(*tasks) -> Group:
 def chord(header, body) -> Chord:
     """
     Create a parallel+aggregation workflow
-    
-    用法：
+
+    Usage:
     ```python
     c = chord(
         group(task.s(i) for i in range(3)),

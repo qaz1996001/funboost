@@ -22,12 +22,12 @@ class NsqConsumer(AbstractConsumer):
 
     def _dispatch_task(self):
         consumer = GnsqImporter().Consumer(self._queue_name, 'frame_channel', BrokerConnConfig.NSQD_TCP_ADDRESSES,
-                            max_in_flight=self.consumer_params.concurrent_num, heartbeat_interval=60, timeout=600, )  # heartbeat_interval 不能设置为600
+                            max_in_flight=self.consumer_params.concurrent_num, heartbeat_interval=60, timeout=600, )  # heartbeat_interval cannot be set to 600
 
         @consumer.on_message.connect
         def handler(consumerx: GnsqImporter().Consumer, message: GnsqImporter().Message):
             # The first message cannot be concurrent, messages after the first can be concurrent.
-            # self.logger.debug(f'从nsq的 [{self._queue_name}] 主题中 取出的消息是：  {message.body.decode()}')
+            # self.logger.debug(f'Message fetched from nsq topic [{self._queue_name}]:  {message.body.decode()}')
             message.enable_async()
             kw = {'consumer': consumerx, 'message': message, 'body': message.body}
             self._submit_task(kw)

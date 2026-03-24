@@ -182,12 +182,12 @@ class ResultPersistenceHelper(MongoMixin, FunboostFileLoggerMixin):
                 if index_name == 'utime_1':
                     old_expire_after_seconds = v['expireAfterSeconds']
             if has_creat_index is False:
-                # params_str 如果很长，必须使用TEXt或HASHED索引。
+                # If params_str is very long, a TEXT or HASHED index must be used.
                 task_status_col.create_indexes([
                     IndexModel([("queue_name", 1)]),
                     IndexModel([("insert_time_str", -1)]), IndexModel([("insert_time", -1)]),
                                                 IndexModel([("params_str", pymongo.TEXT)]), IndexModel([("success", 1)]),
-                                                IndexModel([("time_cost", -1)]),  # 用于按耗时查询
+                                                IndexModel([("time_cost", -1)]),  # Used for querying by time cost
                                                 ], )
                 task_status_col.create_index([("utime", 1)],  # This is the expiration time index.
                                              expireAfterSeconds=self.function_result_status_persistance_conf.expire_seconds)  # Retain only 7 days (user-configurable).
@@ -212,7 +212,7 @@ class ResultPersistenceHelper(MongoMixin, FunboostFileLoggerMixin):
             if item2['exception'] is None:
                 item2['exception'] = ''
             if self.function_result_status_persistance_conf.is_use_bulk_insert:
-                # self._mongo_bulk_write_helper.add_task(InsertOne(item2))  # 自动离散批量聚合方式。
+                # self._mongo_bulk_write_helper.add_task(InsertOne(item2))  # Automatic discrete bulk aggregation approach.
                 with self._bulk_list_lock:
                     self._bulk_list.append(ReplaceOne({'_id': item2['_id']}, item2, upsert=True))
                     # if time.time() - self._last_bulk_insert_time > 0.5:

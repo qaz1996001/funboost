@@ -38,7 +38,7 @@ class FunboostException(Exception):
 
     # Elegant string representation
     def __str__(self):
-        parts = [f"{self.__class__.__name__}"]  # 显示异常类型
+        parts = [f"{self.__class__.__name__}"]  # Display exception type
 
         if self.code is not None:
             parts.append(f"[{self.code}]")

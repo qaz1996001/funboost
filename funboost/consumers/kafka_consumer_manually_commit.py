@@ -47,7 +47,7 @@ class KafkaConsumerManuallyCommit(AbstractConsumer):
             pass
 
         self._producer = KafkaPythonImporter().KafkaProducer(bootstrap_servers=BrokerConnConfig.KAFKA_BOOTSTRAP_SERVERS)
-        # consumer 配置 https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+        # consumer configuration: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
         self._confluent_consumer = ConfluentConsumer({
             'bootstrap.servers': ','.join(BrokerConnConfig.KAFKA_BOOTSTRAP_SERVERS),
             'group.id': self.consumer_params.broker_exclusive_config["group_id"],
@@ -66,7 +66,7 @@ class KafkaConsumerManuallyCommit(AbstractConsumer):
             if msg.error():
                 print("Consumer error: {}".format(msg.error()))
                 continue
-            # msg的类型  https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#message
+            # msg type reference: https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#message
             # value()  offset() partition()
             # print('Received message: {}'.format(msg.value().decode('utf-8'))) # noqa
             self._partion__offset_consume_status_map[msg.partition()][msg.offset()] = 0
@@ -138,7 +138,7 @@ class SaslPlainKafkaConsumer(KafkaConsumerManuallyCommit):
 
         self._producer = KafkaPythonImporter().KafkaProducer(
             **BrokerConnConfig.KFFKA_SASL_CONFIG)
-        # consumer 配置 https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+        # consumer configuration: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
         self._confluent_consumer = ConfluentConsumer({
             'bootstrap.servers': ','.join(BrokerConnConfig.KAFKA_BOOTSTRAP_SERVERS),
             'security.protocol': BrokerConnConfig.KFFKA_SASL_CONFIG['security_protocol'],

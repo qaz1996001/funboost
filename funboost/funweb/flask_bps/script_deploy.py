@@ -903,17 +903,17 @@ def deploy_clone(name):
     if not new_name:
         return jsonify({'succ': False, 'msg': 'New deployment name cannot be empty'})
     if _redis.sismember(_names_key(), new_name):
-        return jsonify({'succ': False, 'msg': f'部署名称 "{new_name}" 已存在'})
+        return jsonify({'succ': False, 'msg': f'Deployment name "{new_name}" already exists'})
 
     config = _redis.hgetall(_config_key(name))
     if not config:
-        return jsonify({'succ': False, 'msg': '源部署配置不存在'})
+        return jsonify({'succ': False, 'msg': 'Source deployment configuration does not exist'})
 
     new_config = dict(config)
     new_config['name'] = new_name
     _redis.sadd(_names_key(), new_name)
     _redis_hset_mapping(_config_key(new_name), new_config)
-    return jsonify({'succ': True, 'msg': f'已复制为 "{new_name}"'})
+    return jsonify({'succ': True, 'msg': f'Copied as "{new_name}"'})
 
 
 @deploy_bp.route('/deploy/<name>/delete', methods=['DELETE'])
@@ -922,12 +922,12 @@ def deploy_delete(name):
     config = _redis.hgetall(_config_key(name)) or {}
     alive_pids, _, _ = _find_deploy_pids(name)
     if alive_pids:
-        return jsonify({'succ': False, 'msg': '进程运行中，请先停止再删除'})
+        return jsonify({'succ': False, 'msg': 'Process is running; please stop it before deleting'})
 
     _redis.srem(_names_key(), name)
     _redis.delete(_config_key(name))
     _redis.delete(_runtime_key(name))
-    return jsonify({'succ': True, 'msg': '删除成功'})
+    return jsonify({'succ': True, 'msg': 'Deleted successfully'})
 
 
 @deploy_bp.route('/deploy/<name>/start', methods=['POST'])
@@ -935,20 +935,20 @@ def deploy_delete(name):
 def deploy_start(name):
     config = _redis.hgetall(_config_key(name))
     if not config:
-        return jsonify({'succ': False, 'msg': '部署配置不存在'})
+        return jsonify({'succ': False, 'msg': 'Deployment configuration does not exist'})
 
     alive_pids, _, _ = _find_deploy_pids(name)
     if alive_pids:
-        return jsonify({'succ': False, 'msg': '进程已在运行中'})
+        return jsonify({'succ': False, 'msg': 'Process is already running'})
 
     procs, err, cmd_detail = _start_process(name, config)
     if err:
-        return jsonify({'succ': False, 'msg': f'启动失败: {err}', 'cmd_detail': cmd_detail})
+        return jsonify({'succ': False, 'msg': f'Start failed: {err}', 'cmd_detail': cmd_detail})
     _redis_hset_mapping(_runtime_key(name), {'manual_stop': '0', 'should_run': '1', 'restart_retry_count': '0'})
     pids = cmd_detail.get('pid', '')
     return jsonify({
         'succ': True,
-        'msg': f'启动成功, PID={pids}',
+        'msg': f'Started successfully, PID={pids}',
         'pid': pids,
         'cmd_detail': cmd_detail,
     })
@@ -959,7 +959,7 @@ def deploy_start(name):
 def deploy_stop(name):
     alive_pids, search_cmd, alive_cts = _find_deploy_pids(name)
     if not alive_pids:
-        return jsonify({'succ': False, 'msg': '进程未在运行'})
+        return jsonify({'succ': False, 'msg': 'Process is not running'})
 
     runtime_data = _redis.hgetall(_runtime_key(name))
     old_start_time = runtime_data.get('start_time', '')
@@ -974,7 +974,7 @@ def deploy_stop(name):
         })
     return jsonify({
         'succ': all_ok,
-        'msg': '停止成功' if all_ok else (last_err or '停止进程时出错'),
+        'msg': 'Stopped successfully' if all_ok else (last_err or 'Error stopping process'),
         'cmd_detail': {
             'search_cmd': search_cmd,
             'found_pids': [str(p) for p in alive_pids],
@@ -991,7 +991,7 @@ def deploy_stop(name):
 def deploy_restart(name):
     config = _redis.hgetall(_config_key(name))
     if not config:
-        return jsonify({'succ': False, 'msg': '部署配置不存在'})
+        return jsonify({'succ': False, 'msg': 'Deployment configuration does not exist'})
 
     runtime_data = _redis.hgetall(_runtime_key(name))
     old_start_time = runtime_data.get('start_time', '')
@@ -1010,7 +1010,7 @@ def deploy_restart(name):
             last_err = next((r[2] for r in kill_results if not r[1]), '')
             return jsonify({
                 'succ': False,
-                'msg': f'停止旧进程失败: {last_err}',
+                'msg': f'Failed to stop old process: {last_err}',
                 'cmd_detail': {
                     'search_cmd': search_cmd,
                     'found_pids': [str(p) for p in alive_pids],
@@ -1031,12 +1031,12 @@ def deploy_restart(name):
     cmd_detail['old_pid'] = old_pid
     cmd_detail['old_start_time'] = old_start_time
     if err:
-        return jsonify({'succ': False, 'msg': f'重启失败: {err}', 'cmd_detail': cmd_detail})
+        return jsonify({'succ': False, 'msg': f'Restart failed: {err}', 'cmd_detail': cmd_detail})
     _redis_hset_mapping(_runtime_key(name), {'manual_stop': '0', 'should_run': '1', 'restart_retry_count': '0'})
     pids = cmd_detail.get('pid', '')
     return jsonify({
         'succ': True,
-        'msg': f'重启成功, PID={pids}',
+        'msg': f'Restarted successfully, PID={pids}',
         'pid': pids,
         'cmd_detail': cmd_detail,
     })
@@ -1045,7 +1045,7 @@ def deploy_restart(name):
 @deploy_bp.route('/deploy/<name>/status', methods=['GET'])
 @login_required
 def deploy_status(name):
-    """状态轮询：仅用 Redis pid_list + is_running()/create_time() 验证，毫秒级返回。"""
+    """Status polling: validates using only Redis pid_list + is_running()/create_time(), returns in milliseconds."""
     config = _redis.hgetall(_config_key(name))
     alive_pids, search_cmd, _ = _find_deploy_pids(name)
     runtime_data = _redis.hgetall(_runtime_key(name))
@@ -1062,11 +1062,11 @@ def deploy_status(name):
 @deploy_bp.route('/deploy/<name>/git_branches', methods=['GET'])
 @login_required
 def deploy_git_branches(name):
-    """获取 git 分支列表（自动 fetch --prune 更新远程信息）"""
+    """Get the list of git branches (automatically runs fetch --prune to update remote info)"""
     config = _redis.hgetall(_config_key(name))
     project_dir = config.get('project_dir', '')
     if not project_dir or not os.path.isdir(project_dir):
-        return jsonify({'succ': False, 'is_git_repo': False, 'msg': f'项目目录不存在: {project_dir}'})
+        return jsonify({'succ': False, 'is_git_repo': False, 'msg': f'Project directory does not exist: {project_dir}'})
 
     try:
         check = subprocess.run(
@@ -1107,7 +1107,7 @@ def deploy_git_branches(name):
             'remote': remote_branches,
         })
     except subprocess.TimeoutExpired:
-        return jsonify({'succ': False, 'is_git_repo': False, 'msg': 'Git 操作超时'})
+        return jsonify({'succ': False, 'is_git_repo': False, 'msg': 'Git operation timed out'})
     except Exception as e:
         return jsonify({'succ': False, 'is_git_repo': False, 'msg': str(e)})
 
@@ -1118,7 +1118,7 @@ def deploy_git_pull(name):
     config = _redis.hgetall(_config_key(name))
     project_dir = config.get('project_dir', '')
     if not project_dir or not os.path.isdir(project_dir):
-        return jsonify({'succ': False, 'msg': f'项目目录不存在: {project_dir}'})
+        return jsonify({'succ': False, 'msg': f'Project directory does not exist: {project_dir}'})
 
     data = request.get_json(silent=True) or {}
     target_branch = data.get('branch', '').strip()
@@ -1132,15 +1132,15 @@ def deploy_git_pull(name):
             'current_branch': res['current_branch'],
         })
     except subprocess.TimeoutExpired:
-        return jsonify({'succ': False, 'msg': '✗ Git pull 超时（60秒）', 'steps': [], 'current_branch': ''})
+        return jsonify({'succ': False, 'msg': '✗ Git pull timed out (60 seconds)', 'steps': [], 'current_branch': ''})
     except Exception as e:
-        return jsonify({'succ': False, 'msg': f'✗ Git pull 异常: {e}', 'steps': [], 'current_branch': ''})
+        return jsonify({'succ': False, 'msg': f'✗ Git pull error: {e}', 'steps': [], 'current_branch': ''})
 
 
 @deploy_bp.route('/deploy/<name>/logs', methods=['GET'])
 @login_required
 def deploy_logs(name):
-    """返回部署日志尾部（仅供操作弹框内近期日志使用）。"""
+    """Return the tail of the deployment log (for use in the recent logs section of the operation dialog)."""
     max_lines = int(request.args.get('lines', 200))
     log_files = _find_log_files(name)
     if not log_files:
@@ -1162,7 +1162,7 @@ def deploy_logs(name):
 def deploy_get_config(name):
     config = _redis.hgetall(_config_key(name))
     if not config:
-        return jsonify({'succ': False, 'msg': '部署配置不存在'})
+        return jsonify({'succ': False, 'msg': 'Deployment configuration does not exist'})
     alive_pids, search_cmd, _ = _find_deploy_pids(name)
     runtime_data = _redis.hgetall(_runtime_key(name))
     status = {
@@ -1176,12 +1176,13 @@ def deploy_get_config(name):
     return jsonify({'succ': True, 'data': {**config, **status}})
 
 
-# ======================== 自动启动 & 自动重启守护 ========================
+# ======================== Auto-start & auto-restart daemon ========================
 
 def _auto_restart_daemon():
-    """后台守护线程：每 10 秒检查所有配置了 auto_restart 的部署，
-    如果进程意外退出（且非人工停止），自动重启，最多连续失败 max_retry 次。
-    启动时还负责处理 auto_start 逻辑。
+    """Background daemon thread: checks all deployments with auto_restart enabled every 10 seconds.
+    If a process exits unexpectedly (and was not manually stopped), it is automatically restarted,
+    up to max_retry consecutive failures.
+    Also handles auto_start logic on service startup.
     """
     time.sleep(15)
 
@@ -1199,7 +1200,7 @@ def _auto_restart_daemon():
 
 
 def _do_auto_start():
-    """服务启动时执行一次：启动所有配置了 auto_start=1 的部署（如果尚未运行）"""
+    """Executed once on service startup: starts all deployments with auto_start=1 (if not already running)"""
     try:
         names = _redis.smembers(_names_key())
     except Exception:
@@ -1222,7 +1223,7 @@ def _do_auto_start():
 
 
 def _do_auto_restart_check():
-    """守护线程每次循环调用：用 Redis pid_list 快速验证存活，不做全量扫描。"""
+    """Called each daemon thread loop: quickly verifies liveness using Redis pid_list, no full scan."""
     try:
         names = _redis.smembers(_names_key())
     except Exception:

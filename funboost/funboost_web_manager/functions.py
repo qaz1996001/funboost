@@ -1,3 +1,3 @@
-# 兼容导入
+# Backward-compatible import
 
 from funboost.funweb.functions import *

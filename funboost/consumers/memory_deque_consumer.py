@@ -21,7 +21,7 @@ class LocalPythonQueueConsumer(AbstractConsumer):
     def _dispatch_task(self):
         while True:
             task = self.local_python_queue.popleft()
-            # self.logger.debug(f'从当前python解释器内部的 [{self._queue_name}] 队列中 取出的消息是：  {json.dumps(task)}  ')
+            # self.logger.debug(f'Message fetched from internal Python interpreter queue [{self._queue_name}]:  {json.dumps(task)}  ')
             kw = {'body': task}
             self._submit_task(kw)
 

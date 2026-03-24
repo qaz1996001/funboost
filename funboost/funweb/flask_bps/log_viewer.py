@@ -490,7 +490,7 @@ def log_stream():
         return Response('data: {"error": "Access denied"}\n\n',
                         mimetype='text/event-stream', status=403)
     if not os.path.isfile(filepath):
-        return Response('data: {"error": "文件不存在"}\n\n',
+        return Response('data: {"error": "File does not exist"}\n\n',
                         mimetype='text/event-stream', status=404)
 
     def generate():

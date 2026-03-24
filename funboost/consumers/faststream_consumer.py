@@ -21,7 +21,7 @@ class FastStreamConsumer(EmptyConsumer):
         async def f(msg:str, logger: Logger,message=Context(),broker=Context(),context=Context(),):
             self.logger.debug(f' This message was fetched by faststream from queue {self.queue_name}, dispatched by faststream framework to function {self.consuming_function.__name__}, msg:{message} {context}')
             # print(logger.name)
-            # return self.consuming_function(*args, **kwargs) # 如果没有声明 autoretry_for ，那么消费函数出错了就不会自动重试了。
+            # return self.consuming_function(*args, **kwargs) # If autoretry_for is not declared, the consuming function will not automatically retry on error.
             # print(msg)
             function_only_params = get_func_only_params(Serialization.to_dict(msg))
             if self._consuming_function_is_asyncio:

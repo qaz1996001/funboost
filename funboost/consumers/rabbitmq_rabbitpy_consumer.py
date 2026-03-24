@@ -23,7 +23,7 @@ class RabbitmqConsumerRabbitpy(AbstractConsumer):
         channel.basic_qos(prefetch_count=self.consumer_params.concurrent_num)
         for message in channel.basic_consume(self._queue_name, no_ack=False):
             body = message.body.decode()
-            # self.logger.debug(f'从rabbitmq {self._queue_name} 队列中 取出的消息是：  {body}')
+            # self.logger.debug(f'Message fetched from rabbitmq queue {self._queue_name}:  {body}')
             kw = {'message': message, 'body': body}
             self._submit_task(kw)
 

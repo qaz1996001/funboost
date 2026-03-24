@@ -39,7 +39,7 @@ class GrpcConsumer(AbstractConsumer, ):
                 kw = {'body': request.json_req, 'future_status_result': future_status_result,}
                 self._submit_task(kw)
                 if request.call_type =="sync_call":
-                    if future_status_result.wait_finish(self.consumer_params.rpc_timeout):  # 等待并发出的消费结果
+                    if future_status_result.wait_finish(self.consumer_params.rpc_timeout):  # Wait for the consumption result to be dispatched
                         return funboost_grpc_pb2.FunboostGrpcResponse(json_resp=Serialization.to_json_str(
                             future_status_result.get_staus_result_obj().get_status_dict(without_datetime_obj=True)))
                     else:

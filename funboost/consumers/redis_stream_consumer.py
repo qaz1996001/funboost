@@ -42,7 +42,7 @@ class RedisStreamConsumer(AbstractConsumer, RedisMixin):
             results = self.redis_db_frame.xreadgroup(self.group, self.consumer_identification,
                                                               {self.queue_name: ">"}, count=pull_msg_batch_size, block=60 * 1000)
             if results:
-                # self.logger.debug(f'从redis的 [{self._queue_name}] stream 中 取出的消息是：  {results}  ')
+                # self.logger.debug(f'Message fetched from redis stream [{self._queue_name}]:  {results}  ')
                 self._print_message_get_from_broker( results)
                 # print(results[0][1])
                 for msg_id, msg in results[0][1]:
@@ -51,7 +51,7 @@ class RedisStreamConsumer(AbstractConsumer, RedisMixin):
 
     def _confirm_consume(self, kw):
         # self.redis_db_frame.xack(self._queue_name, 'distributed_frame_group', kw['msg_id'])
-        # self.redis_db_frame.xdel(self._queue_name, kw['msg_id']) # 便于xlen
+        # self.redis_db_frame.xdel(self._queue_name, kw['msg_id']) # helps xlen
         with self.redis_db_frame.pipeline() as pipe:
             pipe.xack(self._queue_name, self.group, kw['msg_id'])
             pipe.xdel(self._queue_name, kw['msg_id'])  # Delete directly without retaining, for accurate xlen
@@ -77,7 +77,7 @@ class RedisStreamConsumer(AbstractConsumer, RedisMixin):
                     # print(xinfo_item)
                     if xinfo_item['idle'] > 7 * 24 * 3600 * 1000 and xinfo_item['pending'] == 0:
                         self.redis_db_frame.xgroup_delconsumer(self._queue_name, self.group, xinfo_item['name'])
-                    if xinfo_item['name'] not in current_queue_hearbeat_ids and xinfo_item['pending'] > 0:  # 说明这个消费者掉线断开或者关闭了。
+                    if xinfo_item['name'] not in current_queue_hearbeat_ids and xinfo_item['pending'] > 0:  # Indicates this consumer has gone offline, disconnected, or been shut down.
                         pending_msg_list = self.redis_db_frame.xpending_range(
                             self._queue_name, self.group, '-', '+', 1000, xinfo_item['name'])
                         if pending_msg_list:

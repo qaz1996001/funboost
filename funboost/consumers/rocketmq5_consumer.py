@@ -2,13 +2,13 @@
 # @Author  : ydf
 # @Time    : 2026
 """
-RocketMQ 5.x 消费者实现，使用最新版 rocketmq-python-client SDK
+RocketMQ 5.x consumer implementation using the latest rocketmq-python-client SDK.
 pip install rocketmq-python-client
 
-使用 SimpleConsumer 模式：
-- 支持单条消息乱序 ACK，不依赖 offset
-- 基于 gRPC 协议，纯 Python 实现
-- 支持 Windows / Linux / macOS
+Uses SimpleConsumer mode:
+- Supports out-of-order ACK for individual messages, not dependent on offset
+- Based on gRPC protocol, pure Python implementation
+- Supports Windows / Linux / macOS
 """
 
 
@@ -30,17 +30,17 @@ except ImportError:
     )
 class RocketmqConsumer(AbstractConsumer):
     """
-    RocketMQ 5.x 消费者，使用 SimpleConsumer 模式
-    
-    安装方式:
+    RocketMQ 5.x consumer using SimpleConsumer mode.
+
+    Installation:
         pip install rocketmq-python-client
-        
-    特性: 
-        - SimpleConsumer 模式：支持单条消息乱序 ACK，不依赖 offset
-        - 基于 gRPC 协议，纯 Python 实现
-        - 支持 Windows / Linux / macOS
-        - 支持 RocketMQ 5.x 版本
-        - 消息重入队使用原生 invisible_duration 机制，不 ACK 的消息超时后自动重新可见
+
+    Features:
+        - SimpleConsumer mode: supports out-of-order ACK for individual messages, not dependent on offset
+        - Based on gRPC protocol, pure Python implementation
+        - Supports Windows / Linux / macOS
+        - Supports RocketMQ 5.x
+        - Message requeue uses the native invisible_duration mechanism; messages that are not ACKed automatically become visible again after timeout
         
     broker_exclusive_config configurable parameters:
         - endpoints: RocketMQ gRPC endpoint address, default '127.0.0.1:8081'
@@ -157,7 +157,7 @@ class RocketmqConsumer(AbstractConsumer):
         msg = kw.get('rocketmq_msg')
         if msg and self._consumer:
             try:
-                # 尝试使用 change_invisible_duration 立即让消息重新可见
+                # Try using change_invisible_duration to make the message immediately visible again
                 self._consumer.change_invisible_duration(msg, 0)
                 self.logger.debug(f'RocketMQ message {msg.message_id} has been set to immediately visible')
             except AttributeError:

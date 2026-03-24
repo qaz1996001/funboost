@@ -22,15 +22,15 @@ try:
     _PSUTIL_OK = True
 except ImportError:
     raise
-    print('[system_monitor] psutil 未安装，资源监控采集功能不可用。pip install psutil 后重启即可。')
+    print('[system_monitor] psutil is not installed; resource monitoring collection is unavailable. Run pip install psutil and restart.')
 
 
 
 
-_RETENTION_SECS = 30 * 24 * 3600   # 30 天
-_TTL_SECS = 40 * 24 * 3600         # 40 天
-_COLLECT_INTERVAL = 10              # 每 10 秒聚合一次
-_HEARTBEAT_TTL = 35                 # 心跳 TTL
+_RETENTION_SECS = 30 * 24 * 3600   # 30 days
+_TTL_SECS = 40 * 24 * 3600         # 40 days
+_COLLECT_INTERVAL = 10              # Aggregate once every 10 seconds
+_HEARTBEAT_TTL = 35                 # Heartbeat TTL
 
 
 def _zset_key(ip=None):
@@ -48,7 +48,7 @@ def _get_root_path():
     return '/'
 
 
-# ======================== 采集线程 ========================
+# ======================== Collector thread ========================
 
 def _collector_loop():
     root_path = _get_root_path()
@@ -58,7 +58,7 @@ def _collector_loop():
 
     while True:
         try:
-            # 单例检查：近 25 秒内有其他采集器写过心跳则跳过
+            # Singleton check: if another collector has written a heartbeat within the last 25 seconds, skip
             last_hb = _redis.get(hkey)
             if last_hb:
                 try:
@@ -69,7 +69,7 @@ def _collector_loop():
                 except (ValueError, TypeError):
                     pass
 
-            # 采集 10 个样本，每秒 1 次
+            # Collect 10 samples, one per second
             cpu_samples = []
             mem_samples = []
             disk_samples = []
@@ -95,26 +95,26 @@ def _collector_loop():
             })
             _redis.zadd(zkey, {member: ts})
 
-            # 滑动窗口清理
+            # Sliding window cleanup
             _redis.zremrangebyscore(zkey, 0, ts - _RETENTION_SECS)
             _redis.expire(zkey, _TTL_SECS)
 
-            # 刷新心跳
+            # Refresh heartbeat
             _redis.set(hkey, json.dumps({'ts': str(ts), 'uuid': collector_uuid}), ex=_HEARTBEAT_TTL)
 
         except Exception as e:
-            print(f'[system_monitor] 采集异常: {e}')
+            print(f'[system_monitor] Collection error: {e}')
             time.sleep(_COLLECT_INTERVAL)
 
 
 
 
-# ======================== API 路由 ========================
+# ======================== API routes ========================
 
 @monitor_bp.route('/monitor/current', methods=['GET'])
 @login_required
 def monitor_current():
-    """返回当前主机最新一条监控数据"""
+    """Return the latest monitoring data point for the current host"""
     ip = request.args.get('ip', LOCAL_IP)
     raw = _redis.zrevrange(_zset_key(ip), 0, 0)
     if not raw:
@@ -129,7 +129,7 @@ def monitor_current():
 @monitor_bp.route('/monitor/data', methods=['GET'])
 @login_required
 def monitor_data():
-    """按时间范围查询时序数据，支持降采样"""
+    """Query time-series data by time range with downsampling support"""
     ip = request.args.get('ip', LOCAL_IP)
     now = time.time()
     start_ts = float(request.args.get('start_ts', now - 3600))
@@ -145,7 +145,7 @@ def monitor_data():
         except json.JSONDecodeError:
             continue
 
-    # 降采样
+    # Downsampling
     if len(points) > max_samples > 0:
         step = len(points) / max_samples
         sampled = []
@@ -162,7 +162,7 @@ def monitor_data():
 @monitor_bp.route('/monitor/hosts', methods=['GET'])
 @login_required
 def monitor_hosts():
-    """返回所有有监控数据的主机 IP 列表"""
+    """Return the list of host IPs that have monitoring data"""
     cursor = 0
     ips = set()
     while True:

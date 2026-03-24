@@ -43,7 +43,7 @@ class HTTPConsumer(AbstractConsumer, ):
         #     self._ip, self._port = self.queue_name.split(':')
         #     self._port = int(self._port)
         # except BaseException as e:
-        #     self.logger.critical(f'http作为消息队列时候,队列名字必须设置为 例如 192.168.1.101:8200  这种,  ip:port')
+        #     self.logger.critical(f'When using http as a message queue, the queue name must be set like: 192.168.1.101:8200  format:  ip:port')
         #     raise e
         self._ip = self.consumer_params.broker_exclusive_config['host']
         self._port = self.consumer_params.broker_exclusive_config['port']

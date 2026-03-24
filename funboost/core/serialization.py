@@ -34,10 +34,10 @@ class Serialization:
 class PickleHelper:
     @staticmethod
     def to_str(obj_x:typing.Any):
-        return str(pickle.dumps(obj_x)) # 对象pickle,转成字符串
+        return str(pickle.dumps(obj_x)) # Pickle the object and convert to string
     
     @staticmethod
     def to_obj(str_x:str):
-        return pickle.loads(ast.literal_eval(str_x)) # 不是从字节转成对象,是从字符串转,所以需要这样.
+        return pickle.loads(ast.literal_eval(str_x)) # Not converting from bytes to object, but from string, hence this approach.
     
 

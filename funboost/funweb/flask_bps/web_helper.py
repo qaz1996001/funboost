@@ -1,8 +1,9 @@
 
 # -*- coding: utf-8 -*-
-"""SSE 日志实时推送最长持续时间（秒）。
+"""Maximum duration (in seconds) for SSE real-time log streaming.
 
-部署详情、日志查看器的前端脚本中 LOG_STREAM_MAX_MS 须与此值一致（×1000 为毫秒）。
+The LOG_STREAM_MAX_MS value in the frontend scripts for deployment details and log viewer
+must match this value (multiplied by 1000 to convert to milliseconds).
 """
 import socket
 import os
@@ -23,9 +24,9 @@ def _get_local_ip():
 def _get_local_hostname():
     return socket.gethostname()
 
-# LOCAL_IP = _get_local_ip()  # win 不同网络，ip容易变化
+# LOCAL_IP = _get_local_ip()  # On Windows with different networks, the IP address can change frequently
 
 LOCAL_IP = _get_local_hostname()
 
-if os.getenv('FUNWEB_LOCAL_IP'): # 如果环境变量 FUNWEB_LOCAL_IP 存在，则使用环境变量 FUNWEB_LOCAL_IP 的值
+if os.getenv('FUNWEB_LOCAL_IP'): # If the environment variable FUNWEB_LOCAL_IP is set, use its value
     LOCAL_IP = os.getenv('FUNWEB_LOCAL_IP')

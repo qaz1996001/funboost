@@ -1,19 +1,19 @@
 """
-此模块的功能非常适合拿来开发对funboost的监控面板，或者管理后台。
-    - ActiveCousumerProcessInfoGetter  获取队列的活跃消费进程信息
-    - QueuesConusmerParamsGetter  获取所有队列配置参数 和 运行信息
-    - SingleQueueConusmerParamsGetter  获取单个队列配置参数 和 运行信息
+The functionality of this module is ideal for developing a monitoring dashboard or admin backend for funboost.
+    - ActiveCousumerProcessInfoGetter  Get active consumer process info for queues
+    - QueuesConusmerParamsGetter  Get configuration parameters and runtime info for all queues
+    - SingleQueueConusmerParamsGetter  Get configuration parameters and runtime info for a single queue
 
 
-下面3个python文件的web接口中，funboost.faas 主要就是使用了此模块的功能。
- 
+The web interfaces in the following 3 Python files mainly use the functionality of this module (funboost.faas).
 
 
 
-care_project_name 的作用是：
-    - None : 关心所有redis中存储的队列信息
-    - str : 只关心指定project_name的队列信息
-   
+
+The role of care_project_name:
+    - None : Cares about all queue info stored in Redis
+    - str : Only cares about queue info for the specified project_name
+
 """
 
 
@@ -59,19 +59,19 @@ booster_registry_for_faas = BoosterRegistry(
 
 
 class RedisReportInfoGetterMixin:
-    # 类属性：所有实例共享的缓存
+    # Class attribute: cache shared across all instances
     _cache_all_queue_names = None
     _cache_all_queue_names_ts = 0
     _cache_queue_names_by_project = {}  # {project_name: {'data': [...], 'ts': timestamp}}
-    _cache_ttl = 30  # 缓存30秒
-    
+    _cache_ttl = 30  # Cache for 30 seconds
+
     def _init(self,care_project_name:typing.Optional[str]=None,):
         """
-        参数:
+        Parameters:
             care_project_name
-            只关注指定project_name相关的boosters，只获取这些队列在redis中的运行信息
+            Only care about boosters related to the specified project_name, only fetch runtime info for those queues from Redis.
 
-            避免获取redis中不相关的 boosters信息，减少信息干扰和提升性能。
+            Avoids fetching unrelated booster info from Redis, reducing noise and improving performance.
         """
         if care_project_name is not None:
             self.care_project_name = care_project_name
@@ -79,44 +79,44 @@ class RedisReportInfoGetterMixin:
             self.care_project_name = CareProjectNameEnv.get()
 
     def get_all_queue_names(self) ->list:
-        """获取所有队列名称，带30秒缓存（类级别缓存，所有实例共享）"""
+        """Get all queue names with a 30-second cache (class-level cache shared across all instances)"""
         current_time = time.time()
-        
-        # 检查缓存是否有效
+
+        # Check if cache is still valid
         if self._cache_all_queue_names is not None and (current_time - self._cache_all_queue_names_ts) < self._cache_ttl:
             return self._cache_all_queue_names
-        
-        # 缓存失效，重新从redis获取
+
+        # Cache expired, re-fetch from Redis
         if self.care_project_name:
             result = self.project_name_queues
         else:
             result = list(self.redis_db_frame.smembers(RedisKeys.FUNBOOST_ALL_QUEUE_NAMES))
-        
-        # 更新缓存
+
+        # Update cache
         self.__class__._cache_all_queue_names = result
         self.__class__._cache_all_queue_names_ts = current_time
-        
+
         return result
 
     def get_queue_names_by_project_name(self,project_name:str) ->list:
-        """根据项目名称获取队列名称，带30秒缓存（类级别缓存，所有实例共享）"""
+        """Get queue names by project name with a 30-second cache (class-level cache shared across all instances)"""
         current_time = time.time()
-        
-        # 检查缓存是否有效
+
+        # Check if cache is still valid
         if project_name in self._cache_queue_names_by_project:
             cache_entry = self._cache_queue_names_by_project[project_name]
             if (current_time - cache_entry['ts']) < self._cache_ttl:
                 return cache_entry['data']
-        
-        # 缓存失效，重新从redis获取
+
+        # Cache expired, re-fetch from Redis
         result = list(self.redis_db_frame.smembers(RedisKeys.gen_funboost_project_name_key(project_name)))
-        
-        # 更新缓存
+
+        # Update cache
         self.__class__._cache_queue_names_by_project[project_name] = {
             'data': result,
             'ts': current_time
         }
-        
+
         return result
     
     @property
@@ -169,7 +169,7 @@ def _sum_filed_from_active_consumers(active_consumers:typing.List[dict],filed:st
 
 
 def _max_filed_from_active_consumers(active_consumers:typing.List[dict],filed:str):
-    """取所有消费者中某个字段的最大值"""
+    """Get the maximum value of a given field across all consumers"""
     max_val = None
     for c in active_consumers:
         val = c.get(filed)
@@ -180,10 +180,11 @@ def _max_filed_from_active_consumers(active_consumers:typing.List[dict],filed:st
 
 class ActiveCousumerProcessInfoGetter(RedisMixin,RedisReportInfoGetterMixin,FunboostFileLoggerMixin):
     """
-
-    获取分布式环境中的消费进程信息。
-    使用这里面的4个方法需要相应函数的@boost装饰器设置 is_send_consumer_heartbeat_to_redis=True，这样会自动发送活跃心跳到redis。否则查询不到该函数的消费者进程信息。
-    要想使用消费者进程信息统计功能，用户无论使用何种消息队列中间件类型，用户都必须安装redis，并在 funboost_config.py 中配置好redis链接信息
+    Get consumer process info in a distributed environment.
+    The 4 methods here require the corresponding function's @boost decorator to have is_send_consumer_heartbeat_to_redis=True,
+    so that active heartbeats are automatically sent to Redis. Otherwise, consumer process info for that function cannot be queried.
+    To use the consumer process info statistics feature, users must install Redis regardless of which message broker they use,
+    and configure the Redis connection info in funboost_config.py.
     """
 
     def __init__(self,care_project_name:typing.Optional[str]=None):
@@ -195,7 +196,7 @@ class ActiveCousumerProcessInfoGetter(RedisMixin,RedisReportInfoGetterMixin,Funb
         results = self.redis_db_frame.smembers(redis_key)
         # print(type(results))
         # print(results)
-        # 如果所有机器所有进程都全部关掉了，就没办法还剩一个线程执行删除了，这里还需要判断一次15秒。
+        # If all machines and all processes are shut down, there is no remaining thread to perform cleanup; we still need to check the 15-second threshold here.
         active_consumers_processor_info_list = []
         for result in results:
             result_dict = json.loads(result)
@@ -210,8 +211,8 @@ class ActiveCousumerProcessInfoGetter(RedisMixin,RedisReportInfoGetterMixin,Funb
 
     def get_all_hearbeat_info_by_queue_name(self, queue_name) -> typing.List[typing.Dict]:
         """
-        根据队列名查询有哪些活跃的消费者进程
-        返回结果例子：
+        Query which active consumer processes exist for a given queue name.
+        Example return value:
         [{
                 "code_filename": "/codes/funboost/test_frame/my/test_consume.py",
                 "computer_ip": "172.16.0.9",
@@ -232,8 +233,10 @@ class ActiveCousumerProcessInfoGetter(RedisMixin,RedisReportInfoGetterMixin,Funb
 
     def get_all_hearbeat_info_by_ip(self, ip=None) -> typing.List[typing.Dict]:
         """
-        根据机器的ip查询有哪些活跃的消费者进程，ip不传参就查本机ip使用funboost框架运行了哪些消费进程，传参则查询任意机器的消费者进程信息。
-        返回结果的格式和上面的 get_all_hearbeat_dict_by_queue_name 方法相同。
+        Query which active consumer processes exist for a given machine IP.
+        If ip is not provided, queries the local machine's IP to find which consumer processes are running under the funboost framework.
+        If ip is provided, queries consumer process info for any specified machine.
+        The return format is the same as the get_all_hearbeat_dict_by_queue_name method above.
         """
         ip = ip or nb_log_config_default.computer_ip
         redis_key = RedisKeys.gen_funboost_hearbeat_server__dict_key_by_ip(ip)
@@ -262,17 +265,17 @@ class ActiveCousumerProcessInfoGetter(RedisMixin,RedisReportInfoGetterMixin,Funb
         return infos_map
 
     def get_all_hearbeat_info_partition_by_queue_name(self) -> typing.Dict[typing.AnyStr, typing.List[typing.Dict]]:
-        """获取所有队列对应的活跃消费者进程信息，按队列名划分,不需要传入队列名，自动扫描redis键。请不要在 funboost_config.py 的redis 指定的db中放太多其他业务的缓存键值对"""
+        """Get active consumer process info for all queues, partitioned by queue name. No queue name input needed; Redis keys are scanned automatically. Avoid storing too many other business cache entries in the Redis DB specified in funboost_config.py."""
         queue_names = self.get_all_queue_names()
         infos_map = self._get_all_hearbeat_info_partition_by_redis_keys([RedisKeys.gen_funboost_hearbeat_queue__dict_key_by_queue_name(queue_name) for queue_name in queue_names])
-        # self.logger.info(f'获取所有队列对应的活跃消费者进程信息，按队列名划分，结果是 {json.dumps(infos_map, indent=4)}')
+        # self.logger.info(f'Active consumer process info for all queues partitioned by queue name: {json.dumps(infos_map, indent=4)}')
         return infos_map
 
     def get_all_hearbeat_info_partition_by_ip(self) -> typing.Dict[typing.AnyStr, typing.List[typing.Dict]]:
-        """获取所有机器ip对应的活跃消费者进程信息，按机器ip划分,不需要传入机器ip，自动扫描redis键。请不要在 funboost_config.py 的redis 指定的db中放太多其他业务的缓存键值对 """
+        """Get active consumer process info for all machines, partitioned by IP. No IP input needed; Redis keys are scanned automatically. Avoid storing too many other business cache entries in the Redis DB specified in funboost_config.py."""
         ips = self.get_all_ips()
         infos_map = self._get_all_hearbeat_info_partition_by_redis_keys([RedisKeys.gen_funboost_hearbeat_server__dict_key_by_ip(ip) for ip in ips])
-        self.logger.info(f'获取所有机器ip对应的活跃消费者进程信息，按机器ip划分，结果是 {json.dumps(infos_map, indent=4)}')
+        self.logger.info(f'Active consumer process info for all machines partitioned by IP: {json.dumps(infos_map, indent=4)}')
         return infos_map
 
 
@@ -281,8 +284,8 @@ class ActiveCousumerProcessInfoGetter(RedisMixin,RedisReportInfoGetterMixin,Funb
 
 class QueuesConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,FunboostFileLoggerMixin):
     """
-    获取所有队列的运行信息，
-    方法 get_queues_params_and_active_consumers 返回信息最丰富
+    Get runtime info for all queues.
+    The method get_queues_params_and_active_consumers returns the most comprehensive information.
     """
     def __init__(self,care_project_name:typing.Optional[str]=None):
         RedisReportInfoGetterMixin._init(self,care_project_name)
@@ -315,7 +318,7 @@ class QueuesConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,Funboost
         return {k:_cvt_int(v) for k,v in queue__run_fail_count_map.items()}
     
     def get_queues_params_and_active_consumers(self):
-        """获取所有队列的参数和活跃消费者"""
+        """Get parameters and active consumers for all queues"""
         queue__active_consumers_map = ActiveCousumerProcessInfoGetter(
             care_project_name=self.care_project_name
             ).get_all_hearbeat_info_partition_by_queue_name()
@@ -367,13 +370,13 @@ class QueuesConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,Funboost
         def _inner():
             while True:
                 t_start = time.time()
-                # 这个函数确保只有一个地方在上报数据，避免重复采集上报
+                # This function ensures only one place reports data, avoiding duplicate collection and reporting
                 report_ts = self.timestamp()
                 redis_report_uuid_ts_str = self.redis_db_frame.get(RedisKeys.FUNBOOST_LAST_GET_QUEUES_PARAMS_AND_ACTIVE_CONSUMERS_AND_REPORT__UUID_TS, )
                 if redis_report_uuid_ts_str:
                     redis_report_uuid_ts = Serialization.to_dict(redis_report_uuid_ts_str)
                     if redis_report_uuid_ts['report_uuid'] != report_uuid and redis_report_uuid_ts['report_ts'] > report_ts - time_interval - 10 :
-                        time.sleep(5) # 防止cpu空转
+                        time.sleep(5) # Prevent CPU busy-waiting
                         continue
                 self.redis_db_frame.set(RedisKeys.FUNBOOST_LAST_GET_QUEUES_PARAMS_AND_ACTIVE_CONSUMERS_AND_REPORT__UUID_TS,
                                         Serialization.to_json_str({'report_uuid':report_uuid, 'report_ts':report_ts}))
@@ -387,12 +390,12 @@ class QueuesConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,Funboost
                     report_data['report_ts'] = report_ts
                     self.redis_db_frame.zadd(RedisKeys.gen_funboost_queue_time_series_data_key_by_queue_name(queue),
                                             {Serialization.to_json_str(report_data):report_ts} )
-                    # 删除过期时序数据,只保留最近1天数据
+                    # Remove expired time-series data, keep only the last 1 day of data
                     self.redis_db_frame.zremrangebyscore(
                         RedisKeys.gen_funboost_queue_time_series_data_key_by_queue_name(queue),
                         0, report_ts - 86400
                     )
-                # self.logger.info(f'采集上报时序数据耗时 {time.time() - t_start} 秒')
+                # self.logger.info(f'Time-series data collection and reporting took {time.time() - t_start} seconds')
 
                 time.sleep(time_interval)
         threading.Thread(target=_inner, daemon=daemon).start()
@@ -404,8 +407,8 @@ class QueuesConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,Funboost
 
 class SingleQueueConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,FunboostFileLoggerMixin):
     """
-    获取单个队列的运行信息，
-    方法 get_one_queue_params_and_active_consumers 返回信息最丰富
+    Get runtime info for a single queue.
+    The method get_one_queue_params_and_active_consumers returns the most comprehensive information.
     """
     queue__booster_params_cache :dict= {}
     # _pid_broker_kind_queue_name__booster_map = {}
@@ -434,7 +437,7 @@ class SingleQueueConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,Fun
 
     def get_one_queue_params(self)->dict:
         """
-        类似于这样，就是booster_params的字符串json序列化
+        Returns something like this — the JSON string serialization of booster_params.
 
         ```json
         {
@@ -541,68 +544,69 @@ class SingleQueueConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,Fun
     @staticmethod
     def _reset_non_json_serializable_fields(booster_params_from_redis: dict):
         """
-        自动重置 BoosterParams 中所有不可JSON序列化的字段为 None
-        
-        注意：booster_params_from_redis 是从 Redis 取出的字典，不可json序列化的对象的值都是字符串形式
-        需要根据 BoosterParams 的类型定义，将不可序列化类型的字段重置为 None
+        Automatically reset all non-JSON-serializable fields in BoosterParams to None.
+
+        Note: booster_params_from_redis is a dict retrieved from Redis, where non-serializable object values are stored as strings.
+        Based on the BoosterParams type definitions, fields with non-serializable types need to be reset to None.
         """
-        # 获取不可序列化的字段名列表（带缓存）
+        # Get the list of non-serializable field names (with caching)
         from funboost.core.pydantic_compatible_base import get_cant_json_serializable_fields
         non_serializable_fields = get_cant_json_serializable_fields(BoosterParams)
-        
-        # 重置这些字段为 None
+
+        # Reset these fields to None
         for field_name in non_serializable_fields:
             if field_name in booster_params_from_redis:
                 booster_params_from_redis[field_name] = None
 
     def _gen_booster_by_local_booster(self) -> Booster:
-        # 使用本地booster，这种也可以，每个项目单独自己起一个 funboost web manager 就可以，
-        # 启动  funboost web manager  之前，先导入相关的 booster所在模块,再调用 `start_funboost_web_manager()` 函数
+        # Use the local booster. This approach also works — each project can start its own funboost web manager.
+        # Before starting the funboost web manager, import the module containing the relevant booster, then call `start_funboost_web_manager()`.
         
         booster = booster_registry_default.get_or_create_booster_by_queue_name(self.queue_name)
         return booster
 
     def _gen_booster_by_redis_meta_info(self) -> Booster:
-        # 使用redis元信息生成假的fake booster，部分booster配置因为不可json序列化原因，直接赋值None了，缺点是不是真booster  
-        # 优点是支持跨项目管理booster，支持热加载。
+        # Generate a fake booster using Redis metadata. Some booster config fields are set to None because they are not JSON-serializable.
+        # Disadvantage: it is not a real booster. Advantage: supports cross-project booster management and hot-reload.
         booster_params_raw = self.get_one_queue_params_use_cache()
-        booster_params = copy.deepcopy(booster_params_raw) # 因为下面改变了字典，可变对象先复制
+        booster_params = copy.deepcopy(booster_params_raw) # Deep copy the mutable dict before modifying it below
         current_broker_kind = booster_params['broker_kind']
         
-        # 利用 registry 的实例属性字典缓存
+        # Use the registry's instance attribute dict as a cache
         key = gen_pid_queue_name_key(self.queue_name)
         existing_booster = booster_registry_for_faas.pid_queue_name__booster_map.get(key)
         
         if existing_booster:
             """
-            faas 模式支持热加载不重启web服务就能发布，如果中间件先使用redis，后使用rabbitmq这种极端场景，
-            为了支持热加载，需要重新实例化booster。
+            FaaS mode supports hot-reload publishing without restarting the web service.
+            In edge cases where the broker switches from Redis to RabbitMQ mid-flight,
+            the booster must be re-instantiated to support hot-reload.
             """
             if existing_booster.boost_params.broker_kind == current_broker_kind: 
                  self._update_publisher_params_checker(existing_booster.publisher, booster_params)
                  return existing_booster
 
         with self._lock_for_generate_publisher_booster:
-             # 双重检查
+             # Double-checked locking
              existing_booster = booster_registry_for_faas.pid_queue_name__booster_map.get(key)
              if existing_booster and existing_booster.boost_params.broker_kind == current_broker_kind:
                  return existing_booster
 
-             # 自动重置所有不可JSON序列化的字段为None，(避免硬编码)
-             # 例如 user_custom_record_process_info_func  consumer_override_cls consuming_function_decorator 等等
+             # Automatically reset all non-JSON-serializable fields to None (avoids hard-coding)
+             # e.g. user_custom_record_process_info_func, consumer_override_cls, consuming_function_decorator, etc.
              self._reset_non_json_serializable_fields(booster_params)
              
              
-             # 生成新的 booster
-             
-             # 手动设置需要的字段
+             # Generate a new booster
+
+             # Manually set required fields
              redis_final_func_input_params_info = booster_params['auto_generate_info']['final_func_input_params_info']
              fake_fun = FakeFunGenerator.gen_fake_fun_by_params(redis_final_func_input_params_info)
              booster_params['consuming_function'] = fake_fun
              booster_params['consuming_function_raw'] = fake_fun
              
              booster_params['is_fake_booster'] = True 
-             # 关键：指定 registry，这样实例化时会自动注册到 booster_registry_for_faas，覆盖旧的 key
+             # Critical: specify the registry so the booster is automatically registered into booster_registry_for_faas on instantiation, overwriting the old key
              booster_params['booster_registry_name'] = 'booster_registry_for_faas'
 
              booster_params['function_result_status_persistance_conf'] = FunctionResultStatusPersistanceConfig(is_save_status=False,is_save_result=False)
@@ -633,8 +637,9 @@ class SingleQueueConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,Fun
 
 
     def _update_publisher_params_checker(self,publisher:AbstractPublisher,booster_params:dict):
-        """ 
-        如果函数上线后，中途又修改函数入参定义，所以任然需要更新 publish_params_checker， 这样才能持续正确校验发布消息时候的入参是否合法
+        """
+        If the function's input parameter definitions are changed after it goes live, publish_params_checker still needs to be updated
+        so that parameter validity is correctly validated when publishing messages.
         """
         if  self._last_update_consuming_func_input_params_checker < time.time() - 60:
             self._last_update_consuming_func_input_params_checker = time.time()
@@ -646,7 +651,7 @@ class SingleQueueConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,Fun
 
     def get_one_queue_pause_flag(self) ->int:
         """
-        返回队列的暂停状态，-1 表示队列不存在，0 表示队列未暂停，1 表示队列已暂停
+        Returns the pause state of the queue: -1 means the queue does not exist, 0 means not paused, 1 means paused.
         """
         pause_flag = self.redis_db_frame.hget(RedisKeys.REDIS_KEY_PAUSE_FLAG,self.queue_name)
         if pause_flag is None:
@@ -661,9 +666,9 @@ class SingleQueueConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,Fun
 
     def get_one_queue_msg_num(self,ignore_report_ts=False) ->int:
         """
-        从上报到redis的心跳信息中获取的消息数量，
-        如果 ignore_report_ts 为 True 并且最近一次上报时间是很久之前的，消息数量就不准
-        上报线程是随着消费一起自动运行的，如果没有启动消息，就会停止心跳信息上报。
+        Get the message count from heartbeat info reported to Redis.
+        If ignore_report_ts is True and the last report time was long ago, the message count may be inaccurate.
+        The reporting thread runs automatically alongside consumption; if consumption has not started, heartbeat reporting will stop.
         """
         msg_count_info = self.redis_db_frame.hget(RedisKeys.QUEUE__MSG_COUNT_MAP,self.queue_name)
         info_dict = json.loads(msg_count_info)
@@ -671,15 +676,15 @@ class SingleQueueConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,Fun
             return info_dict['msg_num_in_broker']
         return -1
 
-    def get_one_queue_msg_num_realtime(self,) ->int:   
+    def get_one_queue_msg_num_realtime(self,) ->int:
         """
-        实时从broker获取的消息数量，
+        Get the message count in real time directly from the broker.
         """
         try:
             publisher = self.gen_publisher_for_faas()
             return publisher.get_message_count()
         except Exception as e:
-            self.logger.exception(f'实时获取队列消息数失败 {e}')
+            self.logger.exception(f'Failed to get queue message count in real time: {e}')
             return -1
 
 
@@ -737,17 +742,17 @@ class SingleQueueConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,Fun
         if curve_samples_count is None:
             return series_data_all
         
-        # 曲线采样数量
+        # Number of curve samples
         total_count = len(series_data_all)
         if total_count <= curve_samples_count:
-            # 如果原始数据量小于等于需要的样本数，直接返回全部数据
+            # If the original data count is less than or equal to the required sample count, return all data
             return series_data_all
-        
-        # 计算采样步长
+
+        # Calculate the sampling step size
         step = total_count / curve_samples_count
         sampled_data = []
-        
-        # 按照步长进行采样
+
+        # Sample data according to the step size
         for i in range(curve_samples_count):
             index = int(i * step)
             if index < total_count:
@@ -757,13 +762,13 @@ class SingleQueueConusmerParamsGetter(RedisMixin, RedisReportInfoGetterMixin,Fun
 
     def deprecate_queue(self):
         """
-        废弃队列 - 从 Redis 中移除队列名
-        1. 从 funboost_all_queue_names set 中移除
-        2. 从 funboost.project_name:{project_name} set 中移除
+        Deprecate a queue - remove the queue name from Redis.
+        1. Remove from the funboost_all_queue_names set
+        2. Remove from the funboost.project_name:{project_name} set
         """
-        # 从所有队列名 set 中移除
+        # Remove from the all-queue-names set
         self.redis_db_frame.srem(RedisKeys.FUNBOOST_ALL_QUEUE_NAMES, self.queue_name)
-        # 从项目队列名 set 中移除
+        # Remove from the project queue-names set
         self.redis_db_frame.srem(RedisKeys.gen_funboost_project_name_key(self.care_project_name), self.queue_name)
 
     

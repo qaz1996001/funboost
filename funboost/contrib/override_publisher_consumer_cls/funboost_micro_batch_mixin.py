@@ -191,65 +191,65 @@ class MicroBatchConsumerMixin(AbstractConsumer):
             
         except Exception as e:
             self.logger.error(f"Batch processing failed: {batch_size} messages, error: {e}", exc_info=True)
-            
-            # 批量重回队列
+
+            # Requeue all messages in batch
             for kw in batch:
                 try:
                     self._requeue(kw)
                 except Exception as requeue_error:
                     self.logger.error(f"Failed to requeue message: {requeue_error}")
-            
+
             # raise
 
     async def _async_run_batch(self, batch: list):
         """
-        异步批量运行消费函数（支持 async def 消费函数）
-        
-        :param batch: 包含多个 kw 字典的列表
+        Asynchronously run consuming function in batch (supports async def consuming functions)
+
+        :param batch: List containing multiple kw dictionaries
         """
         t_start = time.time()
         batch_size = len(batch)
-        
-        # 提取所有消息的函数参数
+
+        # Extract function parameters from all messages
         items = [kw['function_only_params'] for kw in batch]
-        
+
         try:
-            # 调用消费函数（入参是 list）
+            # Call consuming function (input is a list)
             if asyncio.iscoroutinefunction(self.consuming_function):
                 result = await self.consuming_function(items)
             else:
-                # 同步函数在 executor 中运行
+                # Run synchronous function in executor
                 result = await simple_run_in_executor(self.consuming_function, items)
-            
-            # 批量确认消费
+
+            # Batch confirm consumption
             for kw in batch:
                 await simple_run_in_executor(self._confirm_consume, kw)
-            
+
             t_cost = round(time.time() - t_start, 4)
             self.logger.info(f"Batch processing succeeded (async): {batch_size} messages, took {t_cost}s")
-            
+
             return result
-            
+
         except Exception as e:
             self.logger.error(f"Batch processing failed (async): {batch_size} messages, error: {e}", exc_info=True)
-            
-            # 批量重回队列
+
+            # Requeue all messages in batch
             for kw in batch:
                 try:
                     await simple_run_in_executor(self._requeue, kw)
                 except Exception as requeue_error:
                     self.logger.error(f"Failed to requeue message (async): {requeue_error}")
-            
+
             # raise
 
 
 
 class MicroBatchBoosterParams(BoosterParams):
     broker_kind: str = BrokerEnum.MEMORY_QUEUE
-    consumer_override_cls: typing.Optional[typing.Type] = MicroBatchConsumerMixin  # 类型与父类保持一致
+    consumer_override_cls: typing.Optional[typing.Type] = MicroBatchConsumerMixin  # Keep type consistent with parent class
     user_options: dict = {
-        'micro_batch_size': 10,        # 每批10条
-        'micro_batch_timeout': 1.0,    # 1秒超时
+        'micro_batch_size': 10,        # 10 items per batch
+        'micro_batch_timeout': 1.0,    # 1 second timeout
     }
     qps: float = 100
-    should_check_publish_func_params: bool = False  # 微批模式需要关闭入参校验
+    should_check_publish_func_params: bool = False  # Micro-batch mode requires disabling parameter validation

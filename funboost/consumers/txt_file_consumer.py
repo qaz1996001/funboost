@@ -11,8 +11,8 @@ from funboost.funboost_config_deafult import BrokerConnConfig
 
 class TxtFileConsumer(AbstractConsumer, ):
     """
-    txt文件作为消息队列
-    这个不想做消费确认了,要消费确认请选 SQLITE_QUEUE 、PERSISTQUEUE中间件
+    Text file as message queue.
+    Consumption confirmation is not implemented here. For consumption confirmation, please use the SQLITE_QUEUE or PERSISTQUEUE middleware.
     """
 
     def _dispatch_task(self):

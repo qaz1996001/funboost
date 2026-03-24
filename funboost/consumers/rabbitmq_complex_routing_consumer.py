@@ -26,14 +26,14 @@ class RabbitmqComplexRoutingConsumer(RabbitmqConsumerAmqpStorm):
             arguments_for_bind = None
 
             if rp._exchange_type == 'fanout':
-                routing_key_bind = ''  # fanout 必须使用空 routing_key
+                routing_key_bind = ''  # fanout must use an empty routing_key
             elif rp._exchange_type == 'headers':
-                routing_key_bind = ''  # headers 必须使用空 routing_key
+                routing_key_bind = ''  # headers must use an empty routing_key
                 arguments_for_bind = self.consumer_params.broker_exclusive_config.get('headers_for_bind', {})
                 arguments_for_bind['x-match'] = self.consumer_params.broker_exclusive_config.get('x_match_for_bind', 'all')
             elif routing_key_bind is None:  # When user hasn't specified binding key, set defaults based on exchange type
                 if rp._exchange_type == 'topic':
-                    routing_key_bind = '#'  # topic 默认订阅所有
+                    routing_key_bind = '#'  # topic defaults to subscribe to all
                 else:  # direct
                     routing_key_bind = self._queue_name
 

@@ -6,11 +6,11 @@ import decorator_libs
 # https://www.cnblogs.com/YrRoom/p/14054282.html
 
 """
--p 18083 服务器启动端口
--p 1882 TCP端口
--p 8083 WS端口
--p 8084 WSS端口
--p 8883 SSL端口
+-p 18083 server startup port
+-p 1882 TCP port
+-p 8083 WS port
+-p 8084 WSS port
+-p 8883 SSL port
 """
 
 """

@@ -27,7 +27,7 @@ class HTTPConsumer(AbstractConsumer, ):
         #     self._ip, self._port = self.queue_name.split(':')
         #     self._port = int(self._port)
         # except BaseException as e:
-        #     self.logger.critical(f'http作为消息队列时候,队列名字必须设置为 例如 192.168.1.101:8200  这种,  ip:port')
+        #     self.logger.critical(f'When using http as a message queue, the queue name must be set like: 192.168.1.101:8200  format:  ip:port')
         #     raise e
         self._ip = self.consumer_params.broker_exclusive_config['host']
         self._port = self.consumer_params.broker_exclusive_config['port']
@@ -108,11 +108,11 @@ class HTTPConsumer(AbstractConsumer, ):
         self.logger.info(f'Starting Flask HTTP server, listening on {self._ip}:{self._port}')
 
         # flask_app.run(
-        #     host='0.0.0.0',  # 监听所有接口
+        #     host='0.0.0.0',  # listen on all interfaces
         #     port=self._port,
-        #     debug=False,     # 生产环境关闭debug
-        #     threaded=True,   # 开启多线程支持
-        #     use_reloader=False,  # 关闭自动重载
+        #     debug=False,     # disable debug in production
+        #     threaded=True,   # enable multi-threading support
+        #     use_reloader=False,  # disable auto-reload
         # )
 
         import waitress
@@ -127,7 +127,7 @@ class HTTPConsumer(AbstractConsumer, ):
             future_status_result: FutureStatusResult = kw['future_status_result']
             future_status_result.set_staus_result_obj(current_function_result_status)
             future_status_result.set_finish()
-            # self.logger.info('sync_call任务执行完成，通知HTTP请求返回结果')
+            # self.logger.info('sync_call task execution complete, notifying HTTP request to return result')
 
     def _confirm_consume(self, kw):
         """HTTP mode does not have consumption confirmation"""

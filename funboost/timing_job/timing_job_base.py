@@ -150,7 +150,7 @@ class FunboostBackgroundScheduler(BackgroundScheduler):
         #     while True:
         #         time.sleep(3600)
         #
-        # threading.Thread(target=_block_exit,).start()  # 既不希望用BlockingScheduler阻塞主进程也不希望定时退出。
+        # threading.Thread(target=_block_exit,).start()  # Neither want to block the main process with BlockingScheduler nor want to exit on a timer.
         # self._daemon = False
         # def _when_exit():
         #     while 1:

@@ -44,7 +44,7 @@ def patch_kombu_redis():
         has_patch_kombu_redis = True
 
 
-''' kombu 能支持的消息队列中间件有如下，可以查看 D:\ProgramData\Miniconda3\Lib\site-packages\kombu\transport\__init__.py 文件。
+''' The message queue middlewares supported by kombu are as follows. See the D:\ProgramData\Miniconda3\Lib\site-packages\kombu\transport\__init__.py file.
 
 TRANSPORT_ALIASES = {
     'amqp': 'kombu.transport.pyamqp:Transport',
@@ -102,17 +102,17 @@ class KombuConsumer(AbstractConsumer, ):
 
     # noinspection DuplicatedCode
     def _dispatch_task(self):  # This is launched by while 1 and will auto-reconnect.
-        # patch_kombu_redis() # 不调用
+        # patch_kombu_redis() # not called
 
         def callback(body: dict, message: Message):
             # print(type(body),body,type(message),message)
-            # self.logger.debug(f""" 从 kombu {self._middware_name} 中取出的消息是 {body}""")
+            # self.logger.debug(f""" Message fetched from kombu {self._middware_name}: {body}""")
             kw = {'body': body, 'message': message, }
             self._submit_task(kw)
 
         self.exchange = Exchange('funboost_exchange', 'direct', durable=True)
         self.queue = Queue(self._queue_name, exchange=self.exchange, routing_key=self._queue_name, auto_delete=False, no_ack=False)
-        # https://docs.celeryq.dev/projects/kombu/en/stable/reference/kombu.html?highlight=visibility_timeout#kombu.Connection 每种中间件的transport_options不一样。
+        # https://docs.celeryq.dev/projects/kombu/en/stable/reference/kombu.html?highlight=visibility_timeout#kombu.Connection transport_options differ for each middleware type.
         self.conn = Connection(self.kombu_url, transport_options=self.consumer_params.broker_exclusive_config['transport_options'])
         self.queue(self.conn).declare()
         with self.conn.Consumer(self.queue, callbacks=[callback], no_ack=False, prefetch_count=self.consumer_params.broker_exclusive_config['prefetch_count']) as consumer:

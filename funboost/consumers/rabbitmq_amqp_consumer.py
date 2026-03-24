@@ -2,10 +2,10 @@
 # @Author  : ydf
 # @Time    : 2026/1/11
 """
-使用 amqp 包实现的高性能 RabbitMQ Consumer。
-amqp 是 Celery/Kombu 底层使用的 AMQP 客户端，性能比 pika 更好。
+High-performance RabbitMQ Consumer implemented using the amqp package.
+amqp is the underlying AMQP client used by Celery/Kombu, with better performance than pika.
 
-安装：pip install amqp (通常已随 celery/kombu 安装)
+Install: pip install amqp (usually already installed with celery/kombu)
 """
 import socket
 import time
@@ -56,7 +56,7 @@ class RabbitmqAmqpConsumer(AbstractConsumer):
         
         while True:
             try:
-                # drain_events 使用较短超时，以便及时发送心跳
+                # drain_events uses a shorter timeout to send heartbeats in a timely manner
                 rp.connection.drain_events(timeout=heartbeat_interval)
             except socket.timeout:
                 # Timeout is normal, continue loop
@@ -96,7 +96,7 @@ class RabbitmqAmqpConsumer(AbstractConsumer):
         """Reconnection logic"""
         try:
             time.sleep(5)
-            rp.has_init_broker = 0  # 重置初始化标志
+            rp.has_init_broker = 0  # Reset initialization flag
             rp.init_broker()
             rp.channel.basic_qos(
                 prefetch_size=0,

@@ -39,12 +39,12 @@ class RabbitmqConsumer(AbstractConsumer):
         # channel.basic_qos(prefetch_count=self.consumer_params.concurrent_num)
         def callback(ch, method, properties, body):
             body = body.decode()
-            # self.logger.debug(f'从rabbitmq的 [{self._queue_name}] 队列中 取出的消息是：  {body}')
+            # self.logger.debug(f'Message fetched from rabbitmq queue [{self._queue_name}]:  {body}')
             kw = {'ch': ch, 'method': method, 'properties': properties, 'body': body}
             self._submit_task(kw)
 
         while True:
-            # 文档例子  https://github.com/pika/pika
+            # Documentation example: https://github.com/pika/pika
             try:
                 self.logger.warning(f'Connecting to mq using pika')
                 # self.rabbit_client = RabbitMqFactory(is_use_rabbitpy=0).get_rabbit_cleint()
@@ -88,7 +88,7 @@ class RabbitmqConsumer(AbstractConsumer):
     def _requeue(self, kw):
         kw['ch'].connection.add_callback_threadsafe(functools.partial(self.__nack_message_pika, kw['ch'], kw['method'].delivery_tag))
         # with self._lock_for_pika:
-        # return kw['ch'].basic_nack(delivery_tag=kw['method'].delivery_tag)  # 立即重新入队。
+        # return kw['ch'].basic_nack(delivery_tag=kw['method'].delivery_tag)  # Re-queue immediately.
         # with self._lock_for_pika:
         #     self.__nack_message_pika(kw['ch'], kw['method'].delivery_tag)
 
