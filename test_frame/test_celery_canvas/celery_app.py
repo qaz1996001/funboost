@@ -4,11 +4,11 @@ from celery import Celery
 
 
 def make_celery() -> Celery:
-    """创建 Celery 应用（支持无 Broker 回退到 eager 同进程执行）。
+    """Create a Celery application (supports fallback to eager in-process execution when no broker is available).
 
-    环境变量：
-    - CELERY_BROKER_URL: 如 `redis://127.0.0.1:6379/0` 或 `pyamqp://guest@localhost//`
-    - CELERY_RESULT_BACKEND: 如 `redis://127.0.0.1:6379/0` 或 `rpc://`
+    Environment variables:
+    - CELERY_BROKER_URL: e.g. `redis://127.0.0.1:6379/0` or `pyamqp://guest@localhost//`
+    - CELERY_RESULT_BACKEND: e.g. `redis://127.0.0.1:6379/0` or `rpc://`
     """
 
     broker_url = os.getenv("CELERY_BROKER_URL", "").strip()
@@ -17,10 +17,10 @@ def make_celery() -> Celery:
     app = Celery("test_celery_canvas")
 
     if not broker_url:
-        # 无外部 Broker 场景：退回到单进程 eager 模式，便于快速体验
+        # No external broker: fall back to single-process eager mode for quick experimentation
         warnings.warn(
-            "未检测到 CELERY_BROKER_URL，已启用 task_always_eager 模式（单进程本地执行）。\n"
-            "如需真正的分布式并发与监控，请设置 Redis/RabbitMQ 等 Broker 并启动 worker。",
+            "CELERY_BROKER_URL not detected; task_always_eager mode enabled (single-process local execution).\n"
+            "For true distributed concurrency and monitoring, set a Redis/RabbitMQ broker and start a worker.",
             RuntimeWarning,
         )
         app.conf.update(
@@ -35,7 +35,7 @@ def make_celery() -> Celery:
             if broker_url.startswith("redis://"):
                 result_backend = broker_url
             else:
-                # 默认使用 RPC 结果后端（需 AMQP）
+                # Default to RPC result backend (requires AMQP)
                 result_backend = "rpc://"
         app.conf.update(
             broker_url=broker_url,
@@ -63,7 +63,7 @@ def make_celery() -> Celery:
         },
     )
 
-    # 自动发现任务
+    # Auto-discover tasks
     app.autodiscover_tasks(["test_frame.test_celery_canvas"])
     return app
 

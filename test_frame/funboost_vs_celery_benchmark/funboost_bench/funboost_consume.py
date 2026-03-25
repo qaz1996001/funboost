@@ -9,8 +9,8 @@ import logging
                      )
 def print_number(i):
     if  i % 1000 == 0:
-        print(f"{datetime.datetime.now()} 当前数字是: {i}")
-    return i  # 返回结果方便查看任务执行状态
+        print(f"{datetime.datetime.now()} current number is: {i}")
+    return i  # Return result for easy viewing of task execution status
 
 
 if __name__ == '__main__':
@@ -19,10 +19,10 @@ if __name__ == '__main__':
 
 '''
 
-在win11 + python3.9 + funboost + redis 中间件 + amd r7 5800h cpu 环境下测试 + 选择单线程并发模式
+Tested on win11 + python3.9 + funboost + redis middleware + amd r7 5800h cpu + single-thread concurrency mode
 
-funboost消费性能测试结果如下：
+funboost consumption performance test results:
 
-funboost平均每隔0.07秒消费1000条消息，10万消息在7秒内全部完成了，每秒能消费14000条消息
+funboost consumes 1000 messages on average every 0.07 seconds, completing 100,000 messages within 7 seconds, capable of consuming 14,000 messages per second
 
 '''

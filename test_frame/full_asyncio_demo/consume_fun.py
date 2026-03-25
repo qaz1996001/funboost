@@ -2,7 +2,7 @@ import asyncio
 import time
 from funboost import boost,BrokerEnum,ConcurrentModeEnum,BoosterParams
 
-# funboost 直接方便性支持 async def 函数逇消费,远超 celery对async 函数的支持
+# funboost directly and conveniently supports consuming async def functions, far surpassing celery's support for async functions
 @boost(BoosterParams(queue_name='aio_long_time_fun_queue',is_using_rpc_mode=True))
 async def aio_long_time_fun(x):
     await asyncio.sleep(10)
@@ -20,11 +20,11 @@ if __name__ == '__main__':
     async def aio_push_msg():
         for i in range(10):
             await aio_long_time_fun.aio_push(i)
-    asyncio.run(aio_push_msg()) # asyncio 发布消息到中间件演示
+    asyncio.run(aio_push_msg()) # Demonstrate asyncio publishing messages to middleware
 
-    for j in range(10):     # 同步发布消息到中间件演示
+    for j in range(10):     # Demonstrate synchronous publishing messages to middleware
         long_time_fun.push(j)
 
 
-    aio_long_time_fun.consume() # 启动消费,funboost 能直接性支持async def 的函数作为消费函数,这点上的方便性完爆celery对asycn def的支持.
-    long_time_fun.consume()  # 启动消费
+    aio_long_time_fun.consume() # Start consuming. funboost directly supports async def functions as consumer functions — far more convenient than celery's support for async def.
+    long_time_fun.consume()  # Start consuming

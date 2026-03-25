@@ -8,7 +8,7 @@ class Calculator:
     self.express = '0'
 
   def __str__(self):
-    print('完成')
+    print('Done')
     # return f'{self.express} = {self.result}'
     return ''
 

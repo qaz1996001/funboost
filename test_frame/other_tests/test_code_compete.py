@@ -6,8 +6,8 @@ from dataclasses import dataclass
 
 @dataclass
 class User:
-    name: str       # 必须字段（无默认值）
-    age: int = 18   # 可选字段（有默认值）
+    name: str       # Required field (no default value)
+    age: int = 18   # Optional field (has default value)
 
 class MyModel(BaseModel):
     name: str
@@ -22,10 +22,10 @@ class CommonKls:
         pass
 
 if __name__ == '__main__':
-    m = MyModel(name='张三', age=18, sex='男', 
-                address='北京市朝阳区', phone='13800138000',email='123456@qq.com')
+    m = MyModel(name='Zhang San', age=18, sex='Male',
+                address='Chaoyang District, Beijing', phone='13800138000',email='123456@qq.com')
     print(m)
 
-    
-   
-    CommonKls(name='张三', sex='男', age=18)
+
+
+    CommonKls(name='Zhang San', sex='Male', age=18)

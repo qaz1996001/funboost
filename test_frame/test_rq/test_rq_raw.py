@@ -31,10 +31,10 @@ def count_words_at_url(url):
 '''
 from rq import Connection, Worker
 
-# 设置 Redis 连接
+# Set up the Redis connection
 redis_conn = Redis(host='localhost', port=6379)
 
-# 在 RQ 上下文中启动 worker
+# Start worker in the RQ context
 with Connection(redis_conn):
     worker = Worker(['my_queue'])
     worker.work()
@@ -51,7 +51,7 @@ D:\ProgramData\Miniconda3\Lib\site-packages\rq\worker.py
         # signal.signal(signal.SIGINT, self.request_stop)
         # signal.signal(signal.SIGTERM, self.request_stop)
         
-        多线程worker运行要打猴子补丁。
+        Monkey-patching is required for multi-threaded worker execution.
 '''
 
 def work(queues):

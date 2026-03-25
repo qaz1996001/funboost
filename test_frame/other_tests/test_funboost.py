@@ -22,8 +22,8 @@ from funboost.timing_job.timing_push import ApsJobAdder
 
 
 class MyBoosterParams(BoosterParams):
-    max_retry_times: int = 3  # 设置最大重试次数为3次
-    function_timeout: int = 10  # 设置超时时间为10秒
+    max_retry_times: int = 3  # Set maximum retry times to 3
+    function_timeout: int = 10  # Set timeout to 10 seconds
 
 
 @boost(MyBoosterParams(queue_name='add_numbers_queue'))
@@ -32,26 +32,26 @@ def add_numbers(x: int, y: int) -> int:
     return x + y
 
 if __name__ == '__main__':
-    # 定义定时任务
+    # Define scheduled task
     # Start the scheduler
 
 
-    
+
     ApsJobAdder(add_numbers,job_store_kind='redis').add_push_job(
         args=(1, 2),
-        trigger='date',  # 使用日期触发器
-        run_date='2025-01-16 19:15:40',  # 设置运行时间
-        # id='add_numbers_job'  # 任务ID
+        trigger='date',  # Use date trigger
+        run_date='2025-01-16 19:15:40',  # Set run time
+        # id='add_numbers_job'  # Task ID
     )
 
     ApsJobAdder(add_numbers,job_store_kind='memory').add_push_job(
         args=(1, 2),
-        trigger='date',  # 使用日期触发器
-        run_date='2025-01-16 19:15:50',  # 设置运行时间
-        # id='add_numbers_job'  # 任务ID
+        trigger='date',  # Use date trigger
+        run_date='2025-01-16 19:15:50',  # Set run time
+        # id='add_numbers_job'  # Task ID
     )
 
-    # 启动消费者
+    # Start consumer
     add_numbers.consume()
     ctrl_c_recv()
     # run_forever()

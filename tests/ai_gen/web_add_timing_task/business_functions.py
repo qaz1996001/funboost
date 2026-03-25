@@ -1,80 +1,80 @@
 """
-定时任务业务函数模块
-这里定义所有需要被定时调用的业务函数
+Business functions module for timing tasks
+Defines all business functions that need to be called on a schedule
 """
 import time
 from datetime import datetime
 from funboost import boost, BrokerEnum
 
 
-# 定义业务函数，使用funboost装饰器
+# Define business functions using the funboost decorator
 @boost('task_queue', broker_kind=BrokerEnum.REDIS)
 def send_email_task(to_email: str, subject: str, content: str):
-    """发送邮件任务"""
-    print(f"[{datetime.now()}] 开始发送邮件")
-    print(f"收件人: {to_email}")
-    print(f"主题: {subject}")
-    print(f"内容: {content}")
-    
-    # 模拟发送邮件的耗时操作
+    """Send email task"""
+    print(f"[{datetime.now()}] Starting to send email")
+    print(f"Recipient: {to_email}")
+    print(f"Subject: {subject}")
+    print(f"Content: {content}")
+
+    # Simulate the time-consuming operation of sending an email
     time.sleep(2)
-    
-    print(f"[{datetime.now()}] 邮件发送完成")
-    return {"status": "success", "message": "邮件发送成功"}
+
+    print(f"[{datetime.now()}] Email sent successfully")
+    return {"status": "success", "message": "Email sent successfully"}
 
 
 @boost('data_sync_queue', broker_kind=BrokerEnum.REDIS)
 def data_sync_task(source_db: str, target_db: str, table_name: str):
-    """数据同步任务"""
-    print(f"[{datetime.now()}] 开始数据同步")
-    print(f"源数据库: {source_db}")
-    print(f"目标数据库: {target_db}")
-    print(f"表名: {table_name}")
-    
-    # 模拟数据同步操作
+    """Data sync task"""
+    print(f"[{datetime.now()}] Starting data sync")
+    print(f"Source database: {source_db}")
+    print(f"Target database: {target_db}")
+    print(f"Table name: {table_name}")
+
+    # Simulate data sync operation
     time.sleep(3)
-    
-    print(f"[{datetime.now()}] 数据同步完成")
-    return {"status": "success", "message": f"表 {table_name} 同步完成"}
+
+    print(f"[{datetime.now()}] Data sync complete")
+    return {"status": "success", "message": f"Table {table_name} sync complete"}
 
 
 @boost('report_queue', broker_kind=BrokerEnum.REDIS)
 def generate_report_task(report_type: str, date_range: str):
-    """生成报表任务"""
-    print(f"[{datetime.now()}] 开始生成报表")
-    print(f"报表类型: {report_type}")
-    print(f"时间范围: {date_range}")
-    
-    # 模拟生成报表
+    """Generate report task"""
+    print(f"[{datetime.now()}] Starting to generate report")
+    print(f"Report type: {report_type}")
+    print(f"Date range: {date_range}")
+
+    # Simulate report generation
     time.sleep(5)
-    
-    print(f"[{datetime.now()}] 报表生成完成")
-    return {"status": "success", "message": f"{report_type}报表生成完成"}
+
+    print(f"[{datetime.now()}] Report generation complete")
+    return {"status": "success", "message": f"{report_type} report generation complete"}
 
 
 @boost('cleanup_queue', broker_kind=BrokerEnum.REDIS)
 def cleanup_temp_files_task(directory: str, days_old: int):
-    """清理临时文件任务"""
-    print(f"[{datetime.now()}] 开始清理临时文件")
-    print(f"目录: {directory}")
-    print(f"清理{days_old}天前的文件")
-    
-    # 模拟清理操作
+    """Clean up temporary files task"""
+    print(f"[{datetime.now()}] Starting to clean up temporary files")
+    print(f"Directory: {directory}")
+    print(f"Cleaning files older than {days_old} days")
+
+    # Simulate cleanup operation
     time.sleep(1)
-    
-    print(f"[{datetime.now()}] 临时文件清理完成")
-    return {"status": "success", "message": f"清理了{directory}目录中{days_old}天前的文件"}
+
+    print(f"[{datetime.now()}] Temporary file cleanup complete")
+    return {"status": "success", "message": f"Cleaned up files older than {days_old} days in directory {directory}"}
 
 
 @boost('backup_queue', broker_kind=BrokerEnum.REDIS)
 def database_backup_task(database_name: str, backup_path: str):
-    """数据库备份任务"""
-    print(f"[{datetime.now()}] 开始数据库备份")
-    print(f"数据库: {database_name}")
-    print(f"备份路径: {backup_path}")
-    
-    # 模拟备份操作
+    """Database backup task"""
+    print(f"[{datetime.now()}] Starting database backup")
+    print(f"Database: {database_name}")
+    print(f"Backup path: {backup_path}")
+
+    # Simulate backup operation
     time.sleep(4)
-    
-    print(f"[{datetime.now()}] 数据库备份完成")
-    return {"status": "success", "message": f"数据库 {database_name} 备份完成"} 
+
+    print(f"[{datetime.now()}] Database backup complete")
+    return {"status": "success", "message": f"Database {database_name} backup complete"}

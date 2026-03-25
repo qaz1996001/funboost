@@ -2,9 +2,9 @@
 # @Author  : AI Assistant
 # @Time    : 2026/1/18
 """
-微批消费者 asyncio 测试
+Micro batch consumer asyncio test
 
-验证 MicroBatchConsumerMixin 在 ASYNC 模式下的表现
+Validates the behavior of MicroBatchConsumerMixin in ASYNC mode
 """
 import asyncio
 import time
@@ -13,13 +13,13 @@ from funboost.contrib.override_publisher_consumer_cls.funboost_micro_batch_mixin
     MicroBatchConsumerMixin,
 )
 
-# 记录批量处理的结果
+# Record batch processing results
 batch_results = []
 
 @boost(BoosterParams(
     queue_name='test_micro_batch_async_queue',
     broker_kind=BrokerEnum.REDIS,
-    concurrent_mode=ConcurrentModeEnum.ASYNC,  # 开启异步模式
+    concurrent_mode=ConcurrentModeEnum.ASYNC,  # Enable async mode
     consumer_override_cls=MicroBatchConsumerMixin,
     user_options={
         'micro_batch_size': 10,
@@ -30,31 +30,29 @@ batch_results = []
 ))
 async def batch_async_task(items: list):
     """
-    模拟异步批量处理任务
+    Simulated async batch processing task
     """
-    # 模拟异步 I/O 操作
+    # Simulate async I/O operation
     await asyncio.sleep(0.1)
-    
-    print(f"✅ [Async] 批量处理 {len(items)} 条消息: {items}")
+
+    print(f"[Async] Batch processing {len(items)} messages: {items}")
     return len(items)
 
 
 def test_async_batch():
-    """测试异步批量功能"""
+    """Test async batch functionality"""
     print("=" * 60)
-    print("测试: Asyncio 批量功能")
-    print("发布 25 条消息，验证是否通过 _async_run_batch 执行")
+    print("Test: Asyncio batch functionality")
+    print("Publishing 25 messages, verifying execution via _async_run_batch")
     print("=" * 60)
-    
-    # 发布 25 条消息
+
+    # Publish 25 messages
     for i in range(25):
         batch_async_task.push(x=i, y=i * 2)
-    
-    # 启动消费
+
+    # Start consuming
     batch_async_task.consume()
 
 
 if __name__ == '__main__':
     test_async_batch()
-    
-  

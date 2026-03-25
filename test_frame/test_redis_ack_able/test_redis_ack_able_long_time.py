@@ -1,5 +1,6 @@
 """
-这个是用来测试，以redis为中间件，随意关闭代码会不会造成任务丢失的。
+This is used to test whether tasks are lost when using Redis as the middleware
+and the code is arbitrarily shut down.
 """
 import os
 import time
@@ -11,9 +12,9 @@ import multiprocessing
 @boost('test_cost_long_time_fun_queue8889', broker_kind=BrokerEnum.REDIS_BRPOP_LPUSH,
        )
 def cost_long_time_fun(x):
-   print(f'函数开始 hello {x}')
+   print(f'function started hello {x}')
    time.sleep(120)
-   print('函数完全结束')
+   print('function fully finished')
 
 if __name__ == '__main__':
     #  cost_long_time_fun.push(666)

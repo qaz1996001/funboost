@@ -1,8 +1,12 @@
 """
-此代码演示 funboost 强大的 消息格式兼容能力, 能消费一切任意队列中已存在的不规范格式的消息(消息格式不是json也能消费),
-无论你是否使用funboost来发布消息,无视你的消息是不是json格式,funboost一样能消费.
-通过用户自定义 _user_convert_msg_before_run 清洗转化消息成字典或者json字符串,funboost就能消费任意消息.
-这是个小奇葩需求,但是funboost在消费任意消息的简单程度这方面能吊打celery
+This code demonstrates funboost's powerful message format compatibility: it can consume any
+non-standard messages already in a queue (even if the format is not JSON).
+Regardless of whether you use funboost to publish messages, and regardless of whether
+your messages are in JSON format, funboost can still consume them.
+By user-defining _user_convert_msg_before_run to clean and convert messages to a dict or
+JSON string, funboost can consume any message.
+This is a niche requirement, but funboost easily surpasses celery in terms of simplicity
+when it comes to consuming arbitrary messages.
 """
 
 import typing
@@ -12,18 +16,18 @@ from funboost import BrokerEnum, BoosterParams, AbstractConsumer
 
 class MyAnyMsgConvetConsumer(AbstractConsumer):
     def _user_convert_msg_before_run(self, msg) -> typing.Union[dict,str]:
-        # 'a=1,b=2' 例如从这个字符串,提取出键值对,返回字典,以适配funboost消费
+        # 'a=1,b=2' e.g. extract key-value pairs from this string and return a dict to fit funboost consumption
         new_msg_dict = {}
         msg_split_list = msg.split(',')
         for item in msg_split_list:
             key, value = item.split('=')
             new_msg_dict[key] = int(value)
-        self.logger.debug(f'原来消息是:{msg},转换成的新消息是:{new_msg_dict}')  # 例如 实际会打印 原来消息是:a=3,b=4,转换成的新消息是:{'a': 3, 'b': 4}
+        self.logger.debug(f'Original message: {msg}, converted new message: {new_msg_dict}')  # e.g. actually prints: Original message: a=3,b=4, converted new message: {'a': 3, 'b': 4}
         return new_msg_dict
 
 
 @BoosterParams(queue_name="task_queue_consume_any_msg", broker_kind=BrokerEnum.REDIS,
-               consumer_override_cls=MyAnyMsgConvetConsumer  # 这行是关键,MyAnyMsgConvetConsumer类自定义了_user_convert_msg_before_run,这个方法里面,用户可以自由发挥清洗转化消息
+               consumer_override_cls=MyAnyMsgConvetConsumer  # This line is key; MyAnyMsgConvetConsumer defines _user_convert_msg_before_run where users can freely clean and convert messages
                )
 def task_fun(a: int, b: int):
     print(f'a:{a},b:{b}')
@@ -31,9 +35,9 @@ def task_fun(a: int, b: int):
 
 
 if __name__ == "__main__":
-    redis_conn = redis.Redis(db=7)  # 使用原生redis来发布消息，funboost照样能消费。
+    redis_conn = redis.Redis(db=7)  # Use native redis to publish messages; funboost can still consume them.
 
-    redis_conn.lpush('task_queue_consume_any_msg', 'a=1,b=2')  # 模拟别的部门员工,手动发送了funboost框架无法识别的消息格式,原本funboost需要消息是json,但别的部门直接发字符串到消息队列中了.,
-    task_fun.publisher.send_msg('a=3,b=4')  # 使用send_msg 而非push和publish方法,是故意发送不规范消息, 就是发送原始消息到消息队列里面,funboost不会去处理添加任何辅助字段发到消息队列里面,例如task_id 发布时间这些东西.
+    redis_conn.lpush('task_queue_consume_any_msg', 'a=1,b=2')  # Simulate another team member manually sending a message format that funboost cannot recognize; funboost normally needs JSON, but the other team sent a raw string to the queue.
+    task_fun.publisher.send_msg('a=3,b=4')  # Using send_msg instead of push/publish to intentionally send a non-standard message; this sends the raw message to the queue without funboost adding any auxiliary fields like task_id or publish time.
 
-    task_fun.consume()  # funboost 现在可以消费消息队列里面的不规范消息了,因为用户在_user_convert_msg_before_run清洗了消息
+    task_fun.consume()  # funboost can now consume non-standard messages in the queue because the user cleaned them in _user_convert_msg_before_run

@@ -15,10 +15,10 @@ for i in range(1000000):
     # time.sleep(0.2)
     async_result = pb_add.publish(dict(a=i, b=2 * i))
     # print(async_result.status_and_result)
-    # print('结果', async_result.result)
+    # print('result', async_result.result)
     # async_result = consumer_sub.publisher_of_same_queue.publish({'x': i, 'y': i * 6},
     #                                                             task_options=TaskOptions(is_using_rpc_mode=False))
-    # print('同步结果', async_result.result)
+    # print('sync result', async_result.result)
 
 """
 mtfy

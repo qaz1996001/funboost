@@ -10,10 +10,10 @@ lock_key = 'redis_locka2'
 def f(x):
     with RedisDistributedLockContextManager(RedisMixin().redis_db_frame, lock_key, ).set_log_level(30) as lock:
         if lock:
-            print(f'获得锁 {x}')
+            print(f'Acquired lock {x}')
             time.sleep(60)
         else:
-            print(f'没有获得锁 {x}')
+            print(f'Did not acquire lock {x}')
 
 
 if __name__ == '__main__':

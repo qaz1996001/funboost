@@ -2,22 +2,22 @@ from funboost import boost, BrokerEnum,ctrl_c_recv,BoosterParams,APSJobAdder
 
 
 
-# 定义任务处理函数
+# Define task handler function
 @BoosterParams(queue_name='sum_queue3', broker_kind=BrokerEnum.REDIS)
-def sum_two_numbers(x, y):  
-    result = x + y 
-    print(f'The sum of {x} and {y} is {result}')  
+def sum_two_numbers(x, y):
+    result = x + y
+    print(f'The sum of {x} and {y} is {result}')
 
 
 if __name__ == '__main__':
-    # 启动消费者
+    # Start consumer
     sum_two_numbers.consume()
-    
-    # 发布任务
+
+    # Publish tasks
     sum_two_numbers.push(3, 5)
     sum_two_numbers.push(10, 20)
-    
-    # 使用ApsJobAdder添加定时任务，
+
+    # Use ApsJobAdder to add scheduled tasks,
     ApsJobAdder(sum_two_numbers, job_store_kind='redis').add_push_job(trigger='date',
                                                                       run_date='2025-01-17 23:25:40', args=(7, 8))
     

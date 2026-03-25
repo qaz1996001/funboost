@@ -40,9 +40,9 @@ def ccc(msg):
 
 if __name__ == '__main__':
 
-    aaa.publish({'msg':'a队列的消息'},task_options=TaskOptions(countdown=10))
-    bbb.publish({'msg':'b队列的消息'},task_options=TaskOptions(countdown=15))
-    ccc.publish({'msg':'c队列的消息'},task_options=TaskOptions(countdown=20))
+    aaa.publish({'msg':'message for queue a'},task_options=TaskOptions(countdown=10))
+    bbb.publish({'msg':'message for queue b'},task_options=TaskOptions(countdown=15))
+    ccc.publish({'msg':'message for queue c'},task_options=TaskOptions(countdown=20))
 
     aaa.consume()
     aaa.multi_process_consume(2)

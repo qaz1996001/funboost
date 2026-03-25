@@ -5,12 +5,13 @@ run_current_script_on_remote()
 from funboost import boost, BrokerEnum, TaskOptions,FunctionResultStatusPersistanceConfig,BoosterParams
 
 """
-演示多进程启动消费，多进程和 asyncio/threading/gevnt/evntlet是叠加关系，不是平行的关系。
+Demonstrates launching consumers with multiple processes.
+Multi-process and asyncio/threading/gevent/eventlet are cumulative relationships, not parallel.
 """
 
 
-# qps=5，is_using_distributed_frequency_control=True 分布式控频每秒执行5次。
-# 如果is_using_distributed_frequency_control不设置为True,默认每个进程都会每秒执行5次。
+# qps=5, is_using_distributed_frequency_control=True: distributed rate control, executes 5 times per second globally.
+# If is_using_distributed_frequency_control is not set to True, each process will execute 5 times per second independently.
 @boost(BoosterParams(queue_name='test_queue_s23', qps=1, broker_kind=BrokerEnum.REDIS,
 
        ))
@@ -25,17 +26,18 @@ if __name__ == '__main__':
     ff.clear()
 
 
-        # 这个与push相比是复杂的发布，第一个参数是函数本身的入参字典，后面的参数为任务控制参数，例如可以设置task_id，设置延时任务，设置是否使用rpc模式等。
+        # This is more complex publishing compared to push; the first argument is the function's parameter dict,
+        # and subsequent arguments are task control parameters, such as task_id, delayed task, and rpc mode.
         # ff.publish({'x': i * 10, 'y': i * 20}, )
 
-    # ff(666, 888)  # 直接运行函数
-    # ff.start()  # 和 conusme()等效
-    # ff.consume()  # 和 start()等效
-    # # run_consumer_with_multi_process(ff, 2)  # 启动两个进程
+    # ff(666, 888)  # Run the function directly
+    # ff.start()  # Equivalent to consume()
+    # ff.consume()  # Equivalent to start()
+    # # run_consumer_with_multi_process(ff, 2)  # Start two processes
     # ff.multi_process_consume(3)
     for i in range(1000):
         ff.push(i, y=0)
-    ff.multi_process_consume(3)  # 启动两个进程，和上面的run_consumer_with_multi_process等效,现在新增这个multi_process_start方法。
-    # IdeAutoCompleteHelper(ff).multi_process_start(3)  # IdeAutoCompleteHelper 可以补全提示，但现在装饰器加了类型注释，ff. 已近可以在pycharm下补全了。
+    ff.multi_process_consume(3)  # Start two processes; equivalent to run_consumer_with_multi_process above; multi_process_start is the new method name.
+    # IdeAutoCompleteHelper(ff).multi_process_start(3)  # IdeAutoCompleteHelper provides auto-complete hints, but since the decorator now includes type annotations, ff. already auto-completes in PyCharm.
 
     time.sleep(100000)

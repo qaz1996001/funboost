@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-临时手搞批量聚合 - 不封装，不使用 funboost
+Manual batch aggregation without encapsulation - not using funboost
 
-这是很多开发者在没有 funboost 时的真实写法：
-直接在业务代码里临时搞一堆全局变量、锁、线程...
+This is how many developers write it without funboost:
+directly cluttering business code with global variables, locks, threads...
 
-看看有多乱、多容易出 bug。
+Look how messy and bug-prone it is.
 """
 
 import threading
@@ -13,89 +13,89 @@ import time
 from queue import Queue
 
 # ============================================================
-# 你的业务代码里突然多了一堆全局变量...
+# Your business code suddenly has a bunch of global variables...
 # ============================================================
 
-# 全局缓冲区（你得自己维护）
+# Global buffer (you must maintain it yourself)
 _buffer = []
 
-# 全局锁（你得自己加）
+# Global lock (you must add it yourself)
 _lock = threading.Lock()
 
-# 上次刷新时间（你得自己记）
+# Last flush time (you must track it yourself)
 _last_flush_time = time.time()
 
-# 配置（硬编码在这里，改起来麻烦）
+# Configuration (hard-coded here, annoying to change)
 BATCH_SIZE = 10
 BATCH_TIMEOUT = 3.0
 
-# 控制后台线程的标志
+# Flag to control background thread
 _running = True
 
 
 def batch_insert_to_db(items):
-    """假装这是你的批量插入函数"""
-    print(f"{time.strftime('%H:%M:%S')} ✅ 批量插入 {len(items)} 条: {items}")
+    """Pretend this is your bulk insert function"""
+    print(f"{time.strftime('%H:%M:%S')} Batch insert {len(items)} items: {items}")
 
 
 def _flush_if_needed():
     """
-    检查并刷新 - 你需要在每次添加数据后调用
-    
-    问题：忘了调用怎么办？
+    Check and flush - you need to call this after every data addition
+
+    Problem: what if you forget to call it?
     """
     global _buffer, _last_flush_time
-    
+
     if len(_buffer) >= BATCH_SIZE:
         batch = _buffer[:]
         _buffer = []
         _last_flush_time = time.time()
-        
+
         try:
             batch_insert_to_db(batch)
         except Exception as e:
-            # 失败了怎么办？数据丢了！
-            print(f"❌ 失败了，丢了 {len(batch)} 条数据: {e}")
+            # What if it fails? Data lost!
+            print(f"Failed, lost {len(batch)} items: {e}")
 
 
 def _timeout_flush_thread():
     """
-    后台超时刷新线程 - 你得自己写
-    
-    问题：
-    1. daemon=True，主线程退出时数据可能丢失
-    2. 不是 daemon，程序可能无法正常退出
-    3. 忘了启动怎么办？
+    Background timeout flush thread - you must write this yourself
+
+    Problems:
+    1. daemon=True: data may be lost when main thread exits
+    2. non-daemon: program may not exit cleanly
+    3. What if you forget to start it?
     """
     global _buffer, _last_flush_time, _running
-    
+
     while _running:
-        time.sleep(1)  # 轮询间隔，写死还是配置？
-        
+        time.sleep(1)  # Poll interval - hardcode or configure?
+
         with _lock:
             elapsed = time.time() - _last_flush_time
             if _buffer and elapsed >= BATCH_TIMEOUT:
                 batch = _buffer[:]
                 _buffer = []
                 _last_flush_time = time.time()
-                
+
                 try:
                     batch_insert_to_db(batch)
                 except Exception as e:
-                    print(f"❌ 超时刷新失败: {e}")
+                    print(f"Timeout flush failed: {e}")
 
 
 def add_data(item):
     """
-    添加数据 - 业务代码调用这个
-    
-    问题：
-    1. 得记得加锁
-    2. 得记得调用 flush
-    3. 多个地方调用，容易漏
+    Add data - business code calls this
+
+    Problems:
+    1. Must remember to lock
+    2. Must remember to call flush
+    3. Called from multiple places, easy to miss
     """
     global _buffer
-    
+
     with _lock:
         _buffer.append(item)
         _flush_if_needed()
@@ -103,79 +103,79 @@ def add_data(item):
 
 def graceful_shutdown():
     """
-    优雅退出 - 你得自己调用
-    
-    问题：忘了调用，最后一批数据就丢了
+    Graceful shutdown - you must call this yourself
+
+    Problem: if you forget to call it, the last batch of data is lost
     """
     global _running, _buffer
-    
+
     _running = False
-    
+
     with _lock:
         if _buffer:
-            print(f"关闭前刷新剩余 {len(_buffer)} 条...")
+            print(f"Flushing remaining {len(_buffer)} items before shutdown...")
             batch = _buffer[:]
             _buffer = []
             batch_insert_to_db(batch)
 
 
 # ============================================================
-# 你还得在某个地方启动后台线程...
+# You also need to start the background thread somewhere...
 # ============================================================
 
 def init_batch_system():
     """
-    初始化 - 你得记得在程序启动时调用
-    
-    问题：忘了调用，超时刷新就不工作
+    Initialization - you must remember to call this at program startup
+
+    Problem: if you forget to call it, timeout flush won't work
     """
     t = threading.Thread(target=_timeout_flush_thread, daemon=True)
     t.start()
-    print("后台线程已启动（记得调用 graceful_shutdown）")
+    print("Background thread started (remember to call graceful_shutdown)")
 
 
 # ============================================================
-# 测试
+# Tests
 # ============================================================
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("临时手搞批量聚合 - 看看有多麻烦")
+    print("Manual batch aggregation - see how troublesome it is")
     print("=" * 60)
-    
-    # 你得记得初始化
+
+    # You must remember to initialize
     init_batch_system()
-    
-    # 模拟业务数据
-    print("\n模拟产生 25 条数据...\n")
+
+    # Simulate business data
+    print("\nSimulating 25 data items...\n")
     for i in range(25):
         add_data({"id": i, "value": f"data_{i}"})
-        print(f"  {time.strftime('%H:%M:%S')} 添加: id={i}")
+        print(f"  {time.strftime('%H:%M:%S')} Added: id={i}")
         time.sleep(0.1)
-    
-    # 等待超时刷新
-    print(f"\n等待 {BATCH_TIMEOUT}s 超时刷新剩余数据...\n")
+
+    # Wait for timeout flush
+    print(f"\nWaiting {BATCH_TIMEOUT}s for timeout flush of remaining data...\n")
     time.sleep(BATCH_TIMEOUT + 1)
-    
-    # 你得记得优雅退出
+
+    # You must remember to call graceful shutdown
     graceful_shutdown()
-    
+
     print("\n" + "=" * 60)
-    print("总结：临时手搞的问题")
+    print("Summary: problems with manual approach")
     print("=" * 60)
     print("""
-1. 全局变量污染：_buffer, _lock, _last_flush_time, _running...
-2. 容易忘记：
-   - 忘了启动后台线程 → 超时刷新不工作
-   - 忘了加锁 → 数据竞争
-   - 忘了 graceful_shutdown → 最后一批数据丢失
-3. 代码分散：初始化、添加、刷新、退出 散落在各处
-4. 不可复用：下个项目又得重写一遍
-5. 测试困难：全局状态难以 mock
+1. Global variable pollution: _buffer, _lock, _last_flush_time, _running...
+2. Easy to forget:
+   - Forgot to start background thread -> timeout flush doesn't work
+   - Forgot to lock -> data race
+   - Forgot graceful_shutdown -> last batch of data lost
+3. Code scattered: init, add, flush, shutdown spread across the codebase
+4. Not reusable: have to rewrite from scratch for the next project
+5. Hard to test: global state is hard to mock
 
-而 funboost MicroBatchConsumerMixin：
-   - 0 个全局变量
-   - 2 个参数配置
-   - 自动管理生命周期
-   - 开箱即用
+Whereas funboost MicroBatchConsumerMixin:
+   - 0 global variables
+   - 2 configuration parameters
+   - Automatic lifecycle management
+   - Works out of the box
 """)

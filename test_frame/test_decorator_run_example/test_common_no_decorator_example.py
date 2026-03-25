@@ -1,5 +1,5 @@
 """
-测试非装饰器版本方式，注意对比装饰器版本test_decorator_task_example.py
+Test the non-decorator approach; compare with the decorator version test_decorator_task_example.py
 """
 
 from funboost import get_consumer

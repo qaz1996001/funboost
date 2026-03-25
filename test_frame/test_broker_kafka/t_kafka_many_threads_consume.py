@@ -1,22 +1,24 @@
 
 
+
 """
-从0实现一个 kafka消费类,
+Implement a kafka consumer class from scratch.
 
-支持设置num_threads为很高的数字,这个数字可以远高于分区数
-callback_func 是用户传递一个自定义函数, 需要自动在 线程池大小为num_threads 的线程池中执行这个函数
+Supports setting num_threads to a high number, which can far exceed the number of partitions.
+callback_func is a user-supplied custom function that needs to be automatically executed
+in a thread pool of size num_threads.
 
-要求:
-随时任意kill -9重启程序,做到不丢失 不跳过消息
+Requirements:
+Kill -9 and restart the program at any time, ensuring no messages are lost or skipped.
 
-例如需要避免如下:
-消息耗时是随机的,例如msg1耗时100秒,但msg2耗时30秒,msg3耗时10秒,如果msg3提交offset后,
-如果突然重启程序,造成msg1和msg2无法再次消费
+For example, the following scenario must be avoided:
+Message processing time is random, e.g. msg1 takes 100 seconds, msg2 takes 30 seconds, msg3 takes 10 seconds.
+If msg3 commits its offset, and the program is suddenly restarted,
+msg1 and msg2 can no longer be consumed again.
 
 
 """
 
 class KafkaManyThreadsConsumer:
-    def __init__(self, kafka_broker_address, topic, group_id, num_threads=100,callback_func=None):
+    def __init__(self, kafka_broker_address, topic, group_id, num_threads=100, callback_func=None):
         pass
-

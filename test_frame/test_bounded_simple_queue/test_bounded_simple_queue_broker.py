@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-有界 SimpleQueue Broker 测试
+Bounded SimpleQueue Broker test.
 
-演示按照 funboost 文档 4.21 章节，动态扩展 broker 的使用方法：
-1. 导入 bounded_simple_queue_broker 模块（自动注册 broker）
-2. 使用 broker_kind='BOUNDED_SIMPLE_QUEUE' 
+Demonstrates dynamic broker extension following funboost documentation section 4.21:
+1. Import the bounded_simple_queue_broker module (broker is auto-registered on import)
+2. Use broker_kind='BOUNDED_SIMPLE_QUEUE'
 """
 
 import time
 import datetime
 from funboost import boost, BoosterParams, ConcurrentModeEnum
 
-# 导入自定义 broker（导入即自动注册）
+# Import custom broker (auto-registered on import)
 from test_frame.test_bounded_simple_queue.bounded_simple_queue_broker import BOUNDED_SIMPLE_QUEUE
 
 
@@ -30,7 +30,7 @@ class GlobalVars:
     concurrent_mode=ConcurrentModeEnum.SINGLE_THREAD,
     log_level=20,
     broker_exclusive_config={
-        'maxsize': 500000,  # 队列最大容量
+        'maxsize': 500000,  # maximum queue capacity
     }
 ))
 def f(x):

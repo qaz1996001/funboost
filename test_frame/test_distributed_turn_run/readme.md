@@ -1,70 +1,69 @@
 
-## 用户的需求是:
+## User Requirement:
 
-每台机器轮流执行一个消息,只有当上一台机器运行完成消息后,下一台机器才开始运行下一条消息.
+Each machine takes turns executing one message. The next machine only starts executing the next message after the previous machine has finished running its message.
 
-如果单纯的只采用redis分布式锁只能保证多台机器只有一个线程运行某个代码块,从而确保多台机器只有一个在运行消息,
-但没法保证是下一台机器等待上一台机器运行完成消息后才开始执行消息,就是redis锁没保证多台机器轮流执行消息这个特点.
-
-```
-用户有机器1  机器2  机器3  .... 机器10
-用户希望每台机器轮流从 queue1 队列获取消息,并运行,
-就是 机器1 获取 msg1 后并运行完成,  机器2 才开始获取msg2并运行完成, 然后机器3开始获取msg3并运行完成, .......,周而复始.
+Simply using a Redis distributed lock can only guarantee that only one thread across multiple machines is running a given code block at any time, ensuring only one machine is processing a message. However, it cannot guarantee that each machine waits for the previous one to finish before starting — that is, a Redis lock alone does not guarantee that machines take turns executing messages in order.
 
 ```
-
-用户的实际例子需求是 ,利用非常多台物理机ip反爬虫
-
-```
-该用户不使用ip代理池,而是利用多台物理机的真实ip反爬虫,用户希望轮流在多台机器请求url,
-同时保证多台机器只有一个机器在单并发的运行爬取url,避免触发ip反爬虫,
-用户不希望所谓的使用ssh链接到远程机器 来curl爬虫,也不希望使用物理机搭建ip代理服务,就是正常的多台机器上部署相同的python爬虫代码.
+The user has machine1, machine2, machine3, ..., machine10.
+The user wants each machine to take turns fetching messages from queue1 and running them.
+Meaning: machine1 fetches msg1, runs it to completion; then machine2 fetches msg2 and runs it to completion; then machine3 fetches msg3 and runs it to completion; and so on, cycling repeatedly.
 ```
 
-## 此demo使用单个机器模拟实现用户的如下奇葩特殊需求
+The user's real-world use case is using a large number of physical machine IPs to circumvent anti-scraping measures.
+
+```
+This user does not use an IP proxy pool. Instead, they use the real IPs of multiple physical machines to bypass anti-scraping, wanting each machine to take turns requesting URLs.
+At the same time, only one machine at a time runs the URL crawl in single-concurrency mode, to avoid triggering IP-based anti-scraping.
+The user does not want to use SSH to connect to remote machines and run curl crawlers, nor to set up an IP proxy service on physical machines — they just want to deploy the same Python crawler code normally on multiple machines.
+```
+
+## This demo uses a single machine to simulate the following special user requirement
 
 
 ```
-现在是在单台机器分两个脚本启动消费,模拟实现  "两个机器轮流运行消息,并且同时只有一台机器在执行消息,同时只有一个消息被执行,不允许并发运行消息 " 这个需求.
+This simulation uses two scripts on a single machine to simulate "two machines taking turns running messages, with only one machine executing a message at any time and only one message being executed at a time, with no concurrent message execution allowed".
 
-实际上是动态自动获取当前机器ip,不需要 run_execute_msg_on_host101.py run_execute_msg_on_host102.py 两个重复的文件
-
+In practice, the current machine's IP is obtained dynamically and automatically — there is no need for two separate files like run_execute_msg_on_host101.py and run_execute_msg_on_host102.py.
 ```
 
 
 
-## 难点和funboost的轻松解决这个需求的方式
-```
-难点:
-要实现多台物理机只有一台在进行爬取url,这个使用redis 分布式锁就可以保证了.
-
-解决方式:
-要保证每台机器轮流爬一个url,那就不光是分布式锁就能解决了
-所以使用单线程并发模式 + 分发到不同的ip队列,使用rpc阻塞等待可以确保爬虫函数执行完成,从而再分发下一条消息,
-这样就能达到多台机器只有一个机器在运行,并保证每台机器轮流爬虫.
-
-具体到funboost就是:
-分为一个从正常的队列获取消息并push到 多个ip名字的子队列.
-写一个消息分发函数,该函数必须使用单线程并发模式,这个函数里面使用rpc 阻塞等待获取 消息执行函数的结果,
-再写一个正正的具体执行消息的函数,该函数必须设置支持rpc模式,is_using_rpc_mode=True,
-```
-
-## 如果是scrapy和仿scrapy api用法的框架,非常难实现
+## Challenges and How funboost Solves This Requirement Easily
 
 ```
-如果是scrapy和仿scrapy api用法的框架,非常难实现,
-因为你完全不知道需要改框架哪里,这种奇葩需求也不好搜答案.
+Challenge:
+To ensure only one physical machine is crawling a URL at a time, a Redis distributed lock can handle that.
 
-funboost框架是函数调度框架,部署url调度框架,所以自由灵活,用户任何奇葩独特想法不需要涉及到需要改funboost框架
+Solution:
+To ensure each machine takes turns crawling one URL, a distributed lock alone is not enough.
+So the solution uses single-thread concurrency mode + dispatching to different per-IP queues + RPC blocking to wait for the crawler function to complete before dispatching the next message.
+This ensures only one machine is running at a time, and each machine takes its turn.
+
+In funboost specifically:
+A dispatcher reads from a main queue and pushes to sub-queues named after each machine's IP.
+Write a message dispatcher function that must use single-thread concurrency mode, and inside it use RPC to block and wait for the result of the message execution function.
+Write the actual message execution function, which must have RPC mode enabled (is_using_rpc_mode=True).
+```
+
+## Why This Is Very Difficult to Implement with Scrapy or Scrapy-Like Frameworks
+
+```
+With Scrapy or frameworks that mimic its API, this is extremely difficult to implement
+because you have no idea which part of the framework to modify, and this kind of unusual requirement is hard to search for.
+
+funboost is a function scheduling framework and URL dispatching framework — it is free and flexible, so any unusual or unique idea from the user does not require modifying the funboost framework itself.
 ```
 
 
-## 脚本说明
-```
-run_distribute_msg.py 是 从queue1 获取消息,并轮流分发到 queue2的各个ip对应的队列名字,
-distribute_msg函数是单线程并发模式,并且采用了rpc模式阻塞等待函数运行完成,才会继续分发消息到下一台机器的队列中,
-从而保证了每台机器轮流运行一条消息(每台机器轮流获取一个url种子并爬取)
+## Script Descriptions
 
-run_execute_msg_on_host101.py 和 run_execute_msg_on_host102.py 是为了方便单台机器模拟在两台机器上运行消费,
-实际不需要重复写这两个文件.
+```
+run_distribute_msg.py fetches messages from queue1 and takes turns dispatching them to sub-queues named after each IP in queue2.
+The distribute_msg function uses single-thread concurrency mode and RPC mode to block until the function finishes before dispatching the next message to the next machine's queue,
+thus ensuring each machine takes turns running one message (each machine takes turns fetching one URL seed and crawling it).
+
+run_execute_msg_on_host101.py and run_execute_msg_on_host102.py are provided for the convenience of simulating two machines on a single machine.
+In practice, you do not need to write these two separate files.
 ```

@@ -45,11 +45,11 @@ setup(
     name='funboost',  #
     version=__version__,
     description=(
-        'pip install funboost，python全功能分布式函数调度框架,funboost的功能是全面性重量级，用户能想得到的功能99%全都有;funboost的使用方式是轻量级，只有@boost一行代码需要写。支持python所有类型的并发模式和一切知名消息队列中间件，支持如 celery dramatiq等框架整体作为funboost中间件，python函数加速器，框架包罗万象，用户能想到的控制功能全都有。一统编程思维，兼容50% python业务场景，适用范围广。只需要一行代码即可分布式执行python一切函数，funboost web manager 方便查看和管理消费函数；99%用过funboost的pythoner 感受是　简易 方便 强劲 强大，相见恨晚 '
+        'pip install funboost, a full-featured Python distributed function scheduling framework. funboost is comprehensive and heavyweight in features — 99% of what users can think of is already there; yet its usage is lightweight — only one line of code (@boost) is needed. Supports all Python concurrency modes and every major message-queue middleware. Frameworks such as celery and dramatiq can be used wholesale as funboost middleware. It is a Python function accelerator that covers everything; all the control features users can imagine are included. It unifies the programming mindset, is compatible with 50% of Python business scenarios, and has a wide range of applicability. Only one line of code is needed to execute any Python function in a distributed manner. The funboost web manager makes it easy to view and manage consumer functions. 99% of Python developers who have used funboost describe it as: simple, convenient, powerful, and wish they had found it sooner.'
     ),
     # long_description=open('README.md', 'r',encoding='utf8').read(),
     keywords=["funboost", "distributed-framework", "function-scheduling", "rabbitmq", "rocketmq", "kafka", "nsq", "redis", "disk",
-              "sqlachemy", "consume-confirm", "timing", "task-scheduling", "apscheduler", "pulsar", "mqtt", "kombu", "的", "celery", "框架", '分布式调度'],
+              "sqlachemy", "consume-confirm", "timing", "task-scheduling", "apscheduler", "pulsar", "mqtt", "kombu", "de", "celery", "framework", 'distributed-scheduling'],
     long_description_content_type="text/markdown",
     long_description=open('README.md', 'r', encoding='utf8').read(),
     author='bfzs',
@@ -59,8 +59,8 @@ setup(
     # license='BSD License',
     license='BSD-3-Clause',
     # packages=['douban'], #
-    packages=find_packages() + ['funboost.beggar_version_implementation', 'funboost.assist'],  # 也可以写在 MANiFEST.in
-    # packages=['function_scheduling_distributed_framework'], # 这样内层级文件夹的没有打包进去。
+    packages=find_packages() + ['funboost.beggar_version_implementation', 'funboost.assist'],  # can also be specified in MANIFEST.in
+    # packages=['function_scheduling_distributed_framework'], # this way nested sub-package folders are not included in the build.
     include_package_data=True,
     platforms=["all"],
     url='https://github.com/ydf0509/funboost',
@@ -108,7 +108,7 @@ setup(
         'redis5',
         'redis',
         'setuptools_rust',
-        'fabric2>=2.6.0',  # 有的机器包rust错误， 这样做 curl https://sh.rustup.rs -sSf | sh
+        'fabric2>=2.6.0',  # some machines have a Rust build error; fix it with: curl https://sh.rustup.rs -sSf | sh
         'nb_filelock',
         'pysnooper',
         'deprecated',
@@ -138,13 +138,13 @@ setup(
 )
 
 """
-官方 https://pypi.org/simple
-清华 https://pypi.tuna.tsinghua.edu.cn/simple
-豆瓣 https://pypi.douban.com/simple/ 
-阿里云 https://mirrors.aliyun.com/pypi/simple/
-腾讯云  http://mirrors.tencentyun.com/pypi/simple/
+Official   https://pypi.org/simple
+Tsinghua   https://pypi.tuna.tsinghua.edu.cn/simple
+Douban     https://pypi.douban.com/simple/
+Aliyun     https://mirrors.aliyun.com/pypi/simple/
+Tencent    http://mirrors.tencentyun.com/pypi/simple/
 
-打包上传
+Build and upload
 python setup.py sdist upload -r pypi
 
 # python setup.py bdist_wheel
@@ -152,16 +152,16 @@ python setup.py bdist_wheel ; python -m twine upload dist/funboost-23.5-py3-none
 python setup.py bdist_wheel && python -m twine upload dist/funboost-24.8-py3-none-any.whl
 python setup.py sdist & twine upload dist/funboost-10.9.tar.gz
 
-最快的下载方式，上传立即可安装。阿里云源同步官网pypi间隔要等很久。
-./pip install funboost==3.5 -i https://pypi.org/simple   
-最新版下载
-./pip install funboost --upgrade -i https://pypi.org/simple     
+Fastest download method — installable immediately after upload. Aliyun mirror sync with the official PyPI can take a long time.
+./pip install funboost==3.5 -i https://pypi.org/simple
+Install the latest version
+./pip install funboost --upgrade -i https://pypi.org/simple
 
-pip install funboost[all]     # 安装其他所有冷门的中间件操作包。
+pip install funboost[all]     # install all optional, less common middleware packages.
 
 
-从git安装
-pip install git+https://github.com/ydf0509/funboost.git 
+Install from git
+pip install git+https://github.com/ydf0509/funboost.git
 pip install git+https://gitee.com/bfzshen/funboost.git
 
 """

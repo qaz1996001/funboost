@@ -6,12 +6,12 @@ from funboost import boost, BrokerEnum, FunctionResultStatusPersistanceConfig, B
 
 class MyConsumer(AbstractConsumer):
     def user_custom_record_process_info_func(self, current_function_result_status: FunctionResultStatus):
-        print('使用指定的consumer_override_cls来自定义或重写方法')
+        print('Using the specified consumer_override_cls to customize or override methods')
         if current_function_result_status.success is True:
-            print(f'入参 {current_function_result_status.params} 成功了，结果是： {current_function_result_status.result}，模拟发个微信通知')
+            print(f'Parameters {current_function_result_status.params} succeeded; result: {current_function_result_status.result}; simulating a WeChat notification')
         else:
-            print(f'入参 {current_function_result_status.params} 失败了，原因是： {current_function_result_status.exception},模拟发个邮件')
-        self.logger.debug(current_function_result_status.get_status_dict()) # 给用户打印下current_function_result_status有哪些字段信息。
+            print(f'Parameters {current_function_result_status.params} failed; reason: {current_function_result_status.exception}; simulating sending an email')
+        self.logger.debug(current_function_result_status.get_status_dict())  # Print the fields in current_function_result_status for the user.
 
 
 @boost(BoosterParams(queue_name='test_redis_ack_use_timeout_queue', broker_kind=BrokerEnum.REDIS,
@@ -22,7 +22,7 @@ def cost_long_time_fun(x):
     print(f'start {x}')
     time.sleep(2)
     if random.random()>0.5:
-        raise ValueError('模拟函数运行出错')
+        raise ValueError('Simulated function execution error')
     print(f'end {x}')
     return x*2
 

@@ -8,13 +8,13 @@ class Calculator:
         self.value = 0
 
     def evaluate(self, expression):
-        expression = expression.replace(' ', '')  # 去除空格
-        expression = re.sub(r'(\d+)', r'self.add(\1)', expression)  # 将数字替换为self.add(num)
-        expression = expression.replace('+', '.add')  # 将+替换为.add
-        expression = expression.replace('-', '.subtract')  # 将-替换为.subtract
-        expression = expression.replace('*', '.multiply')  # 将*替换为.multiply
-        expression = expression.replace('/', '.divide')  # 将/替换为.divide
-        eval(expression)  # 执行表达式
+        expression = expression.replace(' ', '')  # Remove spaces
+        expression = re.sub(r'(\d+)', r'self.add(\1)', expression)  # Replace numbers with self.add(num)
+        expression = expression.replace('+', '.add')  # Replace + with .add
+        expression = expression.replace('-', '.subtract')  # Replace - with .subtract
+        expression = expression.replace('*', '.multiply')  # Replace * with .multiply
+        expression = expression.replace('/', '.divide')  # Replace / with .divide
+        eval(expression)  # Execute expression
 
     def add(self, num):
         self.value += num

@@ -1,70 +1,70 @@
 # gRPC Demo
 
-这是一个最简单的 gRPC 示例，演示了如何创建 gRPC 服务器和客户端。
+This is the simplest gRPC example, demonstrating how to create a gRPC server and client.
 
-## 文件说明
+## File Descriptions
 
-- `hello.proto` - protobuf 定义文件，定义了服务接口和消息格式
-- `server.py` - gRPC 服务器实现
-- `client.py` - gRPC 客户端实现
-- `generate_pb.py` - 生成 protobuf 文件的脚本
-- `requirements.txt` - Python 依赖包
+- `hello.proto` - Protobuf definition file, defining the service interface and message format
+- `server.py` - gRPC server implementation
+- `client.py` - gRPC client implementation
+- `generate_pb.py` - Script for generating protobuf files
+- `requirements.txt` - Python dependencies
 
-## 快速开始
+## Quick Start
 
-### 1. 安装依赖
+### 1. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. 生成 protobuf 文件
+### 2. Generate protobuf files
 
 ```bash
 python generate_pb.py
 ```
 
-这会生成 `hello_pb2.py` 和 `hello_pb2_grpc.py` 文件。
+This will generate the `hello_pb2.py` and `hello_pb2_grpc.py` files.
 
-### 3. 启动服务器
+### 3. Start the server
 
 ```bash
 python server.py
 ```
 
-服务器将在 `localhost:50051` 上启动。
+The server will start listening on `localhost:50051`.
 
-### 4. 运行客户端
+### 4. Run the client
 
-在另一个终端中运行：
+In another terminal, run:
 
 ```bash
 python client.py
 ```
 
-## 示例输出
+## Example Output
 
-**服务器端：**
+**Server side:**
 ```
-gRPC 服务器已启动，监听地址: [::]:50051
-```
-
-**客户端：**
-```
-=== gRPC 客户端测试 ===
-1. 简单测试
-服务器响应: Hello, World!
-
-2. 交互式测试
-请输入您的名字 (输入 'quit' 退出): Alice
-服务器响应: Hello, Alice!
-请输入您的名字 (输入 'quit' 退出): quit
+gRPC server started, listening on: [::]:50051
 ```
 
-## 工作原理
+**Client side:**
+```
+=== gRPC Client Test ===
+1. Simple test
+Server response: Hello, World!
 
-1. **proto 文件定义**：定义了 `HelloService` 服务，包含 `SayHello` 方法
-2. **服务器**：实现 `HelloService`，接收客户端请求并返回问候消息
-3. **客户端**：连接到服务器，发送请求并接收响应
+2. Interactive test
+Enter your name (type 'quit' to exit): Alice
+Server response: Hello, Alice!
+Enter your name (type 'quit' to exit): quit
+```
 
-这是一个最基础的 gRPC 示例，展示了 gRPC 的基本工作流程。
+## How It Works
+
+1. **Proto file definition**: Defines the `HelloService` service containing the `SayHello` method
+2. **Server**: Implements `HelloService`, receives client requests, and returns a greeting message
+3. **Client**: Connects to the server, sends a request, and receives the response
+
+This is the most basic gRPC example, showing the fundamental gRPC workflow.

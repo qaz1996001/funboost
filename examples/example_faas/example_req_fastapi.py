@@ -1,12 +1,12 @@
 """
-funboost.faas FastAPI Router 接口测试示例
+funboost.faas FastAPI Router interface test examples
 
-本示例演示如何使用 funboost.faas 提供个接口：
+This example demonstrates how to use the interfaces provided by funboost.faas:
 
-1. test_publish_and_get_result - 演示发布消息并等待结果（RPC模式）
-2. test_get_msg_count - 演示获取队列消息数量
-3. test_publish_async_then_get_result - 演示异步发布，先获取task_id，再根据task_id获取结果
-4. test_get_all_queues - 演示获取所有已注册的队列名称
+1. test_publish_and_get_result - demonstrates publishing a message and waiting for the result (RPC mode)
+2. test_get_msg_count - demonstrates getting the number of messages in a queue
+3. test_publish_async_then_get_result - demonstrates async publishing, first getting the task_id, then retrieving the result by task_id
+4. test_get_all_queues - demonstrates getting all registered queue names
 
 """
 
@@ -17,15 +17,17 @@ import json
 base_url = "http://127.0.0.1:8000"
 
 def test_publish_and_get_result():
-    """测试发布消息并等待结果（RPC模式）
+    """Test publishing a message and waiting for the result (RPC mode)
 
-    接口有对queue_name是否存在的校验，支持校验消息内容是否正确。所以不用担心跨部门用户使用了错误的queue_name，或者消息内容不正确。
-    用户可以先通过 /get_queues_config 接口获取所有队列的配置信息，就知道有哪些队列，以及每个队列的消费函数支持的消息内容需要包括哪些入参字段了。
+    The endpoint validates whether the queue_name exists and whether the message content is correct,
+    so you don't need to worry about cross-team users providing a wrong queue_name or incorrect message content.
+    Users can first call /get_queues_config to get configuration info for all queues, which shows
+    what queues exist and what input parameters each queue's consumer function expects.
     """
     print("=" * 60)
     print("1. Testing publish and get result (RPC mode)...")
     print("=" * 60)
-    
+
     url = f"{base_url}/funboost/publish"
     data = {
         "queue_name": "test_funboost_faas_queue",
@@ -33,16 +35,16 @@ def test_publish_and_get_result():
         "need_result": True,
         "timeout": 10
     }
-    # publish 
+    # publish
     try:
         resp = requests.post(url, json=data)
         print(f"Status Code: {resp.status_code}")
         print(f"Response: {json.dumps(resp.json(), indent=2, ensure_ascii=False)}")
-        
+
         if resp.status_code == 200:
             result_data = resp.json()
             if result_data['succ']:
-                # 新格式：数据在 data 字段中
+                # New format: data is in the 'data' field
                 task_id = result_data['data']['task_id']
                 status_and_result = result_data['data']['status_and_result']
                 print(f"\n✅ Success!")
@@ -54,23 +56,23 @@ def test_publish_and_get_result():
         print(f"\n❌ Request failed: {e}")
 
 def test_get_msg_count():
-    """测试获取队列消息数量"""
+    """Test getting the number of messages in a queue"""
     print("\n" + "=" * 60)
     print("2. Testing get message count...")
     print("=" * 60)
-    
+
     url = f"{base_url}/funboost/get_msg_count"
     params = {"queue_name": "test_funboost_faas_queue"}
-    
+
     try:
         resp = requests.get(url, params=params)
         print(f"Status Code: {resp.status_code}")
         print(f"Response: {json.dumps(resp.json(), indent=2, ensure_ascii=False)}")
-        
+
         if resp.status_code == 200:
             result_data = resp.json()
             if result_data['succ']:
-                # 新格式：数据在 data 字段中
+                # New format: data is in the 'data' field
                 queue_name = result_data['data']['queue_name']
                 count = result_data['data']['count']
                 print(f"\n✅ Success!")
@@ -82,48 +84,48 @@ def test_get_msg_count():
         print(f"\n❌ Request failed: {e}")
 
 def test_publish_async_then_get_result():
-    """测试异步发布，先获取task_id，再根据task_id获取结果"""
+    """Test async publishing: first get the task_id, then retrieve the result by task_id"""
     print("\n" + "=" * 60)
     print("3. Testing publish async then get result by task_id...")
     print("=" * 60)
-    
-    # 步骤1: 发布消息（不等待结果）
+
+    # Step 1: Publish message (without waiting for result)
     url_pub = f"{base_url}/funboost/publish"
     data = {
         "queue_name": "test_funboost_faas_queue",
         "msg_body": {"x": 33, "y": 44},
-        "need_result": False,  # 不等待结果，立即返回
+        "need_result": False,  # Do not wait for result; return immediately
     }
-    
+
     try:
         resp = requests.post(url_pub, json=data)
         print(f"Publish Status Code: {resp.status_code}")
         print(f"Publish Response: {json.dumps(resp.json(), indent=2, ensure_ascii=False)}")
-        
+
         if resp.status_code == 200:
             result_data = resp.json()
             if result_data['succ']:
-                # 新格式：数据在 data 字段中
+                # New format: data is in the 'data' field
                 task_id = result_data['data']['task_id']
                 print(f"\n✅ Message published!")
                 print(f"Task ID: {task_id}")
-                
+
                 if task_id:
-                    # 步骤2: 根据task_id获取结果
+                    # Step 2: Retrieve result by task_id
                     print("\nWaiting for task to complete...")
-                    time.sleep(0.2)  # 等待一小段时间让任务完成
-                    
+                    time.sleep(0.2)  # Wait a short time for the task to finish
+
                     url_get = f"{base_url}/funboost/get_result"
                     params = {"task_id": task_id, "timeout": 5}
                     resp_get = requests.get(url_get, params=params)
-                    
+
                     print(f"\nGet Result Status Code: {resp_get.status_code}")
                     print(f"Get Result Response: {json.dumps(resp_get.json(), indent=2, ensure_ascii=False)}")
-                    
+
                     if resp_get.status_code == 200:
                         get_result_data = resp_get.json()
                         if get_result_data['succ']:
-                            # 新格式：数据在 data 字段中
+                            # New format: data is in the 'data' field
                             status_and_result = get_result_data['data']['status_and_result']
                             print(f"\n✅ Got result!")
                             print(f"Result: {status_and_result}")
@@ -135,22 +137,22 @@ def test_publish_async_then_get_result():
         print(f"\n❌ Request failed: {e}")
 
 def test_get_all_queues():
-    """测试获取所有已注册的队列名称"""
+    """Test getting all registered queue names"""
     print("\n" + "=" * 60)
     print("4. Testing get all queues...")
     print("=" * 60)
-    
+
     url = f"{base_url}/funboost/get_all_queues"
-    
+
     try:
         resp = requests.get(url)
         print(f"Status Code: {resp.status_code}")
         print(f"Response: {json.dumps(resp.json(), indent=2, ensure_ascii=False)}")
-        
+
         if resp.status_code == 200:
             result_data = resp.json()
             if result_data['succ']:
-                # 新格式：数据在 data 字段中
+                # New format: data is in the 'data' field
                 queues = result_data['data']['queues']
                 count = result_data['data']['count']
                 print(f"\n✅ Success!")
@@ -165,17 +167,17 @@ def test_get_all_queues():
 
 
 def test_get_one_queue_config():
-    """测试获取所有已注册的队列名称"""
+    """Test getting the configuration of a single registered queue"""
     print("\n" + "=" * 60)
     print("4. Testing get all queues...")
     print("=" * 60)
-    
+
     url = f"{base_url}/funboost/get_one_queue_config"
     params = {"queue_name": "test_funboost_faas_queue"}
     resp = requests.get(url, params=params)
     print(f"Status Code: {resp.status_code}")
     print(f"Response: {json.dumps(resp.json(), indent=2, ensure_ascii=False)}")
-    
+
     if resp.status_code == 200:
         result_data = resp.json()
         if result_data['succ']:
@@ -188,10 +190,10 @@ def test_get_one_queue_config():
 
 if __name__ == "__main__":
     print("\n" + "🚀 " * 20)
-    print("FastAPI Funboost faas  接口测试")
+    print("FastAPI Funboost faas Interface Tests")
     print("🚀 " * 20)
-    
-    # 测试所有4个接口
+
+    # Test all 4 interfaces
     test_publish_and_get_result()
     test_get_msg_count()
     test_publish_async_then_get_result()
@@ -199,5 +201,5 @@ if __name__ == "__main__":
     test_get_one_queue_config()
 
     print("\n" + "✅ " * 20)
-    print("测试完成！")
+    print("Tests complete!")
     print("✅ " * 20 + "\n")

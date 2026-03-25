@@ -8,7 +8,7 @@ from funboost import boost, BrokerEnum
 def deco(f):
     @wraps(f)
     def _f(*args, **kwargs):
-        print('叠加装饰器测试')
+        print('Stacked decorator test')
         return f(*args, **kwargs)
 
     return _f
@@ -16,7 +16,7 @@ def deco(f):
 
 @boost(queue_name='s1qc', qps=0.2, broker_kind=BrokerEnum.REDIS, consuming_function_decorator=deco)
 def step1(x):
-    print(f'x 的值是 {x}')
+    print(f'x value is {x}')
     if x == 0:
         for i in range(1, 10):
             step1.publish(dict(x=x + i))
@@ -26,7 +26,7 @@ def step1(x):
 
 @boost(queue_name='s2qc', qps=2, broker_kind=BrokerEnum.REDIS)
 def step2(y):
-    print(f'y 的值是 {y}')
+    print(f'y value is {y}')
 
 
 if __name__ == '__main__':

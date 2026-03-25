@@ -11,18 +11,18 @@ async def root():
     return {"Hello": "World"}
 
 
-# 演示push同步发布, 并且aio rpc获取消费结果
+# Demonstrate push synchronous publishing and aio rpc to get consumption result
 @app.get("/url1/{name}")
 async def api1(name: str):
-    async_result = long_time_fun.push(name)  # 通常发布消息时间比较小,局域网内一般少于0.3毫秒,所以在asyncio的异步方法中调用同步io方法一般不会产生过于严重的灾难
-    return {"result": await AioAsyncResult(async_result.task_id).result}   # 一般情况下不需要请求时候立即使用rpc模式获取消费结果,直接吧消息发到中间件后就不用管了.前端使用ajx轮训或者mqtt
-    # return {"result": async_result.result}  # 如果你直接这样写代码,会产生所有协程全局阻塞灭顶之灾.
+    async_result = long_time_fun.push(name)  # Usually publishing a message is fast; on LAN it's generally less than 0.3ms, so calling synchronous IO in an asyncio async method usually won't cause serious problems
+    return {"result": await AioAsyncResult(async_result.task_id).result}   # In general you don't need rpc mode to get the consumption result immediately upon request. Just send the message to the middleware and forget it. Frontend uses ajax polling or mqtt.
+    # return {"result": async_result.result}  # If you write code this way directly, it will cause all coroutines to block globally — a catastrophe.
 
-# 演示aio_push 异步发布, 并且aio rpc获取消费结果
+# Demonstrate aio_push async publishing and aio rpc to get consumption result
 @app.get("/url2/{name}")
 async def api2(name: str):
-    asio_async_result = await aio_long_time_fun.aio_push(name)  # 如果你用的是asyncio编程生态,那还是建议这种,尤其是对外网发布消息会耗时大的情况下.
-    return {"result": await asio_async_result.result}  # 一般情况下不需要请求时候立即使用rpc模式获取消费结果,直接吧消息发到中间件后就不用管了.前端使用ajx轮训或者mqtt
+    asio_async_result = await aio_long_time_fun.aio_push(name)  # If you use the asyncio programming ecosystem, this approach is still recommended, especially when publishing messages to external networks that may take longer.
+    return {"result": await asio_async_result.result}  # In general you don't need rpc mode to get the consumption result immediately upon request. Just send the message to the middleware and forget it. Frontend uses ajax polling or mqtt.
 
 
 if __name__ == "__main__":

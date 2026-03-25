@@ -24,9 +24,9 @@ cache = Cache().setup("memory://",prefix='myproj3')
 def f2(a, b):
     sleep_time = 7
     result = a + b
-    print(f'消费此消息 {a} + {b} 中。。。。。,此次需要消耗 {sleep_time} 秒')
-    time.sleep(sleep_time)  # 模拟做某事需要阻塞n秒种，必须用并发绕过此阻塞。
-    print(f'{a} + {b} 的结果是 {result}')
+    print(f'Consuming message {a} + {b}..., will take {sleep_time} seconds')
+    time.sleep(sleep_time)  # Simulate blocking for n seconds; must use concurrency to bypass this.
+    print(f'Result of {a} + {b} is {result}')
     return result
 
 

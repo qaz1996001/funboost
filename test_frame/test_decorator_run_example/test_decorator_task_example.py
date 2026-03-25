@@ -1,5 +1,5 @@
 """
-测试装饰器版本方式,注意对比非装饰器版本 test_common_no_decorator_example.py
+Test the decorator approach; compare with the non-decorator version test_common_no_decorator_example.py
 """
 import time
 

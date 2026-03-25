@@ -7,7 +7,7 @@ def add(a, b):
 
 def my_push(quue_name, a, b):
     booster = BoostersManager.build_booster(BoosterParams(queue_name=quue_name, qps=0.2, consuming_function=add, broker_kind=BrokerEnum.REDIS))  # type: Booster
-    # get_or_create_booster 这种就不会无数次去创建 消息队列连接了。
+    # get_or_create_booster this approach won't create message queue connections an unlimited number of times.
     booster.push(a, b)
 
 for i in range(1000):

@@ -14,7 +14,7 @@ def while1_thread():
 def run_in_thread():
     t = Thread(target=while1_thread)
     t.start()
-    # t.join()  # linux + py3.6 + 多进程运行  如果不join 代码会迅速结束。
+    # t.join()  # linux + py3.6 + multi-process execution: if not joined, the code will finish immediately.
 
 
 if __name__ == '__main__':

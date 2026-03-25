@@ -13,7 +13,7 @@ def f(x):
 # logger.warning('aaaaa')
 if __name__ == '__main__':
     run_current_script_on_remote()
-    # 200万条 45秒
+    # 2 million entries in 45 seconds
 
     pool = ProcessPoolExecutor(10)
     print('start')

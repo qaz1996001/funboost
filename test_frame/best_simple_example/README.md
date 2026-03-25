@@ -1,12 +1,12 @@
-演示框架的使用，演示最简单的基于本地持久化消息队列的用法，运行此例子不需要安装任何中间件，有python环境就可以运行。
+Demonstrates the usage of the framework, showing the simplest usage based on a local persistent message queue. Running this example does not require installing any middleware — a Python environment is all you need.
 
 
-自动在当前硬盘下的根目录的\sqllite_queues，创建sqlite数据库文件，可以pycahrm专业版打开数据库查看。
+Automatically creates an SQLite database file under the `\sqllite_queues` directory at the root of the current drive. You can open and inspect the database with PyCharm Professional Edition.
 
 
-正式使用墙裂推荐安装rabbitmq中间件，使用rabbitmq作为消息队列是最好的。不建议redis，redis的list只是个数组结构，很多消息队列的功能redis的list都没有，连最重要的消费确认都不支持，导致随意反复关闭运行中的程序、 突然关机、突然断电这些情况下，会丢失一部分任务。
+For production use, it is strongly recommended to install the RabbitMQ middleware; using RabbitMQ as the message queue is the best choice. Redis is not recommended — Redis's list is just an array structure and lacks many message queue features. Even the most critical feature, consumption acknowledgment, is not supported, which means that arbitrarily stopping a running program, sudden shutdowns, or power outages can cause some tasks to be lost.
 
-此例子没有利用到框架中除分布式以外的10种功能。
+This example does not make use of the framework's 10 additional features beyond distribution.
 
 
-### 装饰器版本的运行方式，查看test_decorator_run_example的例子。
+### For the decorator-based usage, see the test_decorator_run_example.

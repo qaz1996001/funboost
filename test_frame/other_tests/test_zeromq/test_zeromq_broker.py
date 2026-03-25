@@ -14,7 +14,7 @@ poller.register(backend, zmq.POLLIN)
 
 # Switch messages between sockets
 while True:
-    socks = dict(poller.poll())   #轮询器 循环接收
+    socks = dict(poller.poll())   # Poller: loop receiving
 
     if socks.get(frontend) == zmq.POLLIN:
         message = frontend.recv_multipart()

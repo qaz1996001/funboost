@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-有界 SimpleQueue：SimpleQueue + 信号量
+Bounded SimpleQueue: SimpleQueue + Semaphore
 """
 
 import threading
@@ -8,17 +8,17 @@ from queue import SimpleQueue, Empty as QueueEmpty
 
 
 class BoundedSimpleQueue:
-    """有界 SimpleQueue，信号量实现背压"""
-    
+    """Bounded SimpleQueue, implements backpressure using a semaphore"""
+
     __slots__ = ('_queue', '_semaphore', '_maxsize')
-    
+
     def __init__(self, maxsize: int = 0):
         self._queue = SimpleQueue()
         self._maxsize = maxsize if maxsize > 0 else 0
         self._semaphore = threading.Semaphore(maxsize) if maxsize > 0 else None
-    
+
     def put(self, item, block=True, timeout=None):
-        """放入消息，队列满时阻塞"""
+        """Put a message; blocks when queue is full"""
         if self._semaphore is not None:
             acquired = self._semaphore.acquire(blocking=block, timeout=timeout)
             if not acquired:
@@ -30,9 +30,9 @@ class BoundedSimpleQueue:
                 raise
         else:
             self._queue.put(item)
-    
+
     def get(self, block=True, timeout=None):
-        """获取消息"""
+        """Get a message"""
         try:
             item = self._queue.get(block=block, timeout=timeout)
         except QueueEmpty:
@@ -40,10 +40,10 @@ class BoundedSimpleQueue:
         if self._semaphore is not None:
             self._semaphore.release()
         return item
-    
+
     def qsize(self):
         return self._queue.qsize()
-    
+
     def empty(self):
         return self._queue.empty()
 
@@ -57,11 +57,11 @@ class Full(Exception):
 
 
 class BoundedSimpleQueues:
-    """有界 SimpleQueue 管理器"""
-    
+    """Bounded SimpleQueue manager"""
+
     _queues = {}
     _lock = threading.Lock()
-    
+
     @classmethod
     def get_queue(cls, queue_name: str, maxsize: int = 10000):
         if queue_name not in cls._queues:
@@ -74,17 +74,17 @@ class BoundedSimpleQueues:
 if __name__ == '__main__':
     import time
     import queue
-    
+
     n = 1000000
-    print(f"测试 {n:,} 次 put + get:")
-    
+    print(f"Testing {n:,} put + get operations:")
+
     # q = BoundedSimpleQueue(maxsize=n)
     q = queue.Queue(maxsize=n)
     t0 = time.time()
     for i in range(n):
         q.put(i)
     print(f"  put: {time.time()-t0:.3f}s, {n/(time.time()-t0):,.0f} ops/sec")
-    
+
     t0 = time.time()
     for i in range(n):
         q.get()

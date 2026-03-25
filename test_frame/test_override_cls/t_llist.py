@@ -1,20 +1,20 @@
 from llist import sllist
 
-# 创建一个空的链表
+# Create an empty linked list
 ll = sllist()
 
-# 在链表的尾部添加节点
+# Append a node to the tail of the linked list
 ll.append(1)
 
-# 在链表的头部添加节点
+# Prepend a node to the head of the linked list
 ll.appendleft(2)
 
-# 删除指定节点
+# Remove a specific node
 ll.remove(1)
 
-# 获取链表的长度
+# Get the length of the linked list
 length = len(ll)
 
-# 遍历链表
+# Iterate through the linked list
 for node in ll:
     print(node.value)

@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 def scan_files(root_dir, excluded_dirs,specify_files):
-    all_codesr_str = '# funboost 项目代码文件大全 \n'
+    all_codesr_str = '# funboost Project Code File Collection \n'
     for f in specify_files:
         pass
         # print(f)
@@ -20,7 +20,7 @@ def scan_files(root_dir, excluded_dirs,specify_files):
                 lang = short_file_name.split('.')[-1]
                 if lang=='py':
                     lang = 'python'
-                all_codesr_str += f'\n### 代码文件: {short_file_name}\n```{lang}\n{file_str}\n```\n'
+                all_codesr_str += f'\n### Code file: {short_file_name}\n```{lang}\n{file_str}\n```\n'
     Path('all_codes.md').write_text(all_codesr_str, encoding='utf-8')
 
 

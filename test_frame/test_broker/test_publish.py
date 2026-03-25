@@ -7,9 +7,9 @@ from test_frame.test_broker.test_consume import f, f2
 for i in range(200):
 
     if i == 0:
-        print(time.strftime("%H:%M:%S"), '发布第一条')
+        print(time.strftime("%H:%M:%S"), 'Publishing first message')
     if i %100 ==  0:
-        print(time.strftime("%H:%M:%S"), f'发布第 {i} 条')
+        print(time.strftime("%H:%M:%S"), f'Publishing message {i}')
     f2.push(i, i * 2)
     # f2.push(i, 1 * 2)
     # time.sleep(1)

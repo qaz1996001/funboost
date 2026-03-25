@@ -1,61 +1,61 @@
 """
-快速验证重构后的动态导入机制
+Quickly verify the refactored dynamic import mechanism
 """
 
 def test_config_driven_import():
-    """验证配置驱动的导入机制"""
-    print("测试配置驱动的动态导入机制\n")
+    """Verify the config-driven import mechanism"""
+    print("Testing config-driven dynamic import mechanism\n")
     print("=" * 60)
-    
-    # 测试1: 导入 fastapi_router
+
+    # Test 1: Import fastapi_router
     try:
         from funboost.faas import fastapi_router
-        print("✅ fastapi_router 导入成功")
-        print(f"   类型: {type(fastapi_router)}")
-        print(f"   前缀: {fastapi_router.prefix}")
+        print("✅ fastapi_router imported successfully")
+        print(f"   Type: {type(fastapi_router)}")
+        print(f"   Prefix: {fastapi_router.prefix}")
     except Exception as e:
-        print(f"❌ fastapi_router 导入失败: {e}")
-    
+        print(f"❌ fastapi_router import failed: {e}")
+
     print()
-    
-    # 测试2: 验证缓存机制
+
+    # Test 2: Verify cache mechanism
     try:
         from funboost.faas import fastapi_router as router1
         from funboost.faas import fastapi_router as router2
-        
+
         if router1 is router2:
-            print("✅ 缓存机制正常：多次导入返回同一对象")
+            print("✅ Cache mechanism works: multiple imports return the same object")
         else:
-            print("❌ 缓存机制失败：多次导入返回不同对象")
+            print("❌ Cache mechanism failed: multiple imports return different objects")
     except Exception as e:
-        print(f"❌ 缓存测试失败: {e}")
-    
+        print(f"❌ Cache test failed: {e}")
+
     print()
-    
-    # 测试3: 检查配置是否可读
+
+    # Test 3: Check if config is accessible
     try:
         import funboost.faas as faas_module
         config = faas_module._ROUTER_CONFIG
-        
-        print("✅ 配置表可访问")
-        print(f"   支持的 routers: {list(config.keys())}")
-        print(f"   总数: {len(config)}")
+
+        print("✅ Config table is accessible")
+        print(f"   Supported routers: {list(config.keys())}")
+        print(f"   Total: {len(config)}")
     except Exception as e:
-        print(f"❌ 配置表访问失败: {e}")
-    
+        print(f"❌ Config table access failed: {e}")
+
     print()
-    
-    # 测试4: 错误提示
+
+    # Test 4: Error message
     try:
         from funboost.faas import non_existent_router
-        print("❌ 应该抛出 AttributeError")
+        print("❌ Should have raised AttributeError")
     except AttributeError as e:
-        print(f"✅ 正确抛出 AttributeError: {e}")
+        print(f"✅ Correctly raised AttributeError: {e}")
     except Exception as e:
-        print(f"⚠️  抛出了非预期的异常: {e}")
-    
+        print(f"⚠️  Raised an unexpected exception: {e}")
+
     print("\n" + "=" * 60)
-    print("重构验证完成！配置驱动的动态导入机制工作正常 🎉")
+    print("Refactoring verification complete! Config-driven dynamic import mechanism works correctly 🎉")
 
 
 if __name__ == "__main__":

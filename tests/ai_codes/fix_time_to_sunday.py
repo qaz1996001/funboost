@@ -93,7 +93,7 @@ def main():
             if process_file(filepath):
                 total_changed += 1
 
-    print(f"\n共修改了 {total_changed} 个文件")
+    print(f"\nTotal files modified: {total_changed}")
 
 
 if __name__ == '__main__':

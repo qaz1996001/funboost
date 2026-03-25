@@ -9,12 +9,12 @@ def f1(x):
     for async_result in async_result_list:
         async_result.set_timeout(300)
         print(async_result.task_id, async_result.status_and_result, async_result.result)
-    print('f2 10个任务都完成了，现在开始进行下一步，打印哈哈。')
-    print('哈哈')
+    print('All 10 f2 tasks are complete; proceeding to the next step.')
+    print('haha')
 
 
 @BoosterParams(queue_name='test_rpc_queue_a2',
-               is_using_rpc_mode=True,  # f2必须支持rpc，必须写is_using_rpc_mode=True
+               is_using_rpc_mode=True,  # f2 must support rpc; is_using_rpc_mode=True must be set
                broker_kind=BrokerEnum.REDIS_ACK_ABLE,
                qps=5, max_retry_times=5)
 def f2(y):

@@ -8,7 +8,7 @@ def gen_queue_name_by_ip(queue_namex, ip):
 
 
 def get_current_ip(ip=None):
-    return ip  # 实际是写成自动获取当前机器的ip,不需要传参,作者例子现在是在一台机器2个脚本运行,模拟2台机器,所以需要传参.
+    return ip  # In practice, this would automatically get the current machine's IP without parameters; in the author's example, two scripts run on one machine simulating two machines, so a parameter is needed.
 
 
 ip_101 = '192.168.1.101b'
@@ -22,21 +22,22 @@ class GlobalVars:
 
 @boost(BoosterParams(queue_name='queue1', concurrent_mode=ConcurrentModeEnum.SINGLE_THREAD, broker_kind=BrokerEnum.REDIS))
 def distribute_msg(x):
-    """轮流分发消息到每台机器,并且阻塞等待函数运行完成,才分发下一个任务到下一台机器"""
+    """Distribute messages to each machine in turn, blocking until function completes before distributing the next task to the next machine"""
     GlobalVars.i += 1
-    ip = ip_list[GlobalVars.i % len(ip_list)]  # 轮流向每台机器的队列分发推送消息
+    ip = ip_list[GlobalVars.i % len(ip_list)]  # Round-robin push messages to each machine's queue
     booster = build_booster_really_execute_msg_on_host_by_ip(ip)
     async_result = booster.push(x)
     # async_result.set_timeout(10)
     """
-    使用async_result.get() rpc模式是为了阻塞,直到 really_execute_msg_on_host 函数运行消息完成,
-    配合上distribute_msg是单线程并发模式, 这样就是保证了多台机器只有一个机器在使用 really_execute_msg_on_host 函数运行queue1中取出的消息
+    Using async_result.get() RPC mode to block until the really_execute_msg_on_host function finishes
+    processing the message. Combined with distribute_msg's single-thread mode, this guarantees that
+    only one machine at a time uses really_execute_msg_on_host to process messages from queue1.
     """
-    print(async_result.get()) # 这一行会阻塞函直到消息在 really_execute_msg_on_host 函数中运行完成.
+    print(async_result.get()) # This line blocks until the message finishes running in really_execute_msg_on_host.
 
 
 def really_execute_msg_on_host(x):
-    """真正的执行消息,在每台机器轮流运行这个函数."""
+    """Actually execute messages; this function runs on each machine in turn."""
     time.sleep(5)
     print(x)
     return f'{x} finish from ip_xx '
@@ -57,5 +58,5 @@ if __name__ == '__main__':
         distribute_msg.push(i)
     distribute_msg.consume()
     """
-    这个消息分发部署在一台机器上
+    This message dispatcher is deployed on one machine.
     """

@@ -3,60 +3,60 @@
 
 import grpc
 
-# 导入生成的 protobuf 文件
+# Import generated protobuf files
 import hello_pb2
 import hello_pb2_grpc
 import time
 
 def run_client():
     """
-    运行 gRPC 客户端
+    Run gRPC client
     """
-    # 连接到服务器
+    # Connect to the server
     with grpc.insecure_channel('localhost:50051') as channel:
-        # 创建 stub
+        # Create stub
         stub = hello_pb2_grpc.HelloServiceStub(channel)
         time_start = time.time()
         for i in range(10000):
-            # 创建请求
+            # Create request
             request = hello_pb2.HelloRequest(name=f"World_{i}")
-            
+
             try:
-                # 调用远程方法
+                # Call remote method
                 response = stub.SayHello(request)
-                # print(f"服务器响应: {response.message}")
+                # print(f"Server response: {response.message}")
             except grpc.RpcError as e:
-                print(f"gRPC 调用失败: {e}")
+                print(f"gRPC call failed: {e}")
         time_end = time.time()
-        print(f"gRPC 调用时间: {time_end - time_start} 秒")
+        print(f"gRPC call time: {time_end - time_start} seconds")
 
 
 def interactive_client():
     """
-    交互式客户端
+    Interactive client
     """
     with grpc.insecure_channel('localhost:50051') as channel:
         stub = hello_pb2_grpc.HelloServiceStub(channel)
-        
+
         while True:
-            name = input("请输入您的名字 (输入 'quit' 退出): ")
+            name = input("Please enter your name (type 'quit' to exit): ")
             if name.lower() == 'quit':
                 break
-                
+
             request = hello_pb2.HelloRequest(name=name)
-            
+
             try:
                 response = stub.SayHello(request)
-                print(f"服务器响应: {response.message}")
+                print(f"Server response: {response.message}")
             except grpc.RpcError as e:
-                print(f"gRPC 调用失败: {e}")
+                print(f"gRPC call failed: {e}")
         
 
 
 
 if __name__ == '__main__':
-    print("=== gRPC 客户端测试 ===")
-    print("1. 简单测试")
+    print("=== gRPC Client Test ===")
+    print("1. Simple test")
    
     run_client()
     

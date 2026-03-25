@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Flask 应用启动时初始化 APScheduler 调度器
-确保所有队列的 Redis JobStore 调度器都正确启动
+Initialize APScheduler schedulers when a Flask application starts up
+Ensure that Redis JobStore schedulers for all queues start correctly
 """
 
 from funboost.core.active_cousumer_info_getter import QueuesConusmerParamsGetter, SingleQueueConusmerParamsGetter
@@ -10,47 +10,47 @@ from funboost import logger_getter
 
 logger = logger_getter.get_logger('timing_jobs_init')
 
-# 全局字典，存储已初始化的调度器
+# Global dict storing initialized schedulers
 _initialized_schedulers = {}
 
 def init_all_timing_schedulers():
     """
-    初始化所有队列的定时任务调度器
-    应该在 Flask 应用启动时调用一次
+    Initialize timing job schedulers for all queues
+    Should be called once when the Flask application starts
     """
-    logger.info("开始初始化定时任务调度器...")
-    
+    logger.info("Starting initialization of timing job schedulers...")
+
     all_queues = list(QueuesConusmerParamsGetter().get_all_queue_names())
-    logger.info(f"发现 {len(all_queues)} 个队列")
-    
+    logger.info(f"Found {len(all_queues)} queues")
+
     for queue_name in all_queues:
         try:
-            # 为每个队列创建 Redis 模式的调度器
+            # Create a Redis-mode scheduler for each queue
             booster = SingleQueueConusmerParamsGetter(queue_name)\
                 .gen_booster_for_faas()
-            
-            # 创建并启动调度器
+
+            # Create and start scheduler
             job_adder = ApsJobAdder(booster, job_store_kind='redis', is_auto_start=True)
-            
-            # 检查是否有任务
+
+            # Check for existing jobs
             jobs = job_adder.aps_obj.get_jobs()
-            
+
             _initialized_schedulers[queue_name] = job_adder.aps_obj
-            
-            logger.info(f"✓ 队列 '{queue_name}' 调度器已启动，当前任务数: {len(jobs)}")
-            
+
+            logger.info(f"✓ Scheduler for queue '{queue_name}' started, current job count: {len(jobs)}")
+
         except Exception as e:
-            logger.error(f"✗ 队列 '{queue_name}' 调度器初始化失败: {e}")
-    
-    logger.info(f"定时任务调度器初始化完成，共 {len(_initialized_schedulers)} 个调度器运行中")
-    
+            logger.error(f"✗ Scheduler initialization failed for queue '{queue_name}': {e}")
+
+    logger.info(f"Timing job scheduler initialization complete, {len(_initialized_schedulers)} scheduler(s) running")
+
     return _initialized_schedulers
 
 
 def get_scheduler_for_queue(queue_name, job_store_kind='redis'):
     """
-    获取指定队列的调度器
-    如果不存在则创建
+    Get the scheduler for a specific queue
+    Creates one if it does not exist
     """
     if job_store_kind == 'redis':
         key = queue_name
@@ -60,31 +60,31 @@ def get_scheduler_for_queue(queue_name, job_store_kind='redis'):
                     .gen_booster_for_faas()
                 job_adder = ApsJobAdder(booster, job_store_kind='redis', is_auto_start=True)
                 _initialized_schedulers[key] = job_adder.aps_obj
-                logger.info(f"创建新的调度器: {queue_name}")
+                logger.info(f"Created new scheduler: {queue_name}")
             except Exception as e:
-                logger.error(f"创建调度器失败 {queue_name}: {e}")
+                logger.error(f"Failed to create scheduler {queue_name}: {e}")
                 raise
-        
+
         return _initialized_schedulers[key]
     else:
-        # memory 模式使用全局调度器
+        # memory mode uses global scheduler
         from funboost.timing_job.timing_job_base import funboost_aps_scheduler
         return funboost_aps_scheduler
 
 
-# 在 app.py 中调用示例:
+# Example of calling in app.py:
 if __name__ == '__main__':
-    # 测试初始化
+    # Test initialization
     init_all_timing_schedulers()
-    
+
     import time
-    print("\\n调度器运行中，按 Ctrl+C 退出...")
+    print("\\nSchedulers running, press Ctrl+C to exit...")
     try:
         while True:
             time.sleep(60)
-            # 定期检查调度器状态
+            # Periodically check scheduler status
             for queue_name, scheduler in _initialized_schedulers.items():
                 jobs = scheduler.get_jobs()
-                print(f"队列 {queue_name}: {len(jobs)} 个任务运行中")
+                print(f"Queue {queue_name}: {len(jobs)} job(s) running")
     except KeyboardInterrupt:
-        print("\\n停止调度器...")
+        print("\\nStopping schedulers...")

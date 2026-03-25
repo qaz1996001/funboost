@@ -38,6 +38,6 @@ class MyClass:
     def my_class_property(cls):
         return cls._my_class_property
 
-# 直接通过类名访问类属性的值
+# Access class attribute value directly through the class name
 value = MyClass.my_class_property
-print(value)  # 输出: Hello, World!
+print(value)  # Output: Hello, World!

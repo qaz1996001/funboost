@@ -1,22 +1,22 @@
 """
-Funboost 最最基础示例
-演示如何使用 @boost 装饰器创建分布式任务队列
+The most basic Funboost example.
+Demonstrates how to use the @boost decorator to create a distributed task queue.
 """
 import time
 from funboost import boost, BrokerEnum, BoosterParams,ctrl_c_recv
 
 
-# 示例1: 最简单的任务函数
+# Example 1: The simplest task function
 @boost(BoosterParams(
     queue_name="demo_queue_1",
-    broker_kind=BrokerEnum.SQLITE_QUEUE,  # 使用 SQLite 作为消息队列，无需额外安装中间件
-    qps=5,  # 每秒执行5次
-    concurrent_num=10,  # 并发数为10
+    broker_kind=BrokerEnum.SQLITE_QUEUE,  # Use SQLite as the message queue; no extra middleware needed
+    qps=5,  # Execute 5 times per second
+    concurrent_num=10,  # Concurrency of 10
 ))
 def add_task(x, y):
-    """简单的加法任务"""
-    print(f'计算: {x} + {y} = {x + y}')
-    time.sleep(1)  # 模拟耗时操作
+    """Simple addition task"""
+    print(f'Calculating: {x} + {y} = {x + y}')
+    time.sleep(1)  # Simulate a time-consuming operation
     return x + y
 
 

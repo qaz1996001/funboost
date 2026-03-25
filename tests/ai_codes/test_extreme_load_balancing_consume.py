@@ -2,27 +2,26 @@ import logging
 import time
 from funboost import boost, BrokerEnum, BoosterParams, ctrl_c_recv, ConcurrentModeEnum
 
-# 极端的消费负载均衡示例
+# Extreme consumer load balancing example
 @boost(BoosterParams(
     queue_name='test_extreme_load_balancing_queue',
-    broker_kind=BrokerEnum.REDIS_ACK_ABLE, # 这里使用REDIS_ACK_ABLE作为示例，其他broker同理
+    broker_kind=BrokerEnum.REDIS_ACK_ABLE, # Using REDIS_ACK_ABLE as an example; other brokers work the same way
     log_level=logging.INFO,
-    
-    # 关键点1: 设置并发模式为 SINGLE_THREAD
-    # 这样不会使用线程池，也就没有线程池内部的缓冲队列
+
+    # Key point 1: Set concurrent mode to SINGLE_THREAD
+    # This avoids using a thread pool, which means no internal buffer queue inside the thread pool
     concurrent_mode=ConcurrentModeEnum.SINGLE_THREAD,
-    
-    # 关键点2: 设置 broker 专属配置 pull_msg_batch_size 为 1
-    # 默认情况下很多 broker (如Redis) 会批量拉取 (例如100条) 到内存中
-    # 设置为 1 确保每次只拉取一条消息，处理完再拉下一条
+
+    # Key point 2: Set broker-specific config pull_msg_batch_size to 1
+    # By default many brokers (e.g. Redis) pull messages in batches (e.g. 100) into memory
+    # Setting it to 1 ensures only one message is pulled at a time; the next is pulled after processing
     broker_exclusive_config={'pull_msg_batch_size': 1},
 ))
 def extreme_load_balancing_consumer(x):
     print(f"Consumer processing: {x}")
-    time.sleep(1) # 模拟耗时任务
+    time.sleep(1) # Simulate a time-consuming task
 
 if __name__ == '__main__':
-    # 启动消费
+    # Start consuming
     extreme_load_balancing_consumer.consume()
     ctrl_c_recv()
-

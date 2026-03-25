@@ -12,6 +12,6 @@ def print_long_str(long_str):
 
 
 for i in range(10000000):
-    pool.submit(print_long_str,f'很长的字符串很占内存{i}'*10)
-    print(f'提交到线程池成功{i}')
+    pool.submit(print_long_str,f'very long string consuming memory{i}'*10)
+    print(f'Submitted to thread pool successfully{i}')
 

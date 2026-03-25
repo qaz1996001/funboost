@@ -21,7 +21,7 @@ def my_consuming_function(x):
     time.sleep(5)
     print(f'hi: {x}')
     if random.random() > 0.6:
-        raise ValueError('f error 很长的报错，看看显示咋样，啦啦啦啦啦啦啦啦啦啦啦啦啊啊啊啊')
+        raise ValueError('f error very long error message to see how it displays, la la la la la la la la la la la ah ah ah ah')
     return x + 1
 
 @boost(MyBoosterParams(queue_name='queue_test_g02t',broker_kind=BrokerEnum.RABBITMQ_AMQPSTORM,qps=0.5,
@@ -73,7 +73,7 @@ async def aio_f6(x):
     return x + 1
 
 if __name__ == '__main__':
-    start_funboost_web_manager(port=27018)  # 也可以在python代码中启动web,启动 funboost web manager funboost队列管理界面
+    start_funboost_web_manager(port=27018)  # Can also start web from Python code, starts funboost web manager queue management UI
 
     f2.clear()
 

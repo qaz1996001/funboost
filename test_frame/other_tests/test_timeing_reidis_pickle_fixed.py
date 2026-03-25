@@ -1,76 +1,76 @@
 import pickle
 import codecs
 
-# 原始的二进制数据
+# Original binary data
 s1 = b'''
 \x80\x04\x95W\x04\x00\x00\x00\x00\x00\x00}\x94(\x8c\x07version\x94K\x01\x8c\x02id\x94\x8c\x09cron_job1\x94\x8c\x04func\x94\x8c=funboost.timing_job.timing_job_base:push_fun_params_to_broker\x94\x8c\x07trigger\x94\x8c\x19apscheduler.triggers.cron\x94\x8c\x0BCronTrigger\x94\x93\x94)\x81\x94}\x94(h\x01K\x02\x8c\x08timezone\x94\x8c\x04pytz\x94\x8c\x02_p\x94\x93\x94(\x8c\x0DAsia/Shanghai\x94M\xE8qK\x00\x8c\x03LMT\x94t\x94R\x94\x8c\x0Astart_date\x94N\x8c\x08end_date\x94N\x8c\x06fields\x94]\x94(\x8c apscheduler.triggers.cron.fields\x94\x8c\x09BaseField\x94\x93\x94)\x81\x94}\x94(\x8c\x04name\x94\x8c\x04year\x94\x8c\x0Ais_default\x94\x88\x8c\x0Bexpressions\x94]\x94\x8c%apscheduler.triggers.cron.expressions\x94\x8c\x0DAllExpression\x94\x93\x94)\x81\x94}\x94\x8c\x04step\x94Nsbaubh\x18\x8c\x0AMonthField\x94\x93\x94)\x81\x94}\x94(h\x1D\x8c\x05month\x94h\x1F\x88h ]\x94h$)\x81\x94}\x94h'Nsbaubh\x18\x8c\x0FDayOfMonthField\x94\x93\x94)\x81\x94}\x94(h\x1D\x8c\x03day\x94h\x1F\x88h ]\x94h$)\x81\x94}\x94h'Nsbaubh\x18\x8c\x09WeekField\x94\x93\x94)\x81\x94}\x94(h\x1D\x8c\x04week\x94h\x1F\x88h ]\x94h$)\x81\x94}\x94h'Nsbaubh\x18\x8c\x0EDayOfWeekField\x94\x93\x94)\x81\x94}\x94(h\x1D\x8c\x0Bday_of_week\x94h\x1F\x89h ]\x94h$)\x81\x94}\x94h'Nsbaubh\x1A)\x81\x94}\x94(h\x1D\x8c\x04hour\x94h\x1F\x89h ]\x94h"\x8c\x0FRangeExpression\x94\x93\x94)\x81\x94}\x94(h'N\x8c\x05first\x94K\x17\x8c\x04last\x94K\x17ubaubh\x1A)\x81\x94}\x94(h\x1D\x8c\x06minute\x94h\x1F\x89h ]\x94hM)\x81\x94}\x94(h'NhPK1hQK1ubaubh\x1A)\x81\x94}\x94(h\x1D\x8c\x06second\x94h\x1F\x89h ]\x94hM)\x81\x94}\x94(h'NhPK2hQK2ubaube\x8c\x06jitter\x94Nub\x8c\x08executor\x94\x8c\x07default\x94\x8c\x04args\x94\x8c\x0Asum_queue3\x94\x85\x94\x8c\x06kwargs\x94}\x94(\x8c\x01x\x94K2\x8c\x01y\x94K<uh\x1D\x8c.push_fun_params_to_broker_for_queue_sum_queue3\x94\x8c\x12misfire_grace_time\x94K\x01\x8c\x08coalesce\x94\x88\x8c\x0Dmax_instances\x94K\x01\x8c\x0Dnext_run_time\x94\x8c\x08datetime\x94\x8c\x08datetime\x94\x93\x94C\x0A\x07\xE9\x06\x1A\x1712\x00\x00\x00\x94h\x0F(h\x10M\x80pK\x00\x8c\x03CST\x94t\x94R\x94\x86\x94R\x94u.
 '''
 
 def analyze_pickle_data():
-    """分析 pickle 数据的问题"""
-    print("=== 分析 pickle 数据 ===")
-    
-    # 1. 检查原始数据
-    print(f"原始数据长度: {len(s1)}")
-    print(f"数据开头几个字节: {s1[:20]}")
-    print(f"数据结尾几个字节: {s1[-20:]}")
-    
-    # 2. 清理数据：移除开头和结尾的换行符
+    """Analyze the issues with pickle data"""
+    print("=== Analyzing pickle data ===")
+
+    # 1. Check original data
+    print(f"Original data length: {len(s1)}")
+    print(f"First few bytes of data: {s1[:20]}")
+    print(f"Last few bytes of data: {s1[-20:]}")
+
+    # 2. Clean data: remove leading and trailing newlines
     cleaned_data = s1.strip()
-    print(f"清理后数据长度: {len(cleaned_data)}")
-    print(f"清理后开头几个字节: {cleaned_data[:20]}")
-    print(f"清理后结尾几个字节: {cleaned_data[-20:]}")
-    
-    # 3. 尝试反序列化清理后的数据
+    print(f"Cleaned data length: {len(cleaned_data)}")
+    print(f"First few bytes after cleaning: {cleaned_data[:20]}")
+    print(f"Last few bytes after cleaning: {cleaned_data[-20:]}")
+
+    # 3. Try to deserialize the cleaned data
     try:
         job = pickle.loads(cleaned_data)
-        print("✅ 反序列化成功!")
-        print(f"Job 类型: {type(job)}")
-        print(f"Job 内容: {job}")
+        print("✅ Deserialization successful!")
+        print(f"Job type: {type(job)}")
+        print(f"Job content: {job}")
         return job
     except Exception as e:
-        print(f"❌ 反序列化失败: {e}")
+        print(f"❌ Deserialization failed: {e}")
         return None
 
 def fix_redis_pickle_issue():
-    """修复 Redis pickle 序列化问题的方案"""
-    print("\n=== Redis Pickle 问题修复方案 ===")
-    
+    """Solution to fix Redis pickle serialization issue"""
+    print("\n=== Redis Pickle Issue Fix Solution ===")
+
     print("""
-    这个问题的原因和解决方案：
-    
-    1. 问题原因：
-       - 二进制数据前后包含了换行符等额外字符
-       - pickle.loads() 对数据格式要求严格，不能有额外的字符
-       - 可能是从 Redis 或文件中读取时引入了额外字符
-    
-    2. 解决方案：
-       a) 数据清理方法：
-          - 使用 data.strip() 移除前后空白字符
-          - 检查数据完整性
-       
-       b) Redis 存储改进：
-          - 确保存储时使用正确的序列化方法
-          - 读取时正确处理二进制数据
-       
-       c) APScheduler 配置优化：
-          - 使用合适的序列化器配置
-          - 确保 jobstore 配置正确
+    Cause and solution for this issue:
+
+    1. Root cause:
+       - Binary data contains extra characters like newlines before and after
+       - pickle.loads() requires strict data format with no extra characters
+       - Extra characters may have been introduced when reading from Redis or files
+
+    2. Solutions:
+       a) Data cleaning method:
+          - Use data.strip() to remove leading/trailing whitespace
+          - Verify data integrity
+
+       b) Redis storage improvements:
+          - Ensure correct serialization method is used when storing
+          - Properly handle binary data when reading
+
+       c) APScheduler configuration optimization:
+          - Use appropriate serializer configuration
+          - Ensure jobstore configuration is correct
     """)
 
 def create_test_job():
-    """创建一个测试 job 来验证序列化/反序列化"""
-    print("\n=== 创建测试 job ===")
-    
+    """Create a test job to verify serialization/deserialization"""
+    print("\n=== Creating test job ===")
+
     try:
         from apscheduler.job import Job
         from apscheduler.triggers.cron import CronTrigger
         import datetime
         import pytz
-        
-        # 创建一个简单的测试 job
+
+        # Create a simple test job
         trigger = CronTrigger(hour=23, minute=49, second=50, timezone=pytz.timezone('Asia/Shanghai'))
-        
+
         job_data = {
             'version': 1,
             'id': 'test_job',
@@ -85,34 +85,34 @@ def create_test_job():
             'max_instances': 1,
             'next_run_time': datetime.datetime.now(pytz.timezone('Asia/Shanghai'))
         }
-        
-        # 测试序列化
+
+        # Test serialization
         pickled = pickle.dumps(job_data)
-        print(f"✅ 序列化成功，数据长度: {len(pickled)}")
-        
-        # 测试反序列化
+        print(f"✅ Serialization successful, data length: {len(pickled)}")
+
+        # Test deserialization
         unpickled = pickle.loads(pickled)
-        print(f"✅ 反序列化成功: {unpickled['id']}")
-        
+        print(f"✅ Deserialization successful: {unpickled['id']}")
+
         return True
-        
+
     except Exception as e:
-        print(f"❌ 测试失败: {e}")
+        print(f"❌ Test failed: {e}")
         return False
 
 if __name__ == '__main__':
-    # 分析现有数据
+    # Analyze existing data
     job = analyze_pickle_data()
-    
-    # 提供修复方案
+
+    # Provide fix solution
     fix_redis_pickle_issue()
-    
-    # 创建测试案例
+
+    # Create test case
     create_test_job()
-    
-    print("\n=== 建议 ===")
+
+    print("\n=== Recommendations ===")
     print("""
-    1. 立即修复：对现有数据使用 data.strip() 清理
-    2. 长期方案：检查 Redis 存储逻辑，确保数据存储时不包含额外字符
-    3. 预防措施：在存储和读取时都进行数据验证
-    """) 
+    1. Immediate fix: Use data.strip() to clean existing data
+    2. Long-term solution: Check Redis storage logic to ensure no extra characters when storing data
+    3. Prevention: Validate data both when storing and reading
+    """)

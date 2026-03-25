@@ -1,35 +1,35 @@
-# 为什么 funboost.faas 支持热加载函数
+# Why funboost.faas Supports Hot-Reloading Functions
 
-## 核心问题
+## Core Question
 
-当一个新的 `@boost` 装饰器的消费函数部署后，**web 服务无需重启**，即可通过 HTTP 接口调用该函数并获取结果。这种热加载能力是如何实现的？
+When a new `@boost`-decorated consumer function is deployed, the **web service requires no restart** — it can immediately call that function via the HTTP interface and retrieve results. How is this hot-reload capability implemented?
 
-## 底层原理分析
+## Analysis of the Underlying Mechanism
 
-### 1. 架构概览
+### 1. Architecture Overview
 
 ```mermaid
 graph LR
-    A[新 Booster 部署上线] --> B[向 Redis 注册元数据]
-    B --> C[Redis 存储 Booster 配置]
-    D[Web 接口收到请求] --> E[从 Redis 动态读取配置]
-    E --> F[即时生成 Fake Booster]
-    F --> G[发布消息到队列]
-    G --> H[原 Booster 进程消费执行]
-    H --> I[返回结果]
+    A[New Booster Deployed] --> B[Register Metadata in Redis]
+    B --> C[Redis Stores Booster Config]
+    D[Web Interface Receives Request] --> E[Dynamically Read Config from Redis]
+    E --> F[Instantly Generate Fake Booster]
+    F --> G[Publish Message to Queue]
+    G --> H[Original Booster Process Consumes and Executes]
+    H --> I[Return Result]
 ```
 
-### 2. 关键机制：基于 Redis 的元数据注册
+### 2. Key Mechanism: Redis-Based Metadata Registration
 
-当 `@boost` 装饰的函数启动消费时，会自动将 `BoosterParams` 配置信息序列化后写入 Redis：
+When a `@boost`-decorated function starts consuming, it automatically serializes and writes the `BoosterParams` configuration into Redis:
 
-| Redis Key | 存储内容 |
+| Redis Key | Stored Content |
 |-----------|----------|
-| `funboost_all_queue_names` | 所有队列名称集合 |
-| `funboost.project_name:{project}` | 按项目分组的队列名 |
-| `funboost_queue__consumer_parmas` | 每个队列的完整 BoosterParams 配置（JSON） |
+| `funboost_all_queue_names` | Set of all queue names |
+| `funboost.project_name:{project}` | Queue names grouped by project |
+| `funboost_queue__consumer_parmas` | Full BoosterParams configuration (JSON) for each queue |
 
-**核心配置示例**（存储在 Redis 中）：
+**Example core configuration** (stored in Redis):
 
 ```json
 {
@@ -45,63 +45,63 @@ graph LR
 }
 ```
 
-### 3. 热加载的核心实现
+### 3. Core Implementation of Hot Reload
 
-热加载的核心在 [SingleQueueConusmerParamsGetter._gen_booster_by_redis_meta_info](file:///d:/codes/funboost/funboost/core/active_cousumer_info_getter.py#L565-L617) 方法：
+The core of hot reload is in the [SingleQueueConusmerParamsGetter._gen_booster_by_redis_meta_info](file:///d:/codes/funboost/funboost/core/active_cousumer_info_getter.py#L565-L617) method:
 
 ```python
 def _gen_booster_by_redis_meta_info(self) -> Booster:
-    # 1. 从 Redis 读取配置（带缓存，60秒过期）
+    # 1. Read config from Redis (cached, expires in 60 seconds)
     booster_params = self.get_one_queue_params_use_cache()
-    
-    # 2. 根据函数入参信息生成伪函数
+
+    # 2. Generate a fake function based on the function's input parameter info
     redis_final_func_input_params_info = booster_params['auto_generate_info']['final_func_input_params_info']
     fake_fun = FakeFunGenerator.gen_fake_fun_by_params(redis_final_func_input_params_info)
-    
-    # 3. 即时创建 Fake Booster（仅用于发布消息）
+
+    # 3. Instantly create a Fake Booster (used only for publishing messages)
     booster_params['consuming_function'] = fake_fun
     booster_params['is_fake_booster'] = True
-    
+
     booster = Booster(BoosterParams(**booster_params))(fake_fun)
     return booster
 ```
 
-### 4. 发布接口的调用链
+### 4. Call Chain of the Publish Interface
 
-[publish_msg](file:///d:/codes/funboost/funboost/faas/fastapi_adapter.py#L354-L407) 接口的核心逻辑：
+Core logic of the [publish_msg](file:///d:/codes/funboost/funboost/faas/fastapi_adapter.py#L354-L407) interface:
 
 ```python
 @fastapi_router.post("/publish")
 async def publish_msg(msg_item: MsgItem):
-    # 核心：通过 queue_name 从 Redis 动态获取配置并生成 publisher
+    # Core: dynamically retrieve config from Redis by queue_name and generate a publisher
     publisher = SingleQueueConusmerParamsGetter(msg_item.queue_name).gen_publisher_for_faas()
-    
-    # 发布消息
+
+    # Publish message
     async_result = await publisher.aio_publish(msg_item.msg_body)
 ```
 
-## 热加载的关键设计
+## Key Design of Hot Reload
 
-### ✅ 为什么能热加载
+### Why Hot Reload Is Possible
 
-| 设计要点 | 说明 |
+| Design Point | Explanation |
 |---------|------|
-| **元数据与执行分离** | Web 只需要知道如何发布消息，不需要真正的消费函数代码 |
-| **Redis 作为注册中心** | Booster 上线时自动注册，Web 动态发现 |
-| **Fake Booster 机制** | 根据函数签名信息生成伪函数，只用于消息发布和参数校验 |
-| **队列名称发现** | 从 `funboost_all_queue_names` 集合动态获取所有可用队列 |
+| **Separation of metadata and execution** | The web layer only needs to know how to publish messages; it does not need the actual consumer function code |
+| **Redis as a registry** | Boosters register automatically on startup; the web layer discovers them dynamically |
+| **Fake Booster mechanism** | A fake function is generated from the function signature info, used only for message publishing and parameter validation |
+| **Queue name discovery** | All available queues are dynamically retrieved from the `funboost_all_queue_names` set |
 
-### ✅ 对比传统 Web 开发
+### Comparison with Traditional Web Development
 
-| 对比项 | 传统 Web | funboost.faas |
+| Comparison | Traditional Web | funboost.faas |
 |--------|---------|---------------|
-| 新增功能 | 需要新增接口代码 + 重启服务 | 只需部署 Booster，Web 无需修改 |
-| 接口发现 | 需要手动编写文档 | 自动从 Redis 获取函数签名 |
-| 参数校验 | 需要手动编写校验逻辑 | 自动根据 `final_func_input_params_info` 校验 |
+| Adding a new feature | Requires new interface code + service restart | Only deploy the Booster; no changes needed to the web layer |
+| Interface discovery | Must be documented manually | Automatically retrieved from Redis via function signature |
+| Parameter validation | Must be written manually | Automatic based on `final_func_input_params_info` |
 
-## 使用示例
+## Usage Example
 
-### 1. 消费端（独立部署）
+### 1. Consumer Side (Independently Deployed)
 
 ```python
 # task_funs_dir/add.py
@@ -109,14 +109,14 @@ from funboost import boost, BoosterParams
 
 @boost(BoosterParams(
     queue_name="test_funboost_faas_queue",
-    is_send_consumer_heartbeat_to_redis=True,  # 必须开启心跳上报
-    is_using_rpc_mode=True,  # 支持 RPC 模式获取结果
+    is_send_consumer_heartbeat_to_redis=True,  # heartbeat reporting must be enabled
+    is_using_rpc_mode=True,  # supports RPC mode to retrieve results
 ))
 def add(x: int, y: int = 10):
     return x + y
 ```
 
-### 2. Web 端（无需修改代码）
+### 2. Web Side (No Code Changes Required)
 
 ```python
 # example_fastapi_faas.py
@@ -124,22 +124,22 @@ from fastapi import FastAPI
 from funboost.faas import fastapi_router
 
 app = FastAPI()
-app.include_router(fastapi_router)  # 只需这一行
+app.include_router(fastapi_router)  # just this one line
 ```
 
-### 3. 调用新上线的函数
+### 3. Calling a Newly Deployed Function
 
 ```bash
-# 新 Booster 部署后，立即可调用
+# Immediately callable after the new Booster is deployed
 curl -X POST http://127.0.0.1:8000/funboost/publish \
   -H "Content-Type: application/json" \
   -d '{"queue_name": "test_funboost_faas_queue", "msg_body": {"x": 10, "y": 20}, "need_result": true}'
 ```
 
-## 总结
+## Summary
 
-funboost.faas 热加载的核心原理是：
+The core principle behind funboost.faas hot reload is:
 
-> **将 Booster 配置元数据存储在 Redis 中，Web 接口通过 queue_name 动态从 Redis 读取配置，即时生成 Fake Booster 进行消息发布，无需持有真正的消费函数代码。**
+> **Store Booster configuration metadata in Redis. The web interface dynamically reads the configuration from Redis by queue_name, instantly generates a Fake Booster to publish the message, without needing to hold the actual consumer function code.**
 
-这种设计实现了**配置驱动**而非**代码驱动**，让 Web 服务成为一个通用的消息发布网关，真正的业务逻辑由独立部署的 Booster 进程执行。
+This design achieves **configuration-driven** rather than **code-driven** behavior, turning the web service into a universal message-publishing gateway, with the actual business logic executed by independently deployed Booster processes.

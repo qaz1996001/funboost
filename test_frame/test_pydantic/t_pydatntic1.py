@@ -12,7 +12,7 @@ class M1(BaseModel):
 
     class Config:
         json_encoders = {
-            typing.Callable: lambda v: str(v)  # 自定义 函数 类型的序列化逻辑
+            typing.Callable: lambda v: str(v)  # Custom serialization logic for function types
         }
         underscore_attrs_are_private = True
 

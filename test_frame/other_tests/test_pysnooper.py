@@ -3,7 +3,7 @@
 # @Time    : 2022/11/6 0006 16:49
 
 '''
-测试改版的pysnooper装饰器。
+Test the modified pysnooper decorator.
 '''
 import requests
 from funboost.utils import  pysnooper_ydf, LogManager
@@ -28,11 +28,11 @@ logger = LogManager('test_pysnoop').get_logger_and_add_handlers(log_filename='te
 @pysnooper_ydf.snoop(depth=300)
 def main():
     try:
-        # logger.info('测试pysnoop')
+        # logger.info('Test pysnoop')
         for i in range(5):
             print(i)
         j = 333
-        resp = requests.get('https://www.baidu.com')  # 测试深层次跳转下的代码轨迹自动跟踪效果。
+        resp = requests.get('https://www.baidu.com')  # Test automatic code trace tracking under deep-level jumps.
         logger.debug(resp.text)
         print(RedisMixin().redis_db_frame.set('key_test', '1'))
         bar()

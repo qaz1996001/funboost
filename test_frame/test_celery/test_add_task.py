@@ -25,7 +25,7 @@ for i in range(1,20):
 
 
 print(time.time() - t1)
-print('任务添加完成')
+print('All tasks added')
 
 """
 import celery

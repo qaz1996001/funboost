@@ -6,21 +6,23 @@ app = Flask(__name__)
 
 @app.route('/', methods=['get'])
 def index():
-    return '演示添加funboost定时任务'
+    return 'Demonstrate adding funboost scheduled tasks'
 
 @app.route('/add_job', methods=['get'])
 def api_add_job():
     """
-    接口中添加apscheduler定时任务到中，使用reids作为jobstroes。 is_auto_paused=True意思是暂停aps执行任务，因为这里不需要真的执行任务，只负责增删改查定时任务到redis中。
-    
-    然你也可以is_auto_paused=False，这样aps对象就会不仅负责天极爱定时任务到redis还会负责执行redis中的任务。
-    因为funboost的 apschrduler是定制的，扫描定时任务时候使用了redis分布式锁，所以不用担心多次启动apschrduler对象造成重复执行定时任务
+    Add apscheduler scheduled tasks via API, using redis as jobstores. is_auto_paused=True means pausing aps from executing tasks,
+    because here we only need to add/delete/modify/query scheduled tasks in redis, not actually execute them.
+
+    You can also use is_auto_paused=False, so the aps object will both add scheduled tasks to redis and execute tasks in redis.
+    Because funboost's apscheduler is customized and uses redis distributed locks when scanning scheduled tasks,
+    you don't need to worry about duplicate scheduled task executions when starting the apscheduler object multiple times.
     """
     ApsJobAdder(fun_sum,job_store_kind='redis',is_auto_paused=True).add_push_job(
         args=(1, 2),
-        trigger='interval',  # 使用日期触发器
+        trigger='interval',  # Use interval trigger
         seconds=10,
-        id='add_numbers_job', # 任务ID
+        id='add_numbers_job', # Task ID
         replace_existing=True,
         name='add_numbers_job',
     )

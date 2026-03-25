@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-启动 WebSocket 消费者
+Start the WebSocket consumer
 
-Consumer 会自动启动 WebSocket 服务器，无需手动启动
+The Consumer will automatically start the WebSocket server; no manual startup needed
 """
 
 import time
@@ -28,18 +28,18 @@ from funboost import boost, BoosterParams
     }
 ))
 def process_message(x, y):
-    """处理 WebSocket 消息"""
+    """Process WebSocket message"""
     result = x + y
     if x % 1000 == 0:
-        print(f"处理消息: {x} + {y} = {result}")
+        print(f"Processing message: {x} + {y} = {result}")
     return result
 
 
 if __name__ == '__main__':
     print("=" * 50)
-    print("WebSocket 消费者")
+    print("WebSocket Consumer")
     print("=" * 50)
-    print("服务器将自动启动，按 Ctrl+C 停止")
+    print("Server will start automatically. Press Ctrl+C to stop.")
     print("=" * 50)
     
     process_message.consume()

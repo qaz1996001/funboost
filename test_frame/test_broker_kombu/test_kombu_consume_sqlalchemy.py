@@ -3,8 +3,8 @@ from funboost import BrokerEnum, boost
 from funboost.funboost_config_deafult import BrokerConnConfig
 
 '''
-默认自动创建表 kombu_message 和 kombu_queue, sqlalchemy版本要选对，测试 1.4.8 可以，2.0.15版本报错。 
-所有队列的消息在一个表中kombu_message，queue_id字段做区分是何种队列。
+Automatically creates tables kombu_message and kombu_queue by default. Choose the correct sqlalchemy version — tested with 1.4.8 (works), 2.0.15 (errors).
+All queue messages are stored in one table kombu_message; the queue_id field distinguishes which queue the message belongs to.
 '''
 @boost('test_kombu_sqlalchemy_queue2', broker_kind=BrokerEnum.KOMBU, qps=0.1,
        broker_exclusive_config={
@@ -13,7 +13,7 @@ from funboost.funboost_config_deafult import BrokerConnConfig
            'transport_options': {},
            'prefetch_count': 500})
 def f2(x, y):
-    print(f'start {x} {y} 。。。')
+    print(f'start {x} {y} ...')
     time.sleep(60)
     print(f'{x} + {y} = {x + y}')
     print(f'over {x} {y}')
@@ -26,7 +26,7 @@ def f2(x, y):
            'transport_options': {},
            'prefetch_count': 500})
 def f3(x, y):
-    print(f'start {x} {y} 。。。')
+    print(f'start {x} {y} ...')
     time.sleep(60)
     print(f'{x} + {y} = {x + y}')
     print(f'over {x} {y}')

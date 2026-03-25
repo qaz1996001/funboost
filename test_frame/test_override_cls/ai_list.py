@@ -3,7 +3,7 @@ import time
 from collections import defaultdict
 from funboost import boost, BrokerEnum, BoosterParams, EmptyConsumer, EmptyPublisher
 
-# 全局队列存储
+# Global queue storage
 queue_name__list_map = defaultdict(list)
 list_lock = threading.Lock()
 
@@ -21,7 +21,7 @@ class MyListConsumer(EmptyConsumer):
                 time.sleep(0.1)
 
     def _confirm_consume(self, kw):
-        """简单实现，不做确认消费"""
+        """Simple implementation; no consumption acknowledgment"""
         pass
 
     def _requeue(self, kw):
@@ -49,10 +49,10 @@ class MyListPublisher(EmptyPublisher):
 
 @boost(BoosterParams(
     queue_name='test_define_list_queue',
-    broker_kind=BrokerEnum.EMPTY,  # 使用EMPTY来实现自定义broker
+    broker_kind=BrokerEnum.EMPTY,  # Use EMPTY to implement a custom broker
     concurrent_num=1,
-    consumer_override_cls=MyListConsumer,  # 指定消费者类
-    publisher_override_cls=MyListPublisher,  # 指定发布者类
+    consumer_override_cls=MyListConsumer,  # Specify the consumer class
+    publisher_override_cls=MyListPublisher,  # Specify the publisher class
     is_show_message_get_from_broker=True
 ))
 def cost_long_time_fun(x):

@@ -27,13 +27,13 @@ class ThreadPoolExecutorForAps(BasePoolExecutor):
         super().__init__(pool)
 
 executors = {
-    'default': ThreadPoolExecutor(10) , # 默认线程池，最大线程数 10
-    'non_daemon': ThreadPoolExecutorForAps(10) , # 默认线程池，最大线程数 10
+    'default': ThreadPoolExecutor(10) , # Default thread pool, maximum 10 threads
+    'non_daemon': ThreadPoolExecutorForAps(10) , # Default thread pool, maximum 10 threads
 }
 
 
 def job():
-    print("执行任务:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    print("Executing task:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 
 def t1():
@@ -47,21 +47,21 @@ if __name__ == "__main__":
 
     scheduler = BackgroundScheduler(executors=executors)
     
-    # 每 3 秒执行一次
+    # Execute every 3 seconds
     scheduler.add_job(job, trigger='interval', seconds=30,executor='non_daemon')
-    
-    # 启动调度器（后台线程）
+
+    # Start the scheduler (background thread)
     scheduler.start()
-    
-    print("调度器已启动，主线程继续运行...")
+
+    print("Scheduler started, main thread continuing...")
 
     
     # try:0
-    #     # 主线程可以做其他事情，这里用 sleep 模拟
+    #     # Main thread can do other things; using sleep here as a simulation
     #     while True:
-    #         print("主线程工作中...")
+    #         print("Main thread working...")
     #         time.sleep(5)
     # except (KeyboardInterrupt, SystemExit):
     #     scheduler.shutdown()
-    #     print("调度器已关闭")
+    #     print("Scheduler stopped")
 

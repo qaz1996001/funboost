@@ -4,96 +4,96 @@
 import time
 from funboost import BoosterParams, BrokerEnum, ctrl_c_recv
 
-# 使用 RABBITMQ_COMPLEX_ROUTING 支持复杂路由的 broker
+# Use RABBITMQ_COMPLEX_ROUTING broker that supports complex routing
 BROKER_KIND_FOR_TEST = BrokerEnum.RABBITMQ_COMPLEX_ROUTING
 
-# 定义交换机名称
+# Define exchange name
 EXCHANGE_NAME = 'topic_log_exchange'
 
 
 @BoosterParams(
-    queue_name='q_all_logs',  # 队列1：接收所有日志
+    queue_name='q_all_logs',  # Queue 1: receives all logs
     broker_kind=BROKER_KIND_FOR_TEST,
     broker_exclusive_config={
         'exchange_name': EXCHANGE_NAME,
         'exchange_type': 'topic',
-        'routing_key_for_bind': '#',  # 关键：# 匹配所有路由键，接收所有消息
+        'routing_key_for_bind': '#',  # Key: # matches all routing keys, receives all messages
     })
 def all_logs_consumer(timestamp: str, content: str):
-    """这个消费者接收所有级别的日志"""
-    print(f'【全部日志消费者】 {timestamp} 收到消息: {content}')
+    """This consumer receives logs of all levels"""
+    print(f'[ALL LOGS CONSUMER] {timestamp} received message: {content}')
     time.sleep(0.5)
 
 
 @BoosterParams(
-    queue_name='q_error_logs',  # 队列2：只接收错误日志
+    queue_name='q_error_logs',  # Queue 2: only receives error logs
     broker_kind=BROKER_KIND_FOR_TEST,
     broker_exclusive_config={
         'exchange_name': EXCHANGE_NAME,
         'exchange_type': 'topic',
-        'routing_key_for_bind': '*.error',  # 关键：*.error 匹配所有以 .error 结尾的路由键
+        'routing_key_for_bind': '*.error',  # Key: *.error matches all routing keys ending in .error
     })
 def error_logs_consumer(timestamp: str, content: str):
-    """这个消费者只处理错误级别的日志"""
-    print(f'!!!!!!!!!!【错误日志消费者】 {timestamp} 收到消息: {content} !!!!!!!!!!')
+    """This consumer only handles error-level logs"""
+    print(f'!!!!!!!!!!  [ERROR LOG CONSUMER] {timestamp} received message: {content} !!!!!!!!!!')
     time.sleep(1)
 
 
 @BoosterParams(
-    queue_name='q_system_logs',  # 队列3：只接收系统相关日志
+    queue_name='q_system_logs',  # Queue 3: only receives system-related logs
     broker_kind=BROKER_KIND_FOR_TEST,
     broker_exclusive_config={
         'exchange_name': EXCHANGE_NAME,
         'exchange_type': 'topic',
-        'routing_key_for_bind': 'system.*',  # 关键：system.* 匹配所有以 system. 开头的路由键
+        'routing_key_for_bind': 'system.*',  # Key: system.* matches all routing keys starting with system.
     })
 def system_logs_consumer(timestamp: str, content: str):
-    """这个消费者只处理系统相关的日志"""
-    print(f'【系统日志消费者】 {timestamp} 收到消息: {content}')
+    """This consumer only handles system-related logs"""
+    print(f'[SYSTEM LOG CONSUMER] {timestamp} received message: {content}')
     time.sleep(0.8)
 
 
 @BoosterParams(
-    queue_name='q_app_critical_logs',  # 队列4：只接收应用的关键日志
+    queue_name='q_app_critical_logs',  # Queue 4: only receives critical application logs
     broker_kind=BROKER_KIND_FOR_TEST,
     broker_exclusive_config={
         'exchange_name': EXCHANGE_NAME,
         'exchange_type': 'topic',
-        'routing_key_for_bind': 'app.*.critical',  # 关键：app.*.critical 匹配 app.任意单词.critical 格式
+        'routing_key_for_bind': 'app.*.critical',  # Key: app.*.critical matches routing keys in the format app.<any_word>.critical
     })
 def app_critical_logs_consumer(timestamp: str, content: str):
-    """这个消费者只处理应用的关键日志"""
-    print(f'🔥🔥🔥【应用关键日志消费者】 {timestamp} 收到消息: {content} 🔥🔥🔥')
+    """This consumer only handles critical application logs"""
+    print(f'[APP CRITICAL LOG CONSUMER] {timestamp} received message: {content}')
     time.sleep(1.2)
 
 
 if __name__ == '__main__':
-    # 清理之前的消息（可选）
+    # Clear previous messages (optional)
     # all_logs_consumer.clear()
     # error_logs_consumer.clear()
     # system_logs_consumer.clear()
     # app_critical_logs_consumer.clear()
 
-    # 查看消息数量（可选）
-    # print(f"全部日志队列消息数: {all_logs_consumer.get_message_count()}")
-    # print(f"错误日志队列消息数: {error_logs_consumer.get_message_count()}")
-    # print(f"系统日志队列消息数: {system_logs_consumer.get_message_count()}")
-    # print(f"应用关键日志队列消息数: {app_critical_logs_consumer.get_message_count()}")
+    # View message counts (optional)
+    # print(f"All logs queue message count: {all_logs_consumer.get_message_count()}")
+    # print(f"Error logs queue message count: {error_logs_consumer.get_message_count()}")
+    # print(f"System logs queue message count: {system_logs_consumer.get_message_count()}")
+    # print(f"App critical logs queue message count: {app_critical_logs_consumer.get_message_count()}")
 
-    # 启动消费者
-    print("启动所有消费者...")
+    # Start consumers
+    print("Starting all consumers...")
     all_logs_consumer.consume()
     error_logs_consumer.consume()
     system_logs_consumer.consume()
     app_critical_logs_consumer.consume()
 
-    print("消费者已启动，等待消息...")
-    print("路由键匹配规则:")
-    print("  - 全部日志消费者: '#' (匹配所有)")
-    print("  - 错误日志消费者: '*.error' (匹配任意.error)")
-    print("  - 系统日志消费者: 'system.*' (匹配system.任意)")
-    print("  - 应用关键日志消费者: 'app.*.critical' (匹配app.任意.critical)")
-    print("按 Ctrl+C 停止消费...")
+    print("Consumers started, waiting for messages...")
+    print("Routing key match rules:")
+    print("  - All logs consumer: '#' (matches all)")
+    print("  - Error logs consumer: '*.error' (matches any.error)")
+    print("  - System logs consumer: 'system.*' (matches system.any)")
+    print("  - App critical logs consumer: 'app.*.critical' (matches app.any.critical)")
+    print("Press Ctrl+C to stop consuming...")
 
-    # 阻塞主线程，使消费者可以持续运行
+    # Block the main thread so consumers can keep running
     ctrl_c_recv()

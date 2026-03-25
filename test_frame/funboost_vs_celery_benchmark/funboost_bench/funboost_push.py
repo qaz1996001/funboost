@@ -6,14 +6,15 @@ import datetime
 if __name__ == '__main__':
     for i in range(100000):
         if i % 1000 == 0:
-            print(f'当前时间: {datetime.datetime.now()} {i}')
+            print(f'Current time: {datetime.datetime.now()} {i}')
         print_number.push(i)
 
 
 '''
-在win11 + python3.9 + funboost + redis 中间件 + amd r7 5800h cpu 环境下测试 
+Tested on win11 + python3.9 + funboost + redis middleware + amd r7 5800h cpu
 
-funboost发布性能测试结果如下：
+funboost publish performance test results:
 
-funboost 发布10万条消息，耗时5秒，平均每秒能发布20000条，从打印的发布时间间隔也能看出来,每隔0.05秒打印一次发布1000条
+funboost publishes 100,000 messages in 5 seconds, averaging 20,000 messages per second.
+As can be seen from the printed publish timestamps, it prints once every 0.05 seconds for 1000 messages published.
 '''

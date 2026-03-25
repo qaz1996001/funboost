@@ -1,12 +1,12 @@
 import time
 import asyncio
 import copy
-from funboost import boost, BrokerEnum, BoosterParams, ConcurrentModeEnum, ctrl_c_recv,ApsJobAdder
+from funboost import boost, BrokerEnum, BoosterParams, ConcurrentModeEnum, ctrl_c_recv, ApsJobAdder
 from funboost.contrib.save_function_result_status.save_result_status_use_dataset import ResultStatusUseDatasetMixin
 from funboost.utils.class_utils import ClsHelper
 
 
-# 0. 定义一个自定义类，用于演示pickle序列化
+# 0. Define a custom class to demonstrate pickle serialization
 class MyObject:
     def __init__(self, name, value):
         self.name = name
@@ -16,110 +16,110 @@ class MyObject:
         return f"MyObject(name='{self.name}', value={self.value})"
 
 
-# 1. 定义一个普通的同步函数
-# funboost 默认的并发模式是多线程（ConcurrentModeEnum.THREADING），
-# 非常适合执行这种包含 time.sleep 的 IO 阻塞型函数。
+# 1. Define a regular synchronous function.
+# funboost's default concurrency mode is multi-threading (ConcurrentModeEnum.THREADING),
+# which is ideal for IO-blocking functions containing time.sleep.
 @boost(BoosterParams(queue_name='sync_task_queue', broker_kind=BrokerEnum.REDIS_ACK_ABLE,
                      concurrent_mode=ConcurrentModeEnum.THREADING, concurrent_num=5,
                      consumer_override_cls=ResultStatusUseDatasetMixin
                      ))
 def task_sync(x: int, y: int):
     """
-    这是一个常规的同步函数。
+    This is a regular synchronous function.
     """
-    print(f"开始执行同步任务: {x} + {y}")
-    time.sleep(2)  # 模拟一个耗时的 IO 操作
+    print(f"Starting synchronous task: {x} + {y}")
+    time.sleep(2)  # Simulate a time-consuming IO operation
     result = x + y
-    print(f"同步任务完成: {x} + {y} = {result}")
+    print(f"Synchronous task completed: {x} + {y} = {result}")
     return result
 
-# 2. 定义一个异步协程函数
-# 对于 async def 函数，需要明确指定并发模式为 ASYNC (ConcurrentModeEnum.ASYNC)。
-# funboost 会使用一个事件循环来并发地运行这些协程任务。
+# 2. Define an asynchronous coroutine function.
+# For async def functions, specify concurrent_mode=ConcurrentModeEnum.ASYNC explicitly.
+# funboost will use an event loop to run these coroutine tasks concurrently.
 @boost(BoosterParams(queue_name='async_task_queue', broker_kind=BrokerEnum.REDIS_ACK_ABLE, concurrent_mode=ConcurrentModeEnum.ASYNC, concurrent_num=10,
     is_using_rpc_mode=True))
 async def task_async(url: str):
     """
-    这是一个异步协程函数。
+    This is an asynchronous coroutine function.
     """
-    print(f"开始执行异步任务: 爬取 {url}")
-    await asyncio.sleep(3)  # 模拟一个异步的 aiohttp/httpx 网络请求
-    print(f"异步任务完成: 爬取 {url} 成功")
+    print(f"Starting async task: fetching {url}")
+    await asyncio.sleep(3)  # Simulate an async aiohttp/httpx network request
+    print(f"Async task completed: fetched {url} successfully")
     return f"Success: {url}"
 
 
-# 3. 定义一个包含实例方法的类
+# 3. Define a class with an instance method
 class MyClass:
     def __init__(self, multiplier):
-        # 这行代码是必须的，用于funboost在消费时能够重新实例化对象
+        # This line is required so funboost can re-instantiate the object when consuming
         self.obj_init_params: dict = ClsHelper.get_obj_init_params_for_funboost(copy.copy(locals()))
         self.multiplier = multiplier
-        print(f"MyClass 实例已创建，乘数为: {self.multiplier}")
+        print(f"MyClass instance created, multiplier is: {self.multiplier}")
 
-    # 将@boost装饰器直接应用在实例方法上
+    # Apply the @boost decorator directly to the instance method
     @boost(BoosterParams(queue_name='instance_method_queue', broker_kind=BrokerEnum.REDIS_ACK_ABLE, concurrent_num=3))
     def multiply(self, x: int):
-        print(f"开始执行实例方法任务: {x} * {self.multiplier}")
+        print(f"Starting instance method task: {x} * {self.multiplier}")
         time.sleep(1)
         result = x * self.multiplier
-        print(f"实例方法任务完成: {x} * {self.multiplier} = {result}")
+        print(f"Instance method task completed: {x} * {self.multiplier} = {result}")
         return result
 
 
-# 4. 定义一个接收自定义对象的函数，这将触发pickle序列化
+# 4. Define a function that receives a custom object, which will trigger pickle serialization
 @boost(BoosterParams(queue_name='pickle_task_queue', broker_kind=BrokerEnum.REDIS_ACK_ABLE, concurrent_num=3))
 def task_with_pickle(obj: MyObject):
     """
-    这个函数接收一个自定义对象，funboost会自动使用pickle进行序列化。
+    This function receives a custom object; funboost will automatically use pickle for serialization.
     """
-    print(f"开始执行 pickle 任务: 接收到对象 {obj}")
+    print(f"Starting pickle task: received object {obj}")
     time.sleep(1)
     obj.value += 100
-    print(f"Pickle 任务完成: 对象变为 {obj}")
+    print(f"Pickle task completed: object is now {obj}")
     return str(obj)
 
 
 if __name__ == '__main__':
-    # 5. 清空之前的任务（可选，用于确保测试环境干净）
+    # 5. Clear previous tasks (optional, to ensure a clean test environment)
     task_sync.clear()
     task_async.clear()
     task_with_pickle.clear()
-    my_instance = MyClass(multiplier=10)  # 创建一个实例
+    my_instance = MyClass(multiplier=10)  # Create an instance
     my_instance.multiply.clear()
-    
-    # 测试直接运行函数
-    print("测试直接运行函数")
+
+    # Test calling functions directly
+    print("Test calling functions directly")
     task_sync(1, 2)
     asyncio.get_event_loop().run_until_complete(task_async("https://example.com/page/1"))
     my_instance.multiply(10)
     task_with_pickle(MyObject(name="obj_1", value=1))
 
-    # 6. 启动所有消费者
-    # .consume() 是非阻塞的，它会在后台启动消费者
+    # 6. Start all consumers
+    # .consume() is non-blocking; it starts the consumer in the background
     task_sync.consume()
     task_async.consume()
     my_instance.multiply.consume()
     task_with_pickle.consume()
 
-    print("\n所有消费者均已启动，等待处理任务...")
+    print("\nAll consumers started, waiting to process tasks...")
 
-    # 7. 发布任务到各自的队列
-    print("正在发布任务...")
+    # 7. Publish tasks to their respective queues
+    print("Publishing tasks...")
     for i in range(5):
         task_sync.push(i, i * 2)
         print(task_async.push(f"https://example.com/page/{i}").result)
-        my_instance.multiply.push(my_instance, i)  # 发布实例方法任务，需要将实例本身作为第一个参数
-        task_with_pickle.push(MyObject(name=f'obj_{i}', value=i)) # 发布一个自定义对象
-    print("任务发布完成。")
+        my_instance.multiply.push(my_instance, i)  # Publish instance method task, pass the instance as the first argument
+        task_with_pickle.push(MyObject(name=f'obj_{i}', value=i))  # Publish a custom object
+    print("Task publishing complete.")
 
 
-    # 8 添加定时任务
+    # 8. Add a scheduled task
     ApsJobAdder(task_sync).add_push_job(trigger='interval', seconds=1, args=(111, 222))
 
-   
-    print("按 Ctrl+C 退出程序。")
+
+    print("Press Ctrl+C to exit.")
 
 
 
-    # 10. 阻塞主线程，以便后台的消费者可以持续运行
+    # 10. Block the main thread so background consumers can keep running
     ctrl_c_recv()

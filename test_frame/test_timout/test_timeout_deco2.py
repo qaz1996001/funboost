@@ -23,7 +23,7 @@ try:
     print('start')
     f()
 except BaseException as e:
-    print("错误:",e)
+    print("Error:",e)
 
 print('over')
 print(time.perf_counter()-t1)

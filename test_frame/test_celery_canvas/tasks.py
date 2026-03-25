@@ -57,7 +57,7 @@ def error_prone(self, x: int) -> int:
 
 @shared_task(bind=True, name="test_frame.test_celery_canvas.tasks.on_error_collect")
 def on_error_collect(self, request: Dict[str, Any], exc: str, traceback_str: str) -> Dict[str, Any]:
-    # 作为 chord error callback 使用
+    # Used as chord error callback
     return {"task_id": request.get("id"), "exc": str(exc), "traceback": traceback_str[:400]}
 
 
@@ -97,13 +97,13 @@ def _ensure_dir(path: str) -> None:
 
 @shared_task(bind=True, name="test_frame.test_celery_canvas.tasks.download_video")
 def download_video(self, url: str) -> str:
-    """模拟下载视频，生成到 tests/ai_gen/videos 下并返回文件路径。"""
+    """Simulate downloading a video to tests/ai_gen/videos and return the file path."""
     base_dir = os.path.join("tests", "ai_gen", "videos")
     _ensure_dir(base_dir)
     file_name = f"video_{uuid.uuid4().hex}.mp4"
     file_path = os.path.join(base_dir, file_name)
 
-    # 模拟下载耗时
+    # Simulate download time
     time.sleep(0.2)
     with open(file_path, "wb") as f:
         content = f"dummy video from {url}".encode("utf-8")
@@ -113,13 +113,13 @@ def download_video(self, url: str) -> str:
 
 @shared_task(bind=True, name="test_frame.test_celery_canvas.tasks.transform_video")
 def transform_video(self, file_path: str, resolution: str = "720p") -> str:
-    """模拟转码，读取输入文件并写入一个标记分辨率的新文件，返回新文件路径。"""
+    """Simulate transcoding: read input file, write a new file marked with resolution, return new file path."""
     out_dir = os.path.join("tests", "ai_gen", "videos", "transformed")
     _ensure_dir(out_dir)
     base = os.path.splitext(os.path.basename(file_path))[0]
     out_path = os.path.join(out_dir, f"{base}_{resolution}.mp4")
 
-    # 模拟转码耗时
+    # Simulate transcoding time
     time.sleep(0.1)
     with open(out_path, "wb") as f:
         f.write(f"transformed {resolution} from {file_path}".encode("utf-8"))
@@ -128,7 +128,7 @@ def transform_video(self, file_path: str, resolution: str = "720p") -> str:
 
 @shared_task(bind=True, name="test_frame.test_celery_canvas.tasks.send_finish_msg")
 def send_finish_msg(self, transformed_files: List[str], url: str) -> Dict[str, Any]:
-    """模拟发送完成消息，返回结果概要。"""
+    """Simulate sending a finish message, return result summary."""
     return {"url": url, "files": transformed_files, "count": len(transformed_files)}
 
 

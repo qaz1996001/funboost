@@ -9,96 +9,96 @@ EXCHANGE_NAME = 'fanout_broadcast_exchange'
 
 
 if __name__ == '__main__':
-    # 创建一个 fanout 发布者，用于广播消息给所有绑定的队列
+    # Create a fanout publisher to broadcast messages to all bound queues
     fanout_publisher = BoostersManager.get_cross_project_publisher(PublisherParams(
-        queue_name='fanout_publisher_instance', 
+        queue_name='fanout_publisher_instance',
         broker_kind=BROKER_KIND_FOR_TEST,
         broker_exclusive_config={
             'exchange_name': EXCHANGE_NAME,
             'exchange_type': 'fanout',
-            # fanout 模式不需要设置 routing_key，会被忽略
+            # fanout mode does not need routing_key; it will be ignored
         }
     ))
 
-    print("开始发布用户操作事件消息...")
+    print("Starting to publish user operation event messages...")
     print("=" * 60)
 
-    # 模拟不同的用户操作事件
+    # Simulate different user operation events
     user_events = [
         {
             'user_id': 'user_001',
-            'action': '用户注册',
-            'message': '新用户注册成功，需要发送欢迎通知'
-        },
-        {
-            'user_id': 'user_002', 
-            'action': '订单支付',
-            'message': '用户完成订单支付，金额 ¥299.00'
-        },
-        {
-            'user_id': 'user_003',
-            'action': '密码修改',
-            'message': '用户修改登录密码，需要安全提醒'
-        },
-        {
-            'user_id': 'user_001',
-            'action': '会员升级',
-            'message': '用户升级为VIP会员，享受专属服务'
-        },
-        {
-            'user_id': 'user_004',
-            'action': '订单退款',
-            'message': '用户申请订单退款，金额 ¥158.00'
+            'action': 'User registration',
+            'message': 'New user registered successfully, welcome notification needs to be sent'
         },
         {
             'user_id': 'user_002',
-            'action': '评价商品',
-            'message': '用户对商品进行了5星好评'
-        },
-        {
-            'user_id': 'user_005',
-            'action': '账户异常',
-            'message': '检测到账户异常登录，需要安全验证'
+            'action': 'Order payment',
+            'message': 'User completed order payment, amount $299.00'
         },
         {
             'user_id': 'user_003',
-            'action': '积分兑换',
-            'message': '用户使用积分兑换优惠券'
+            'action': 'Password change',
+            'message': 'User changed login password, security reminder needed'
+        },
+        {
+            'user_id': 'user_001',
+            'action': 'Membership upgrade',
+            'message': 'User upgraded to VIP membership, enjoy exclusive services'
+        },
+        {
+            'user_id': 'user_004',
+            'action': 'Order refund',
+            'message': 'User requested order refund, amount $158.00'
+        },
+        {
+            'user_id': 'user_002',
+            'action': 'Product review',
+            'message': 'User gave a 5-star review for the product'
+        },
+        {
+            'user_id': 'user_005',
+            'action': 'Account anomaly',
+            'message': 'Abnormal login detected, security verification needed'
+        },
+        {
+            'user_id': 'user_003',
+            'action': 'Points redemption',
+            'message': 'User used points to redeem a coupon'
         }
     ]
 
     for i, event in enumerate(user_events, 1):
-        print(f"[{i}] 发布事件: 用户 {event['user_id']} - {event['action']}")
-        print(f"    消息内容: {event['message']}")
-        
-        # 发布消息 - fanout 模式会广播给所有绑定的队列
-        # 注意：即使我们可以指定路由键，fanout 模式也会忽略它
+        print(f"[{i}] Publishing event: user {event['user_id']} - {event['action']}")
+        print(f"    Message content: {event['message']}")
+
+        # Publish message - fanout mode broadcasts to all bound queues
+        # Note: even if a routing key is specified, fanout mode will ignore it
         fanout_publisher.publish(
             {
                 'user_id': event['user_id'],
-                'action': event['action'], 
+                'action': event['action'],
                 'message': event['message']
             },
             task_options=TaskOptions(
-                # 即使设置了路由键，fanout 模式也会忽略，所有队列都会收到消息
+                # Even if a routing key is set, fanout mode will ignore it and all queues will receive the message
                 other_extra_params={'routing_key_for_publish': 'ignored_routing_key'}
             )
         )
-        
-        print(f"    ✅ 消息已广播给所有服务（邮件、短信、推送、审计、数据分析）")
+
+        print(f"    Message broadcast to all services (email, SMS, push, audit, data analytics)")
         print()
-        
-        # 稍微延迟，便于观察消费者处理过程
+
+        # Short delay to make it easier to observe the consumer processing
         time.sleep(1)
 
     print("=" * 60)
-    print("所有事件消息发布完成！")
-    print("\nFanout 路由模式说明:")
-    print("  📢 每条消息都会被广播给所有 5 个服务:")
-    print("     - 📧 邮件服务：发送邮件通知")
-    print("     - 📱 短信服务：发送短信通知") 
-    print("     - 🔔 推送服务：发送推送通知")
-    print("     - 📝 审计服务：记录操作日志")
-    print("     - 📊 数据分析：收集行为数据")
-    print("  🚫 路由键被完全忽略，无论设置什么值都会广播给所有队列")
-    print("  ⚡ 适合需要多个服务同时处理同一事件的场景")
+    print("All event messages published!")
+    print("\nFanout routing mode description:")
+    print("  Each message is broadcast to all 5 services:")
+    print("     - Email service: send email notifications")
+    print("     - SMS service: send SMS notifications")
+    print("     - Push service: send push notifications")
+    print("     - Audit service: record operation logs")
+    print("     - Data analytics: collect behavior data")
+    print("  Routing key is completely ignored; regardless of the value set, messages are broadcast to all queues")
+    print("  Suitable for scenarios where multiple services need to handle the same event simultaneously")

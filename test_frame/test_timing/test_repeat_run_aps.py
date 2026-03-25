@@ -1,14 +1,16 @@
 
 
 """
-此脚本演示，funboost的 redis jobstore的apscheudler 不害怕你反复部署，因为使用用redis分布式锁，防止扫描取出同样的定时任务。
+This script demonstrates that funboost's Redis jobstore-backed apscheduler is not afraid of
+repeated deployments, because it uses a Redis distributed lock to prevent scanning and
+picking up the same scheduled task multiple times.
 """
 
 from funboost import boost, BrokerEnum,ctrl_c_recv,BoosterParams,ApsJobAdder
 
 
 
-# 定义任务处理函数
+# Define the task handler function
 @boost(BoosterParams(queue_name='sum_queue550', broker_kind=BrokerEnum.REDIS))
 def sum_two_numbers(x, y):  
     result = x + y 

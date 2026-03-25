@@ -5,9 +5,9 @@ from funboost import boost
 def my_deco(f):
     wraps(f)
     def _inner(y):
-        print('开始执行',y)
+        print('start executing',y)
         res = f(y)
-        print('结束执行',y)
+        print('finish executing',y)
         return res
     return _inner
 

@@ -22,7 +22,7 @@ def f_beat2(a, b):
     return a - b
 
 
-beat_schedule = {  # 这是100% 原汁原味的celery 定时任务配置方式
+beat_schedule = {  # This is 100% pure celery scheduled task configuration style
     'add-every-10-seconds_job': {
         'task': f_beat.queue_name,
         'schedule': timedelta(seconds=10),
@@ -42,11 +42,11 @@ if __name__ == '__main__':
     for i in range(10):
         f_beat.push(i, i * 2)
         f_beat2.push(i, i * 10)
-    CeleryHelper.start_flower(port=5556)  # 启动flower 网页，这个函数也可以单独的脚本中启动
-    CeleryHelper.celery_start_beat(beat_schedule)  # 配置和启动定时任务，这个函数也可以在单独的脚本中启动，但脚本中需要 先import 导入@boost装饰器函数所在的脚本，因为@boost时候consumer的custom_init中注册celery任务路由，之后才能使定时任务发送到正确的消息队列。
+    CeleryHelper.start_flower(port=5556)  # Start flower web UI; this function can also be started in a separate script
+    CeleryHelper.celery_start_beat(beat_schedule)  # Configure and start scheduled tasks; this can also run in a separate script, but the script must first import the module containing @boost-decorated functions, since the consumer's custom_init registers celery task routing during @boost, enabling scheduled tasks to be sent to the correct message queue.
     print(CeleryHelper.celery_app.conf)
     CeleryHelper.show_celery_app_conf()
-    f_beat.consume()  # 启动f_beat消费，这个是登记celery worker要启动消费的函数，真正的启动worker消费需要运行 realy_start_celery_worker，realy_start_celery_worker是一次性启动所有登记的需要运行的函数
-    # f_beat2.consume()  # 启动f_beat2消费，这个是登记celery worker要启动消费的函数，真正的启动worker消费需要运行 realy_start_celery_worker，realy_start_celery_worker是一次性启动所有登记的需要运行的函数
-    CeleryHelper.realy_start_celery_worker(worker_name='test_worker啊')  # 这个是真正的启动celery worker 函数消费。
-    print('batch_start_celery_consumers()  之后的代码不会被运行')
+    f_beat.consume()  # Register f_beat for consumption; this registers the function with the celery worker, actual worker startup requires realy_start_celery_worker, which starts all registered functions at once
+    # f_beat2.consume()  # Register f_beat2 for consumption; this registers the function with the celery worker, actual worker startup requires realy_start_celery_worker, which starts all registered functions at once
+    CeleryHelper.realy_start_celery_worker(worker_name='test_worker_ah')  # This actually starts the celery worker function consumer.
+    print('Code after batch_start_celery_consumers() will not be executed')

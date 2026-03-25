@@ -26,9 +26,9 @@ if __name__ == '__main__':
     f1.consume()
     f2.consume()
     f1.wait_for_possible_has_finish_all_tasks(4)
-    print('f1函数的队列中4分钟内没有需要执行的任务')
+    print('No tasks to execute in the f1 queue within 4 minutes')
     f2.wait_for_possible_has_finish_all_tasks(3)
-    print('f2函数的队列中3分钟内没有需要执行的任务')
-    print('f1 和f2任务都运行完了，。。。')
-    print('马上 os._exit(444) 结束脚本')
-    os._exit(444)  # 结束脚本
+    print('No tasks to execute in the f2 queue within 3 minutes')
+    print('Both f1 and f2 tasks have finished...')
+    print('Immediately calling os._exit(444) to end the script')
+    os._exit(444)  # End the script

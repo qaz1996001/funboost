@@ -1,1 +1,1 @@
-# 演示多个步骤的连续消费
+# Demonstrates multi-step sequential consumption

@@ -1,23 +1,23 @@
 """
-此脚本演示, funboost的子线程的loop中怎么操作aiomysql 连接池.
+This script demonstrates how to use aiomysql connection pools in funboost's child thread loops.
 
-演示了2种方式使用aiomysql连接池
-方式一:
-async_aiomysql_f1 使用主线程的连接池,.
-核心灵魂代码是 async_aiomysql_f1 的装饰器需要传参specify_async_loop=主线程loop
-如果 async_aiomysql_f1 不指定specify_async_loop,就会出现经典报错 attached to a different loop ,
-子线程的loop去操作主线程loop的连接池,这是大错特错的.
+Demonstrates 2 ways to use aiomysql connection pools:
+Method 1:
+async_aiomysql_f1 uses the main thread's connection pool.
+The core soul of the code is that async_aiomysql_f1's decorator must pass specify_async_loop=main_thread_loop.
+If async_aiomysql_f1 doesn't specify specify_async_loop, the classic error "attached to a different loop" will occur,
+where the child thread's loop tries to operate the main thread loop's connection pool — this is completely wrong.
 
-有的人压根不懂主线程loop和子线程loop,还非要装逼使用asyncio编程生态,
-不精通asyncio编程生态的人应该老老实实使用同步多线程编程生态,简单多了.
-因为funboost的线程池 FlexibleThreadPool能自动扩缩,
-能自动缩容是吊打内置线程池 concurrent.futures.threadpoolexecutor的神级别操作,
-FlexibleThreadPool 去掉了实现futures特性,精简了代码, 性能比官方内置线程池提高了250%
+Some people don't understand main thread loops and child thread loops at all, yet insist on using the asyncio ecosystem.
+People who are not proficient with the asyncio programming ecosystem should honestly use synchronous multi-threaded programming — it's much simpler.
+Because funboost's thread pool FlexibleThreadPool can auto scale up and down,
+auto scale-down completely demolishes the built-in concurrent.futures.ThreadPoolExecutor — it's a god-tier operation.
+FlexibleThreadPool removes the futures feature implementation, simplifies the code, and improves performance by 250% over the official built-in thread pool.
 
 
-方式2:
-async_aiomysql_f2_use_thread_local_aio_mysql_pool 使用 thread local 级别的全局变量连接池
-这样子线程的loop避免了操作主线程loop的aiomysql连接池, 不会出现张冠李戴  attached to a different loop
+Method 2:
+async_aiomysql_f2_use_thread_local_aio_mysql_pool uses thread-local level global variable connection pools.
+This way the child thread's loop avoids operating the main thread loop's aiomysql connection pool, preventing the "attached to a different loop" error.
 """
 import threading
 
@@ -28,7 +28,7 @@ import aiomysql
 
 
 loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop) # 这是重点
+asyncio.set_event_loop(loop) # This is the key point
 
 DB_CONFIG = {
     'host': 'localhost',
@@ -42,14 +42,14 @@ DB_CONFIG = {
 
 g_aiomysql_pool : aiomysql.Pool
 async def create_pool():
-    pool = await aiomysql.create_pool(**DB_CONFIG, minsize=1, maxsize=10,) # 这些是重点.
+    pool = await aiomysql.create_pool(**DB_CONFIG, minsize=1, maxsize=10,) # These are key points.
     global g_aiomysql_pool
     g_aiomysql_pool = pool
     return pool
 
 
 
-# 如果 async_aiomysql_f1 不指定specify_async_loop,就会出现经典报错 attached to a different loop ,子线程的loop去操作主线程loop的连接池
+# If async_aiomysql_f1 does not specify specify_async_loop, the classic error "attached to a different loop" will occur, where the child thread's loop tries to use the main thread loop's connection pool
 r"""
 Traceback (most recent call last):
   File "D:\codes\funboost\test_frame\test_async_consumer\test_child_thread_loop_aiomysql_pool.py", line 46, in async_aiomysql_f1
@@ -87,12 +87,13 @@ RuntimeError: Task <Task pending name='Task-2' coro=<AsyncPoolExecutor._consume(
 """
 
 """
-方式一:
-消费函数使用全局g_aiomysql连接池,每个线程都使用主线程的loop来使用连接池查询,所以@boost需要指定specify_async_loop为主线程的loop
+Method 1:
+Consumer function uses the global g_aiomysql connection pool. Each thread uses the main thread's loop to query via the connection pool,
+so @boost needs to specify specify_async_loop as the main thread's loop.
 """
 @boost(BoosterParams(queue_name='async_aiomysql_f1_queue', concurrent_mode=ConcurrentModeEnum.ASYNC, broker_kind=BrokerEnum.REDIS,
         log_level=10,concurrent_num=3,
-       specify_async_loop=loop, # specify_async_loop传参是核心灵魂代码,不传这个还要使用主loop绑定的连接池就会报错.
+       specify_async_loop=loop, # specify_async_loop parameter is the core soul; not passing it when using the main loop's connection pool will cause an error.
        is_auto_start_specify_async_loop_in_child_thread=True,
        ))
 async def async_aiomysql_f1(x):
@@ -109,21 +110,22 @@ thread_local = threading.local()
 async def create_pool_thread_local():
     if hasattr(thread_local, 'aiomysql_pool'):
         return thread_local.aiomysql_pool
-    pool = await aiomysql.create_pool(**DB_CONFIG, minsize=1, maxsize=5, )  # 这些是重点.
+    pool = await aiomysql.create_pool(**DB_CONFIG, minsize=1, maxsize=5, )  # These are key points.
     setattr(thread_local, 'aiomysql_pool', pool)
-    print('创建了线程级别 threadlocal的 aiomysql连接池')
+    print('Created thread-local level aiomysql connection pool')
     return pool
 
 
 """
-方式二:
-消费函数使用thread_local线程级别全局变量,每个消费函数的那个子线程的loop使用的是线程级别自己的连接池,
-这样就避免了子线程的loop去用 主线程绑定的aiomysqlpool查询数据库,导致报错
+Method 2:
+Consumer function uses thread_local thread-level global variables. Each consumer function's child thread loop uses
+its own thread-level connection pool. This avoids the child thread's loop using the main thread's bound aiomysql pool
+to query the database, which would cause errors.
 
 """
 @boost(BoosterParams(queue_name='async_aiomysql_f2_queue', concurrent_mode=ConcurrentModeEnum.ASYNC, broker_kind=BrokerEnum.REDIS,
         log_level=10,concurrent_num=3,
-       # specify_async_loop=loop, # specify_async_loop 不需要传递,因为子线程的loop有自己的pool,不使用主线程的pool去查数据库
+       # specify_async_loop=loop, # specify_async_loop does not need to be passed, because the child thread's loop has its own pool and doesn't use the main thread's pool for database queries
        is_auto_start_specify_async_loop_in_child_thread=True,
        ))
 async def async_aiomysql_f2_use_thread_local_aio_mysql_pool(x):
@@ -139,7 +141,7 @@ async def async_aiomysql_f2_use_thread_local_aio_mysql_pool(x):
 
 
 if __name__ == '__main__':
-    loop.run_until_complete(create_pool()) # 先创建pool,aiomysql的pool不能直接在模块级全局变量直接生成.
+    loop.run_until_complete(create_pool()) # Create pool first; aiomysql pool cannot be created directly as a module-level global variable.
 
     async_aiomysql_f1.clear()
     async_aiomysql_f2_use_thread_local_aio_mysql_pool.clear()

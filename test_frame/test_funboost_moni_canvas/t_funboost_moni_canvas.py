@@ -1,33 +1,35 @@
 """
-此文件演示, funboost 使用 rpc获取结果阻塞的特性,来实现 canvas编排
-可以把一个函数的结果作为下一个函数的入参,来实现 canvas编排
-无需学习新的领域特定语言（DSL） 没有发明新的语法.funboost没有为工作流编排引入任何新的、专门的 API
+This file demonstrates funboost using the RPC result-blocking feature to implement canvas orchestration.
+The result of one function can be passed as input to the next function to implement canvas orchestration.
+No need to learn a new domain-specific language (DSL) or invent new syntax. funboost has not introduced
+any new, specialized API for workflow orchestration.
 
-整个编排过程就是调用 funboost 已有的 .push() / .aio_push() 和 .wait_rpc_data_or_raise() 方法。
-开发者不需要去学习和记忆 chain, chord, group,header,body, s (signature), si,s(immutable=True), map,starmap  
-等特定的 Canvas 概念和语法，降低了学习成本。
-这一切都是用户主动使用funboost的rpc特性来实现,用户可以自由灵活控制
+The entire orchestration process simply calls funboost's existing .push() / .aio_push() and
+.wait_rpc_data_or_raise() methods.
+Developers do not need to learn and memorize chain, chord, group, header, body, s (signature),
+si, s(immutable=True), map, starmap and other Canvas-specific concepts and syntax, reducing the
+learning curve.
+All of this is implemented using funboost's RPC feature, giving users full flexibility and control.
 """
 
 
 """
-此文件演示一个非常经典的canvas编排:
-    1.从url下载视频,并保存到本地 (download_video)
-    2.根据第1步下载的视频文件,转码视频,并发转换成3个分辨率的视频文件 (transform_video)
-    3.根据第2步转码的视频文件列表,更新数据库,并且发送微信通知 (send_finish_msg)
+This file demonstrates a very classic canvas orchestration:
+    1. Download video from url and save locally (download_video)
+    2. Transcode the downloaded video file concurrently into 3 resolution video files (transform_video)
+    3. Update the database and send a WeChat notification using the transcoded video file list (send_finish_msg)
 
 
-        
-这个需求如果在celery的canvas编排是如下:
+The equivalent celery canvas orchestration for this requirement is:
     from celery import chain, chord, group
 
     resolutions = ["360p", "720p", "1080p"]
 
-    # header: 并行转码；body: 汇总并发送完成消息
+    # header: parallel transcoding; body: aggregate and send finish message
     header = group(transform_video.s(resolution=r) for r in resolutions)
     body = send_finish_msg.s(url=url)
 
-    # 先下载 -> 将下载结果（文件路径）作为额外参数传给 header 中每个 transform_video
+    # First download -> pass download result (file path) as extra argument to each transform_video in header
     work_flow = chain(
         download_video.s(url),
         chord(header, body)
@@ -35,8 +37,8 @@
 """
 
 """
-celery发明了一套声明式canvas api,用户需要学习新的语法,
-funboost是命令式,全部使用已有的rpc方法,没有一套声明式api
+Celery invented a declarative canvas API that requires users to learn new syntax.
+funboost is imperative, using only existing RPC methods, with no declarative API.
 """
 
 

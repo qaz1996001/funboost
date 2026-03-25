@@ -25,8 +25,8 @@ if __name__ == '__main__':
     start_time = time.time()
     for i in range(1000):
         async_result: AsyncResult = f.push(i)
-        # print('async_result is :', async_result.result) # 会阻塞,如果不运行 async_result.result,f.push不会阻塞
-        # rpc_data_obj = f.publisher.sync_call({'x': i},is_return_rpc_data_obj=True) # 已经阻塞,无论是否执行下面的rpc_data_obj.result
+        # print('async_result is :', async_result.result) # blocks; if async_result.result is not accessed, f.push does not block
+        # rpc_data_obj = f.publisher.sync_call({'x': i},is_return_rpc_data_obj=True) # already blocking; regardless of whether rpc_data_obj.result is accessed below
         # print('result is :', rpc_data_obj.result)
 
     # with ThreadPoolExecutor(max_workers=50) as pool:

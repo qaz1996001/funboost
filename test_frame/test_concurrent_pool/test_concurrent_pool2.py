@@ -32,7 +32,7 @@ async def async_request(i):
         async with ss.request('get', url, timeout=aiohttp.ClientTimeout(30), ) as resp:
             text = await resp.text()
             # print(text[:10])
-        print(f'异步{i} {time.time() - t0}')
+        print(f'async{i} {time.time() - t0}')
         # await asyncio.sleep(0.1)
         global total_succ_async
         total_succ_async += 1
@@ -54,7 +54,7 @@ def sync_request(i):
         t0 = time.time()
         resp = ss2.get(url, timeout=30)
         text = resp.text
-        print(f'同步{i} {time.time() - t0}')
+        print(f'sync{i} {time.time() - t0}')
         # time.sleep(0.1)
         # print(text[:10])
         global total_succ_sync
