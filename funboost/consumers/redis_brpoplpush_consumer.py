@@ -18,7 +18,7 @@ class RedisBrpopLpushConsumer(AbstractConsumer, RedisMixin):
 
     def start_consuming_message(self):
         self.consumer_params.is_send_consumer_heartbeat_to_redis = True
-        # Plan C: Register current consumer's unack list key as a “full index”
+        # Plan C: Register current consumer's unack list key as a "full index"
         self._unack_list_name = f'unack_{self._queue_name}_{self.consumer_identification}'
         self._unack_registry_key = RedisKeys.gen_funboost_unack_registry_key_by_queue_name(self._queue_name)
         self.redis_db_frame.sadd(self._unack_registry_key, self._unack_list_name)

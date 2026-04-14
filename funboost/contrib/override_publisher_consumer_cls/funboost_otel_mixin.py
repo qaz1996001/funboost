@@ -1,4 +1,4 @@
-“””
+"""
 1.
 ```md
 🚀 Funboost: The only Python task queue framework with native OpenTelemetry distributed tracing support
@@ -23,7 +23,7 @@ back to fa, you get an infinite loop — traditional task ID tracking is not eno
 fa -> fb -> fc -> fa -> ...
 
 #### Visual effect in Jaeger / SkyWalking / Funboost TreeExporter:
-You will see a **”Staircase to Hell”**:
+You will see a **"Staircase to Hell"**:
 
 ```text
 └── 📤 fa send
@@ -35,7 +35,7 @@ You will see a **”Staircase to Hell”**:
                         └── 📤 fa send  <-- fa called again
                             └── 📥 fa process
 
-“””
+"""
 
 
 

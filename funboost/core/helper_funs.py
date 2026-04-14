@@ -62,11 +62,11 @@ run_forever = block_python_main_thread_exit
 class MsgGenerater:
     @staticmethod
     def generate_task_id(queue_name:str) -> str:
-        “””
+        """
         UUIDv7 is a time-ordered UUID, part of the new generation UUID specification (RFC 9562, now standardized),
         designed specifically for databases/distributed systems. In a nutshell:
-        UUIDv7 = “globally unique like UUID + monotonically increasing like Snowflake ID”
-        “””
+        UUIDv7 = "globally unique like UUID + monotonically increasing like Snowflake ID"
+        """
         # return f'{queue_name}_result:{uuid.uuid4()}'
         return uuid7.uuid7_str()
 

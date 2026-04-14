@@ -469,11 +469,11 @@ class AbstractConsumer(metaclass=abc.ABCMeta, ):
 
     @abc.abstractmethod
     def _dispatch_task(self):
-        “””
+        """
         Each subclass must implement this method to define how to fetch messages from the middleware and add the function and its run parameters to the worker pool.
 
-        The philosophy of funboost's _dispatch_task is: “I don't care how you get tasks from your system. I only require that once you have a task,
-        you call self._submit_task(msg) to hand it to me for processing.”
+        The philosophy of funboost's _dispatch_task is: "I don't care how you get tasks from your system. I only require that once you have a task,
+        you call self._submit_task(msg) to hand it to me for processing."
 
         Therefore, regardless of whether message fetching uses pull mode, push mode, or polling mode; whether it fetches one message at a time or multiple in batch;
         whether it's traditional MQ, kafka, databases, socket/grpc/tcp, kombu, Python task frameworks like celery/rq/dramatiq,
@@ -482,16 +482,16 @@ class AbstractConsumer(metaclass=abc.ABCMeta, ):
         _dispatch_task is the core that allows anything to be a broker. Nothing cannot be a broker; extensibility is unmatched.
 
         :return:
-        “””
+        """
 
-        “””
+        """
         In contrast, with celery, because kombu forcibly emulates the classic AMQP protocol, only RabbitMQ works perfectly as a celery broker.
         When Redis is used as a celery broker, consumption acknowledgment (ACK) uses visibility_timeout, which is a terrible approach.
         Force-restarting the program after a power cut either causes orphan messages to be requeued too slowly, or treats long-running tasks as orphan messages and endlessly re-queues them.
 
         Implementing Kafka as a celery broker has been an open issue for over a decade and has never been perfectly realized — this is the limitation of celery+kombu.
         Not to mention using MySQL CDC as a celery broker. funboost's design is far superior to celery in this regard.
-        “””
+        """
 
         raise NotImplementedError
 
