@@ -1,41 +1,41 @@
 
-# feapder 2层级爬虫demo
+# feapder 2-level crawler demo
 
-# 导入feapder框架中的相关模块
+# Import relevant modules from the feapder framework
 from feapder import Item, Spider, Request
 
-# 定义一个数据模型类，继承自feapder的Item类
+# Define a data model class, inheriting from feapder's Item class
 class MyItem(Item):
-    # 定义数据字段
+    # Define data fields
     title = "default"
     url = "default"
 
-# 定义一个爬虫类，继承自feapder的Spider类
+# Define a spider class, inheriting from feapder's Spider class
 class MySpider(Spider):
-    # 定义起始URL
+    # Define starting URLs
     start_urls = ["https://www.example.com"]
 
-    # 解析函数，用于处理列表页
+    # Parse function for handling list pages
     def parse(self, request, response):
-        # 使用xpath解析获取所有文章链接
+        # Use xpath to parse and get all article links
         links = response.xpath('//div[@class="post-title"]/a/@href').extract()
 
-        # 遍历链接列表，构造Request对象并发送
+        # Iterate over the link list, construct Request objects and send them
         for link in links:
             yield Request(link, callback=self.parse_detail)
 
-    # 解析函数，用于处理详情页
+    # Parse function for handling detail pages
     def parse_detail(self, request, response):
-        # 实例化MyItem类
+        # Instantiate MyItem class
         item = MyItem()
 
-        # 提取标题和URL
+        # Extract title and URL
         item.title = response.xpath('//h1[@class="post-title"]/text()').extract_first()
         item.url = request.url
 
-        # 返回数据
+        # Return data
         yield item
 
-# 运行爬虫
+# Run the spider
 if __name__ == "__main__":
     MySpider().start()

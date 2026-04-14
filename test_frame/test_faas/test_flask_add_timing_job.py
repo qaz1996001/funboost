@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-测试 Flask 定时任务接口
-测试添加、查询、暂停、恢复、删除定时任务
+Test Flask scheduled task API
+Test adding, querying, pausing, resuming, and deleting scheduled tasks
 """
 
 import requests
@@ -9,18 +9,18 @@ import json
 import time
 from datetime import datetime, timedelta
 
-# Flask 服务地址
+# Flask service address
 BASE_URL = "http://localhost:27019"
 
 def test_add_timing_job_date():
-    """测试添加一次性任务（date 触发器）"""
+    """Test adding a one-time task (date trigger)"""
     print("\n" + "="*60)
-    print("测试1: 添加一次性任务 (date)")
+    print("Test 1: Add one-time task (date)")
     print("="*60)
-    
-    # 设置5秒后执行
+
+    # Set execution time 5 seconds from now
     run_date = (datetime.now() + timedelta(seconds=5)).strftime('%Y-%m-%d %H:%M:%S')
-    
+
     data = {
         "queue_name": "test_funboost_task3",
         "trigger": "date",
@@ -30,318 +30,318 @@ def test_add_timing_job_date():
         "run_date": run_date,
         "kwargs": {
             "user_id": 123,
-            "name": "张三",
-            "action": "一次性任务测试"
+            "name": "Zhang San",
+            "action": "one-time task test"
         }
     }
-    
-    print(f"请求数据: {json.dumps(data, indent=2, ensure_ascii=False)}")
-    
+
+    print(f"Request data: {json.dumps(data, indent=2, ensure_ascii=False)}")
+
     response = requests.post(
         f"{BASE_URL}/funboost/add_timing_job",
         json=data,
         headers={"Content-Type": "application/json"}
     )
-    
-    print(f"响应状态: {response.status_code}")
-    print(f"响应数据: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
-    
+
+    print(f"Response status: {response.status_code}")
+    print(f"Response data: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
+
     return response.json()
 
 
 def test_add_timing_job_interval():
-    """测试添加间隔执行任务（interval 触发器）"""
+    """Test adding an interval task (interval trigger)"""
     print("\n" + "="*60)
-    print("测试2: 添加间隔执行任务 (interval)")
+    print("Test 2: Add interval task (interval)")
     print("="*60)
-    
+
     data = {
         "queue_name": "test_funboost_faas_queue",
         "trigger": "interval",
         "job_id": "interval_job_test_001",
         "job_store_kind": "redis",
         "replace_existing": True,
-        "seconds": 10,  # 每10秒执行一次
+        "seconds": 10,  # Execute every 10 seconds
         "kwargs": {
             # "user_id": 456,
-            # "name": "李四",
-            # "action": "间隔任务测试"
+            # "name": "Li Si",
+            # "action": "interval task test"
             "x":8,"y":9
         }
     }
-    
-    print(f"请求数据: {json.dumps(data, indent=2, ensure_ascii=False)}")
-    
+
+    print(f"Request data: {json.dumps(data, indent=2, ensure_ascii=False)}")
+
     response = requests.post(
         f"{BASE_URL}/funboost/add_timing_job",
         json=data
     )
-    
-    print(f"响应状态: {response.status_code}")
-    print(f"响应数据: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
-    
+
+    print(f"Response status: {response.status_code}")
+    print(f"Response data: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
+
     return response.json()
 
 
 def test_add_timing_job_cron():
-    """测试添加定时任务（cron 触发器）"""
+    """Test adding a cron task (cron trigger)"""
     print("\n" + "="*60)
-    print("测试3: 添加定时任务 (cron)")
+    print("Test 3: Add cron task (cron)")
     print("="*60)
-    
+
     data = {
         "queue_name": "test_funboost_task3",
         "trigger": "cron",
         "job_id": "cron_job_test_001",
         "job_store_kind": "redis",
         "replace_existing": True,
-        "hour": "*/1",  # 每小时执行一次
+        "hour": "*/1",  # Execute every hour
         "minute": "0",
         "second": "0",
         "kwargs": {
             "user_id": 789,
-            "name": "王五",
-            "action": "Cron任务测试",
-            "tags": ["定时", "重要"]
+            "name": "Wang Wu",
+            "action": "Cron task test",
+            "tags": ["scheduled", "important"]
         }
     }
-    
-    print(f"请求数据: {json.dumps(data, indent=2, ensure_ascii=False)}")
-    
+
+    print(f"Request data: {json.dumps(data, indent=2, ensure_ascii=False)}")
+
     response = requests.post(
         f"{BASE_URL}/funboost/add_timing_job",
         json=data
     )
-    
-    print(f"响应状态: {response.status_code}")
-    print(f"响应数据: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
-    
+
+    print(f"Response status: {response.status_code}")
+    print(f"Response data: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
+
     return response.json()
 
 
 def test_get_timing_jobs(queue_name=None):
-    """测试获取任务列表"""
+    """Test getting task list"""
     print("\n" + "="*60)
-    print("测试4: 获取任务列表")
+    print("Test 4: Get task list")
     print("="*60)
-    
+
     params = {"job_store_kind": "redis"}
     if queue_name:
         params["queue_name"] = queue_name
-    
-    print(f"请求参数: {params}")
-    
+
+    print(f"Request params: {params}")
+
     response = requests.get(
         f"{BASE_URL}/funboost/get_timing_jobs",
         params=params
     )
-    
-    print(f"响应状态: {response.status_code}")
+
+    print(f"Response status: {response.status_code}")
     result = response.json()
-    print(f"任务数量: {len(result.get('data', {}).get('jobs', []))}")
-    print(f"响应数据: {json.dumps(result, indent=2, ensure_ascii=False)}")
-    
+    print(f"Task count: {len(result.get('data', {}).get('jobs', []))}")
+    print(f"Response data: {json.dumps(result, indent=2, ensure_ascii=False)}")
+
     return result
 
 
 def test_get_timing_job(job_id, queue_name):
-    """测试获取单个任务详情"""
+    """Test getting a single task detail"""
     print("\n" + "="*60)
-    print("测试5: 获取单个任务详情")
+    print("Test 5: Get single task detail")
     print("="*60)
-    
+
     params = {
         "job_id": job_id,
         "queue_name": queue_name,
         "job_store_kind": "redis"
     }
-    
-    print(f"请求参数: {params}")
-    
+
+    print(f"Request params: {params}")
+
     response = requests.get(
         f"{BASE_URL}/funboost/get_timing_job",
         params=params
     )
-    
-    print(f"响应状态: {response.status_code}")
-    print(f"响应数据: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
-    
+
+    print(f"Response status: {response.status_code}")
+    print(f"Response data: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
+
     return response.json()
 
 
 def test_pause_timing_job(job_id, queue_name):
-    """测试暂停任务"""
+    """Test pausing a task"""
     print("\n" + "="*60)
-    print("测试6: 暂停任务")
+    print("Test 6: Pause task")
     print("="*60)
-    
+
     params = {
         "job_id": job_id,
         "queue_name": queue_name,
         "job_store_kind": "redis"
     }
-    
-    print(f"请求参数: {params}")
-    
+
+    print(f"Request params: {params}")
+
     response = requests.post(
         f"{BASE_URL}/funboost/pause_timing_job",
         params=params
     )
-    
-    print(f"响应状态: {response.status_code}")
-    print(f"响应数据: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
-    
+
+    print(f"Response status: {response.status_code}")
+    print(f"Response data: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
+
     return response.json()
 
 
 def test_resume_timing_job(job_id, queue_name):
-    """测试恢复任务"""
+    """Test resuming a task"""
     print("\n" + "="*60)
-    print("测试7: 恢复任务")
+    print("Test 7: Resume task")
     print("="*60)
-    
+
     params = {
         "job_id": job_id,
         "queue_name": queue_name,
         "job_store_kind": "redis"
     }
-    
-    print(f"请求参数: {params}")
-    
+
+    print(f"Request params: {params}")
+
     response = requests.post(
         f"{BASE_URL}/funboost/resume_timing_job",
         params=params
     )
-    
-    print(f"响应状态: {response.status_code}")
-    print(f"响应数据: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
-    
+
+    print(f"Response status: {response.status_code}")
+    print(f"Response data: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
+
     return response.json()
 
 
 def test_delete_timing_job(job_id, queue_name):
-    """测试删除任务"""
+    """Test deleting a task"""
     print("\n" + "="*60)
-    print("测试8: 删除任务")
+    print("Test 8: Delete task")
     print("="*60)
-    
+
     params = {
         "job_id": job_id,
         "queue_name": queue_name,
         "job_store_kind": "redis"
     }
-    
-    print(f"请求参数: {params}")
-    
+
+    print(f"Request params: {params}")
+
     response = requests.delete(
         f"{BASE_URL}/funboost/delete_timing_job",
         params=params
     )
-    
-    print(f"响应状态: {response.status_code}")
-    print(f"响应数据: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
-    
+
+    print(f"Response status: {response.status_code}")
+    print(f"Response data: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
+
     return response.json()
 
 
 def test_delete_all_timing_jobs(queue_name=None):
-    """测试删除所有任务"""
+    """Test deleting all tasks"""
     print("\n" + "="*60)
-    print("测试9: 删除所有任务")
+    print("Test 9: Delete all tasks")
     print("="*60)
-    
+
     params = {"job_store_kind": "redis"}
     if queue_name:
         params["queue_name"] = queue_name
-    
-    print(f"请求参数: {params}")
-    
+
+    print(f"Request params: {params}")
+
     response = requests.delete(
         f"{BASE_URL}/funboost/delete_all_timing_jobs",
         params=params
     )
-    
-    print(f"响应状态: {response.status_code}")
-    print(f"响应数据: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
-    
+
+    print(f"Response status: {response.status_code}")
+    print(f"Response data: {json.dumps(response.json(), indent=2, ensure_ascii=False)}")
+
     return response.json()
 
 
 def run_all_tests():
-    """运行所有测试"""
+    """Run all tests"""
     print("\n" + "#"*60)
-    print("# 开始测试 Flask 定时任务接口")
+    print("# Starting Flask scheduled task API tests")
     print("#"*60)
-    
+
     queue_name = "test_funboost_faas_queue"
-  
-    
+
+
     try:
-        # 1. 添加三种类型的任务
+        # 1. Add three types of tasks
         result1 = test_add_timing_job_date()
         time.sleep(0.5)
-        
+
         result2 = test_add_timing_job_interval()
         time.sleep(0.5)
-        
+
         result3 = test_add_timing_job_cron()
         time.sleep(0.5)
-        
-        # 2. 获取所有任务
+
+        # 2. Get all tasks
         test_get_timing_jobs()
         time.sleep(0.5)
-        
-        # 3. 获取指定队列的任务
+
+        # 3. Get tasks for a specific queue
         test_get_timing_jobs(queue_name)
         time.sleep(0.5)
-        
-        # # 4. 获取单个任务详情
+
+        # # 4. Get single task detail
         # test_get_timing_job("interval_job_test_001", queue_name)
         # time.sleep(0.5)
-        
-        # # 5. 暂停任务
+
+        # # 5. Pause task
         # test_pause_timing_job("interval_job_test_001", queue_name)
         # time.sleep(0.5)
-        
-        # # 6. 查看暂停后的状态
-        # print("\n查看暂停后的任务列表:")
+
+        # # 6. Check status after pausing
+        # print("\nCheck task list after pausing:")
         # test_get_timing_jobs(queue_name)
         # time.sleep(0.5)
-        
-        # # 7. 恢复任务
+
+        # # 7. Resume task
         # test_resume_timing_job("interval_job_test_001", queue_name)
         # time.sleep(0.5)
-        
-        # # 8. 查看恢复后的状态
-        # print("\n查看恢复后的任务列表:")
+
+        # # 8. Check status after resuming
+        # print("\nCheck task list after resuming:")
         # test_get_timing_jobs(queue_name)
         # time.sleep(0.5)
-        
-        # # 9. 删除单个任务
+
+        # # 9. Delete single task
         # test_delete_timing_job("date_job_test_001", queue_name)
         # time.sleep(0.5)
-        
-        # # 10. 查看删除后的任务列表
-        # print("\n查看删除单个任务后的列表:")
+
+        # # 10. Check task list after deletion
+        # print("\nCheck task list after deleting single task:")
         # test_get_timing_jobs(queue_name)
-        
-        # # 11. 删除所有任务（可选，谨慎使用）
+
+        # # 11. Delete all tasks (optional, use with caution)
         # # test_delete_all_timing_jobs(queue_name)
-        
+
         # print("\n" + "#"*60)
-        # print("# 所有测试完成！")
+        # print("# All tests completed!")
         # print("#"*60)
-        
+
     except Exception as e:
-        print(f"\n❌ 测试失败: {e}")
+        print(f"\nTest failed: {e}")
         import traceback
         traceback.print_exc()
 
 
 if __name__ == '__main__':
-    # 运行所有测试
+    # Run all tests
     # run_all_tests()
-    
-    # 或者单独运行某个测试
+
+    # Or run individual tests
     test_add_timing_job_interval()
     test_get_timing_jobs("test_funboost_faas_queue")

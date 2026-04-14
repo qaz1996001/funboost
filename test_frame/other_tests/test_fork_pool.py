@@ -10,7 +10,7 @@ import os
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import ThreadPoolExecutor
 
-print('启动')
+print('Starting')
 
 tp = ThreadPoolExecutor(2)
 

@@ -9,9 +9,7 @@ from funboost.publishers.base_publisher import AbstractPublisher
 
 class RqPublisher(AbstractPublisher):
     """
-    使用redis作为中间件,这个是大幅优化了发布速度的方式。简单的发布是 redis_publisher_0000.py 中的代码方式。
-
-    这个是复杂版，批量推送，简单版在 funboost/publishers/redis_publisher_simple.py
+    Uses RQ (Redis Queue) as the broker.
     """
 
     def _publish_impl(self, msg):

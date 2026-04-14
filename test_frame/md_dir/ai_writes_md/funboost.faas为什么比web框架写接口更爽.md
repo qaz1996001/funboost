@@ -1,126 +1,126 @@
-# funboost.faas 为什么比 Web 框架写接口更爽
+# Why funboost.faas Is More Enjoyable Than Writing Interfaces with a Web Framework
 
-## 传统 Django/Flask 的尴尬："脱了裤子放屁"
+## The Awkwardness of Traditional Django/Flask: "Pants Off Just to Pass Wind"
 
-Django 的视图函数一般不直接写复杂逻辑，因为**视图函数不能作为普通函数被复用调用**。所以你被迫要：
+Django view functions generally do not contain complex logic directly, because **view functions cannot be reused as ordinary functions**. So you are forced to:
 
 ```python
-# 视图函数 - 只是个"搬运工"，不能直接复用
+# View function - just a "porter", cannot be reused directly
 @api_view(['POST'])
 def calculate_score_view(request):
     user_id = request.data['user_id']
     weights = request.data['weights']
-    result = calculate_score(user_id, weights)  # 被迫多一层调用
+    result = calculate_score(user_id, weights)  # forced extra layer of indirection
     return Response({'result': result})
 
-# 真正的业务逻辑 - 另外封装
+# The actual business logic - wrapped separately
 def calculate_score(user_id, weights):
-    # 复杂逻辑...
+    # complex logic...
     return score
 ```
 
-**问题**：
-- 视图只是个"接收参数 → 调用函数 → 返回结果"的搬运工
-- 每个功能都要写两遍：一份业务函数 + 一份视图适配器
-- 还要配路由、写序列化器、写参数校验...
+**Problems**:
+- The view is just a porter that "receives parameters → calls function → returns result"
+- Every feature must be written twice: one business function + one view adapter
+- You also have to configure routes, write serializers, write parameter validation...
 
 ---
 
-## funboost.faas 的设计哲学：函数即接口
+## funboost.faas Design Philosophy: Function as Interface
 
 ```python
-# 这就是业务函数，同时也是 HTTP 接口，也能被其他代码直接调用
+# This is the business function, also an HTTP interface, and can be called directly by other code
 @boost(BoosterParams(queue_name="calculate_score"))
 def calculate_score(user_id: int, weights: dict):
-    # 复杂逻辑...
+    # complex logic...
     return score
 
-# 直接当普通函数调用
+# Call directly as a regular function
 result = calculate_score(123, {"a": 0.5})
 
-# 通过队列异步调用
+# Call asynchronously via the queue
 calculate_score.push(123, {"a": 0.5})
 
-# 通过 HTTP 接口调用
+# Call via HTTP interface
 # POST /funboost/publish {"queue_name": "calculate_score", "msg_body": {...}}
 ```
 
-**一个函数，三种调用方式**，没有"脱了裤子放屁"的中间层！
+**One function, three ways to call it** — no unnecessary intermediate layer!
 
 ---
 
-## 代码量对比
+## Code Volume Comparison
 
-| 功能点 | Django 需要写 | funboost 需要写 |
+| Feature | Django requires | funboost requires |
 |-------|-------------|----------------|
-| 业务函数 | ✅ 1份 | ✅ 1份 |
-| 视图/路由 | ❌ 额外1份 | 0（自动） |
-| 序列化器 | ❌ 额外1份 | 0（自动） |
-| 参数校验 | ❌ 额外写 | 0（根据函数签名自动） |
-| 接口文档 | ❌ 额外写 | 0（自动生成） |
+| Business function | ✅ 1 copy | ✅ 1 copy |
+| View/Route | ❌ 1 extra copy | 0 (automatic) |
+| Serializer | ❌ 1 extra copy | 0 (automatic) |
+| Parameter validation | ❌ extra work | 0 (automatic based on function signature) |
+| Interface documentation | ❌ extra work | 0 (auto-generated) |
 
 ---
 
-## 上新功能流程对比
+## Workflow Comparison for Adding New Features
 
-| 对比维度 | 传统 Django/Flask | funboost.faas |
+| Dimension | Traditional Django/Flask | funboost.faas |
 |---------|------------------|---------------|
-| **上新功能流程** | 写视图函数 → 配路由 → 写序列化 → 写参数校验 → 重启服务 | 写 `@boost` 函数 → 部署上线 → **自动可调用** |
-| **接口文档** | 需要手写或用 Swagger 注解 | 自动从函数签名生成 |
-| **参数校验** | 手动写校验逻辑或用 Pydantic | 自动根据 `final_func_input_params_info` 校验 |
-| **Web服务重启** | **每次都要重启** | **永不重启**（热加载） |
-| **跨项目复用** | 需要打包成库或微服务 | 只要共享 Redis，任意项目都能调用 |
+| **Adding a new feature** | Write view function → configure route → write serializer → write validation → restart service | Write `@boost` function → deploy → **automatically callable** |
+| **Interface documentation** | Must be written manually or annotated with Swagger | Auto-generated from function signature |
+| **Parameter validation** | Write validation logic manually or use Pydantic | Automatic based on `final_func_input_params_info` |
+| **Web service restart** | **Required every time** | **Never needed** (hot reload) |
+| **Cross-project reuse** | Must be packaged as a library or microservice | Any project sharing Redis can call it |
 
 ---
 
-## 最爽的几个点
+## The Best Parts
 
-### 1. 真正的"写完即上线"
+### 1. True "Write It and It's Live"
 ```python
-# 只写这个，部署上线后，HTTP接口马上就能调用
+# Just write this — after deployment, the HTTP interface is immediately callable
 @boost(BoosterParams(queue_name="new_feature"))
 def calculate_score(user_id: int, weights: dict):
     return score
 ```
 
-### 2. Web 网关 = 万能入口
-**一个 `app.include_router(fastapi_router)` 搞定所有接口**，不用再纠结：
-- 这个接口用 GET 还是 POST？
-- URL 路径怎么设计？
-- 参数放 query 还是 body？
+### 2. Web Gateway = Universal Entry Point
+**One `app.include_router(fastapi_router)` handles all interfaces** — no more agonizing over:
+- Should this interface use GET or POST?
+- How should the URL path be designed?
+- Should parameters go in the query string or the body?
 
-### 3. 天然支持异步和 RPC
-传统视图函数要实现"提交任务 → 轮询结果"需要额外设计，funboost 直接内置：
+### 3. Native Support for Async and RPC
+Traditional view functions require extra design to implement "submit task → poll result". funboost has it built in:
 ```python
-# need_result=True 一行搞定 RPC
+# need_result=True solves RPC in one line
 {"queue_name": "xxx", "msg_body": {...}, "need_result": true}
 ```
 
-### 4. 跨团队协作超方便
-其他团队只需要知道 `queue_name` 和入参格式，就能直接调用你的功能，不用关心：
-- 你用什么语言实现的
-- 你的服务部署在哪里
-- 你的服务有没有挂掉（消息队列会等你恢复）
+### 4. Cross-Team Collaboration Is Super Easy
+Other teams only need to know the `queue_name` and the input format to call your feature directly, without caring about:
+- What language you used to implement it
+- Where your service is deployed
+- Whether your service is currently down (the message queue will wait for recovery)
 
 ---
 
-## 什么场景传统方式更合适？
+## When Is the Traditional Approach More Suitable?
 
-| 场景 | 推荐方式 |
+| Scenario | Recommended approach |
 |-----|---------|
-| 需要精细控制 HTTP 状态码/headers | 传统视图函数 |
-| 需要实时流式响应（SSE/WebSocket） | 传统视图函数 |
-| 需要复杂的中间件链条 | 传统视图函数 |
-| CPU 密集型异步任务 | funboost.faas ✅ |
-| 跨服务编排调用 | funboost.faas ✅ |
-| 快速迭代上新功能 | funboost.faas ✅ |
+| Fine-grained control over HTTP status codes/headers | Traditional view function |
+| Real-time streaming responses (SSE/WebSocket) | Traditional view function |
+| Complex middleware chains | Traditional view function |
+| CPU-intensive async tasks | funboost.faas ✅ |
+| Cross-service orchestration | funboost.faas ✅ |
+| Rapid iteration and shipping new features | funboost.faas ✅ |
 
 ---
 
-## 本质区别
+## The Essential Difference
 
-> **Django/Flask 以"请求-响应"为中心，funboost 以"函数"为中心。**
-> 
-> 函数天然可复用，所以不需要适配层！
+> **Django/Flask is centered on "request-response"; funboost is centered on "function".**
+>
+> Functions are naturally reusable, so no adapter layer is needed!
 
-这就是"函数即服务"(FaaS) 的魅力——**专注业务逻辑本身，基础设施全自动化**。
+This is the appeal of "Function as a Service" (FaaS) — **focus on business logic itself, with full infrastructure automation**.

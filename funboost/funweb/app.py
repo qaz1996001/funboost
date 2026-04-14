@@ -29,16 +29,16 @@ from flask_login import login_user, logout_user, login_required, LoginManager, U
 import nb_log
 from funboost import (
     nb_print,
-    # ActiveCousumerProcessInfoGetter,  # 已迁移到 faas/flask_adapter.py
-    # BoostersManager,  # 未使用
-    # PublisherParams,  # 未使用
-    # RedisMixin,  # 已废弃的 pause/resume 路由使用，现已注释
+    # ActiveCousumerProcessInfoGetter,  # Moved to faas/flask_adapter.py
+    # BoostersManager,  # Not used
+    # PublisherParams,  # Not used
+    # RedisMixin,  # Used by deprecated pause/resume routes, now commented out
 )
 from funboost.funweb.functions import (
     get_cols,
     query_result,
     get_speed,
-    # Statistic,  # 已废弃，前端不再使用 speed_statistic_for_echarts 路由
+    # Statistic,  # Deprecated, frontend no longer uses speed_statistic_for_echarts route
 )
 from funboost.funweb import functions as app_functions
 from funboost.core.active_cousumer_info_getter import (
@@ -46,7 +46,7 @@ from funboost.core.active_cousumer_info_getter import (
     SingleQueueConusmerParamsGetter,
     CareProjectNameEnv,
 )
-# from funboost.constant import RedisKeys  # 已废弃的 pause/resume 路由使用，现已注释
+# from funboost.constant import RedisKeys  # Used by deprecated pause/resume routes, now commented out
 from funboost.faas import flask_blueprint
 from funboost.funweb.flask_bps.script_deploy import deploy_bp
 from funboost.funweb.flask_bps.system_monitor import monitor_bp
@@ -63,8 +63,8 @@ login_manager.login_message = "Access denied."
 login_manager.init_app(app)
 
 
-# 大部分路由用faas这里面自带的flask蓝图，因为通用的faas接口是2025年12月才有的功能，
-# 一些老的flask接口是在这里单独开发的。
+# Most routes use the built-in Flask blueprint from faas, since the generic faas API was added in December 2025.
+# Some older Flask endpoints were developed separately here.
 app.register_blueprint(flask_blueprint)  
 app.register_blueprint(deploy_bp)
 app.register_blueprint(monitor_bp)
@@ -104,9 +104,9 @@ def load_user(user_id):
 
 
 class LoginForm(FlaskForm):
-    user_name = StringField("用户名", validators=[DataRequired(), Length(3, 64)])
-    password = PasswordField("密码", validators=[DataRequired(), Length(3, 64)])
-    remember_me = BooleanField("记住我")
+    user_name = StringField("Username", validators=[DataRequired(), Length(3, 64)])
+    password = PasswordField("Password", validators=[DataRequired(), Length(3, 64)])
+    remember_me = BooleanField("Remember me")
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -124,7 +124,7 @@ def login():
                 curr_user = User()
                 curr_user.id = form.user_name.data
 
-                # 通过Flask-Login的login_user方法登录用户
+                # Log in user via Flask-Login's login_user method
                 nb_print(form.remember_me.data)
                 login_user(
                     curr_user,
@@ -134,13 +134,13 @@ def login():
 
                 return redirect(url_for("index"))
 
-            flash("用户名或密码错误", category="error")
+            flash("Incorrect username or password", category="error")
 
             # if form.user_name.data == 'user' and form.password.data == 'mtfy123':
             #     login_user(form.user_name.data, form.remember_me.data)
             #     return redirect(url_for('index'))
             # else:
-            #     flash('账号或密码错误',category='error')
+            #     flash('Incorrect account or password',category='error')
             #     return render_template('login4.html', form=form)
 
     return render_template("login.html", form=form)
@@ -183,7 +183,7 @@ def speed_stats():
 @app.route("/consume_speed_curve")
 @login_required
 def consume_speed_curve():
-    """获取消费速率曲线数据"""
+    """Get consumption speed curve data"""
     from funboost.funweb.functions import get_consume_speed_curve
     queue_name = request.args.get("queue_name")
     start_time = request.args.get("start_time")
@@ -191,7 +191,7 @@ def consume_speed_curve():
     granularity = request.args.get("granularity", "auto")
     
     if not queue_name or not start_time or not end_time:
-        return jsonify({"error": "缺少必要参数: queue_name, start_time, end_time"})
+        return jsonify({"error": "Missing required parameters: queue_name, start_time, end_time"})
     
     try:
         result = get_consume_speed_curve(queue_name, start_time, end_time, granularity)
@@ -204,7 +204,7 @@ def consume_speed_curve():
 @app.route("/tpl/<template>")
 @login_required
 def serve_template(template):
-    # 安全检查：确保只能访问templates目录下的html文件
+    # Security check: ensure only HTML files under the templates directory can be accessed
     if not template.endswith(".html"):
         return "Invalid request", 400
     try:
@@ -225,25 +225,25 @@ def get_time_series_data_by_queue_name(
     Returns:
         _type_: _description_
 
-    返回例如  [{'report_data': {'pause_flag': -1, 'msg_num_in_broker': 936748, 'history_run_count': '150180', 'history_run_fail_count': '46511', 'all_consumers_last_x_s_execute_count': 7, 'all_consumers_last_x_s_execute_count_fail': 0, 'all_consumers_last_x_s_avarage_function_spend_time': 3.441, 'all_consumers_avarage_function_spend_time_from_start': 4.598, 'all_consumers_total_consume_count_from_start': 1296, 'all_consumers_total_consume_count_from_start_fail': 314, 'report_ts': 1749617360.597841}, 'report_ts': 1749617360.597841}, {'report_data': {'pause_flag': -1, 'msg_num_in_broker': 936748, 'history_run_count': '150184', 'history_run_fail_count': '46514', 'all_consumers_last_x_s_execute_count': 7, 'all_consumers_last_x_s_execute_count_fail': 0, 'all_consumers_last_x_s_avarage_function_spend_time': 3.441, 'all_consumers_avarage_function_spend_time_from_start': 4.599, 'all_consumers_total_consume_count_from_start': 1299, 'all_consumers_total_consume_count_from_start_fail': 316, 'report_ts': 1749617370.628166}, 'report_ts': 1749617370.628166}]
+    Returns e.g.  [{'report_data': {'pause_flag': -1, 'msg_num_in_broker': 936748, 'history_run_count': '150180', 'history_run_fail_count': '46511', 'all_consumers_last_x_s_execute_count': 7, 'all_consumers_last_x_s_execute_count_fail': 0, 'all_consumers_last_x_s_avarage_function_spend_time': 3.441, 'all_consumers_avarage_function_spend_time_from_start': 4.598, 'all_consumers_total_consume_count_from_start': 1296, 'all_consumers_total_consume_count_from_start_fail': 314, 'report_ts': 1749617360.597841}, 'report_ts': 1749617360.597841}, {'report_data': {'pause_flag': -1, 'msg_num_in_broker': 936748, 'history_run_count': '150184', 'history_run_fail_count': '46514', 'all_consumers_last_x_s_execute_count': 7, 'all_consumers_last_x_s_execute_count_fail': 0, 'all_consumers_last_x_s_avarage_function_spend_time': 3.441, 'all_consumers_avarage_function_spend_time_from_start': 4.599, 'all_consumers_total_consume_count_from_start': 1299, 'all_consumers_total_consume_count_from_start_fail': 316, 'report_ts': 1749617370.628166}, 'report_ts': 1749617370.628166}]
     """
-    # 获取前端传递的参数
+    # Get parameters passed from the frontend
     start_ts = request.args.get("start_ts")
     end_ts = request.args.get("end_ts")
     curve_samples_count = request.args.get("curve_samples_count")
 
-    # 如果前端指定了采样点数，使用前端的值
+    # If the frontend specified a sample count, use the frontend's value
     if curve_samples_count:
         try:
             curve_samples_count = int(curve_samples_count)
-            # 验证值是否在允许的范围内
+            # Verify the value is within the allowed range
             allowed_values = [60, 120, 180, 360, 720, 1440, 8640]
             if curve_samples_count not in allowed_values:
-                curve_samples_count = 360  # 默认值
+                curve_samples_count = 360  # Default value
         except (ValueError, TypeError):
-            curve_samples_count = 360  # 默认值
+            curve_samples_count = 360  # Default value
     else:
-        # 如果前端没有指定，使用默认值
+        # If not specified by the frontend, use the default value
         curve_samples_count = 360
 
     return jsonify(
@@ -284,32 +284,32 @@ if __name__ == "__main__":
     start_funboost_web_manager(debug=False)
 
     """
-    funboost web manager 启动方式1：
+    funboost web manager startup method 1:
 
-    web代码在funboost包里面，所以可以直接使用命令行运行起来，不需要用户现亲自下载web代码就可以直接运行。
-    
-    第一步： 设置 PYTHONPATH 为你的项目根目录
-    export PYTHONPATH=你的项目根目录 (这么做是为了这个web可以读取到你项目根目录下的 funboost_config.py里面的配置)
-    (怎么设置环境变量应该不需要我来教，环境变量都没听说过太low了)
-      例如 export PYTHONPATH=/home/ydf/codes/ydfhome
-      或者 export PYTHONPATH=./   (./是相对路径，前提是已近cd到你的项目根目录了，也可以写绝对路径全路径)
-      win cmd 设置环境变量语法是 set PYTHONPATH=/home/ydf/codes/ydfhome   
-      win powershell 语法是  $env:PYTHONPATH = "/home/ydf/codes/ydfhome"   
+    The web code is inside the funboost package, so it can be run directly from the command line
+    without users needing to download the web code separately.
 
-    第二步： 启动flask app   
-    win上这么做 python3 -m funboost.funweb.app 
+    Step 1: Set PYTHONPATH to your project root directory
+    export PYTHONPATH=your_project_root_directory (this allows the web app to read the configuration from funboost_config.py in your project root)
+      e.g. export PYTHONPATH=/home/ydf/codes/ydfhome
+      or   export PYTHONPATH=./   (./ is a relative path, assuming you have already cd'd to your project root; you can also use an absolute path)
+      Windows cmd syntax: set PYTHONPATH=/home/ydf/codes/ydfhome
+      Windows powershell syntax: $env:PYTHONPATH = "/home/ydf/codes/ydfhome"
 
-    linux上可以这么做性能好一些，也可以按win的做。
+    Step 2: Start the Flask app
+    On Windows: python3 -m funboost.funweb.app
+
+    On Linux, for better performance (or use the Windows method):
     gunicorn -w 4 --threads=30 --bind 0.0.0.0:27018 funboost.funweb.app:app
     """
 
     """
-    funboost web manager 启动方式2：
-    在python代码中直接启动：
+    funboost web manager startup method 2:
+    Start directly from Python code:
 
     ```python
     from  funboost.funweb.app import start_funboost_web_manager
     start_funboost_web_manager()
     ```
-    
+
     """

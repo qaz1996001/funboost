@@ -6,7 +6,7 @@ import hello_pb2 as hello__pb2
 
 
 class HelloServiceStub(object):
-    """定义服务
+    """Define service
     """
 
     def __init__(self, channel):
@@ -23,11 +23,11 @@ class HelloServiceStub(object):
 
 
 class HelloServiceServicer(object):
-    """定义服务
+    """Define service
     """
 
     def SayHello(self, request, context):
-        """简单的问候方法
+        """Simple greeting method
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -49,7 +49,7 @@ def add_HelloServiceServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class HelloService(object):
-    """定义服务
+    """Define service
     """
 
     @staticmethod

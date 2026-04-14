@@ -1,29 +1,35 @@
 
 """
-2025年后定时任务现在推荐使用 ApsJobAdder 写法 ，用户不需要亲自选择使用 apscheduler对象来添加定时任务。
+After 2025, scheduled tasks are now recommended to use the ApsJobAdder style;
+users no longer need to manually choose an apscheduler object to add scheduled tasks.
 
-使用对apscheduler封装的ApsJobAdder比 直接使用 apscheduler 包的好处如下：
+Benefits of using ApsJobAdder (a wrapper around apscheduler) versus using apscheduler directly:
 
-1、ApsJobAdder.add_push_job 来添加定时发布到消息队列的任务，
-  可以让用户少写一个 push_xx_fun_to_broker 的函数，用户不需要 apscheduler.add_job(push_xx_fun_to_broker,args=(1,)) ，
-  而是 ApsJobAdder.add_push_job(xx_fun,args=(1,))
+1. ApsJobAdder.add_push_job adds tasks that are published to the message queue on schedule.
+   Users can avoid writing a separate push_xx_fun_to_broker function;
+   instead of apscheduler.add_job(push_xx_fun_to_broker, args=(1,)),
+   just use ApsJobAdder.add_push_job(xx_fun, args=(1,)).
 
-2.ApsJobAdder在redis作为job_store时候，每个消费函数使用单独的 jobs_key ，每个消费函数使用独立的 apscheduler对象，避免扫描定时任务互相干扰。
-  例如你只想启动fun1的定时任务，而不像启动fun2的定时任务，更能单独控制。
+2. When using Redis as the job_store, ApsJobAdder uses a separate jobs_key for each consumer
+   function, with an independent apscheduler object per consumer, avoiding interference
+   between scheduled task scans.
+   For example, you can start the scheduled task for fun1 without starting fun2's.
 
-3. ApsJobAdder在redis作为job_store时候 ，_process_jobs 使用了 redis分布式锁， 解决经典头疼的 apschduler建议只在一个进程启动一次，
-现在可以在多机器多进程随意反复启动多次 apscheduler对象，不会造成定时任务执行重复。
+3. When using Redis as the job_store, _process_jobs uses a Redis distributed lock, solving the
+   classic headache of apscheduler recommending only one process start.
+   Now you can start multiple apscheduler objects across multiple machines and processes
+   without causing duplicate scheduled task executions.
 """
 
 from funboost import boost, BrokerEnum,ctrl_c_recv,BoosterParams,ApsJobAdder
 
 
 
-# 定义任务处理函数
+# Define the task handler function
 @boost(BoosterParams(queue_name='sum_queue5', broker_kind=BrokerEnum.REDIS))
-def sum_two_numbers(x, y):  
-    result = x + y 
-    print(f'The sum of {x} and {y} is {result}')  
+def sum_two_numbers(x, y):
+    result = x + y
+    print(f'The sum of {x} and {y} is {result}')
 
 
 @boost(BoosterParams(queue_name='data_queue5', broker_kind=BrokerEnum.REDIS))
@@ -31,30 +37,31 @@ def show_msg(data):
     print(f'data: {data}')
 
 if __name__ == '__main__':
- 
-    # 启动消费者
+
+    # Start consumers
     sum_two_numbers.consume()
     show_msg.consume()
-    
-    # 发布任务
+
+    # Publish tasks
     sum_two_numbers.push(3, 5)
     sum_two_numbers.push(10, 20)
 
     show_msg.push('hello world')
-    
-    # 使用ApsJobAdder添加定时任务， 里面的定时语法，和apscheduler是一样的，用户需要自己熟悉知名框架apscheduler的add_job定时入参
 
-    # 方式1：指定日期执行一次
+    # Use ApsJobAdder to add scheduled tasks; the scheduling syntax inside is the same as apscheduler.
+    # Users should be familiar with the add_job timing parameters of the well-known apscheduler framework.
+
+    # Method 1: Execute once at a specified date
     # ApsJobAdder(sum_two_numbers, job_store_kind='redis').aps_obj.start(paused=False)
     ApsJobAdder(sum_two_numbers, job_store_kind='redis').add_push_job(
         trigger='date',
         run_date='2025-01-17 23:25:40',
         args=(7, 8),
-        replace_existing=True, # 如果写个id，就不能重复添加相同id的定时任务了，要使用replace_existing来替换之前的定时任务id
+        replace_existing=True,  # If an id is specified, the same id cannot be added twice; use replace_existing to replace the previous scheduled task
         id='date_job1'
     )
 
-    # 方式2：固定间隔执行,使用内存作为apscheduler的 job_store
+    # Method 2: Execute at a fixed interval, using memory as the apscheduler job_store
     ApsJobAdder(sum_two_numbers, job_store_kind='redis').add_push_job(
         trigger='interval',
         seconds=5,
@@ -63,7 +70,7 @@ if __name__ == '__main__':
         id='interval_job1',
     )
 
-    # 方式3：使用cron表达式定时执行
+    # Method 3: Execute on a cron schedule
     ApsJobAdder(sum_two_numbers, job_store_kind='redis').add_push_job(
         trigger='cron',
         day_of_week='*',
@@ -74,11 +81,11 @@ if __name__ == '__main__':
         replace_existing=True,
         id='cron_job1')
 
-    # 延时使用内存作为apscheduler的 job_store ，因为是内存，这种定时任务计划就不能持久化。
+    # Use memory as the apscheduler job_store for delayed tasks; since it uses memory, this schedule cannot be persisted.
     ApsJobAdder(show_msg, job_store_kind='memory').add_push_job(
         trigger='interval',
         seconds=20,
         args=('hi python',)
     )
 
-    ctrl_c_recv() # 这个是阻止代码主线程结束，这在background类型的apscheduler很重要，否则会报错提示主线程已退出。 当然，你也可以在末尾加 time.sleep 来阻止主线结束。
+    ctrl_c_recv()  # Prevent the main thread from ending; this is important for background-type apscheduler to avoid errors about the main thread having exited. You can also add time.sleep at the end.

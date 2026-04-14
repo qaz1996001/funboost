@@ -3,7 +3,7 @@
 # @Time    : 2021/4/18 0008 13:32
 
 """
-    这个可以实现kafka topic单分区,但funboost 200线程消费消息,并且随意强制重启消费进程,不丢失消息
+    This can achieve single partition kafka topic, but with funboost 200 threads consuming messages, and freely force-restarting the consuming process without losing messages
 """
 
 import json
@@ -19,16 +19,16 @@ from funboost.consumers.base_consumer import AbstractConsumer
 from funboost.core.lazy_impoter import KafkaPythonImporter
 from funboost.funboost_config_deafult import BrokerConnConfig
 from confluent_kafka.cimpl import TopicPartition
-from confluent_kafka import Consumer as ConfluentConsumer  # 这个包在win下不好安装，用户用这个中间件的时候自己再想办法安装。win用户需要安装c++ 14.0以上环境。
+from confluent_kafka import Consumer as ConfluentConsumer  # This package is hard to install on Windows; users need to install it themselves when using this middleware. Windows users need C++ 14.0 or above.
 
 
 class KafkaConsumerManuallyCommit(AbstractConsumer):
     """
-    confluent_kafla作为中间件实现的。操作kafka中间件的速度比kafka-python快10倍。
-    这个是自动间隔2秒的手动确认，由于是异步在并发池中并发消费，可以防止强制关闭程序造成正在运行的任务丢失，比自动commit好。
-    如果使用kafka，推荐这个。
+    Consumer implemented using confluent_kafka as middleware. 10x faster than kafka-python for operating kafka middleware.
+    This uses automatic manual commit every 2 seconds. Since consumption is asynchronous in a concurrent pool, it prevents loss of running tasks when the program is forcefully closed, better than auto-commit.
+    Recommended if using kafka.
 
-    可以让消费函数内部 sleep 60秒，突然停止消费代码，使用 kafka-consumer-groups.sh --bootstrap-server 127.0.0.1:9092 --describe --group frame_group 来证实自动确认消费和手动确认消费的区别。
+    You can let the consuming function sleep for 60 seconds internally, then suddenly stop the consuming code. Use kafka-consumer-groups.sh --bootstrap-server 127.0.0.1:9092 --describe --group frame_group to verify the difference between auto-commit and manual commit consumption.
     """
 
 
@@ -47,7 +47,7 @@ class KafkaConsumerManuallyCommit(AbstractConsumer):
             pass
 
         self._producer = KafkaPythonImporter().KafkaProducer(bootstrap_servers=BrokerConnConfig.KAFKA_BOOTSTRAP_SERVERS)
-        # consumer 配置 https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+        # consumer configuration: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
         self._confluent_consumer = ConfluentConsumer({
             'bootstrap.servers': ','.join(BrokerConnConfig.KAFKA_BOOTSTRAP_SERVERS),
             'group.id': self.consumer_params.broker_exclusive_config["group_id"],
@@ -66,22 +66,22 @@ class KafkaConsumerManuallyCommit(AbstractConsumer):
             if msg.error():
                 print("Consumer error: {}".format(msg.error()))
                 continue
-            # msg的类型  https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#message
+            # msg type reference: https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#message
             # value()  offset() partition()
             # print('Received message: {}'.format(msg.value().decode('utf-8'))) # noqa
             self._partion__offset_consume_status_map[msg.partition()][msg.offset()] = 0
             kw = {'partition': msg.partition(), 'offset': msg.offset(), 'body': msg.value()}  # noqa
             if self.consumer_params.is_show_message_get_from_broker:
                 self.logger.debug(
-                    f'从kafka的 [{self._queue_name}] 主题,分区 {msg.partition()} 中 的 offset {msg.offset()} 取出的消息是：  {msg.value()}')  # noqa
+                    f'Message fetched from kafka topic [{self._queue_name}], partition {msg.partition()}, offset {msg.offset()}: {msg.value()}')  # noqa
             self._submit_task(kw)
 
 
     def _manually_commit(self):
         """
-        kafka要求消费线程数量和分区数量是一对一或一对多，不能多对一，消息并发处理收到分区数量的限制，这种是支持超高线程数量消费，所以commit非常复杂。
-        因为这种是可以支持单分区200线程消费，消费本身和拉取kafka任务不在同一个线程，而且可能offset较大的比offset较小的任务先完成，
-        每隔2秒对1组offset，对连续消费状态是1的最大offset进行commit
+        Kafka requires the number of consuming threads and partitions to be one-to-one or one-to-many, not many-to-one. Message concurrent processing is limited by partition count. This supports very high thread count consumption, so commit is very complex.
+        Because this supports 200 threads consuming a single partition, consumption and kafka task pulling are not in the same thread, and tasks with larger offsets may complete before those with smaller offsets.
+        Every 2 seconds, commit the maximum offset where consecutive consumption status is 1.
         :return:
         """
         with self._lock_for_operate_offset_dict:
@@ -138,7 +138,7 @@ class SaslPlainKafkaConsumer(KafkaConsumerManuallyCommit):
 
         self._producer = KafkaPythonImporter().KafkaProducer(
             **BrokerConnConfig.KFFKA_SASL_CONFIG)
-        # consumer 配置 https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+        # consumer configuration: https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
         self._confluent_consumer = ConfluentConsumer({
             'bootstrap.servers': ','.join(BrokerConnConfig.KAFKA_BOOTSTRAP_SERVERS),
             'security.protocol': BrokerConnConfig.KFFKA_SASL_CONFIG['security_protocol'],
@@ -162,7 +162,7 @@ class SaslPlainKafkaConsumer(KafkaConsumerManuallyCommit):
             if msg.error():
                 print("Consumer error: {}".format(msg.error()))
                 continue
-            # msg的类型  https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#message
+            # msg type: https://docs.confluent.io/platform/current/clients/confluent-kafka-python/html/index.html#message
             # value()  offset() partition()
             # print('Received message: {}'.format(msg.value().decode('utf-8'))) # noqa
             self._partion__offset_consume_status_map[msg.partition(
@@ -170,5 +170,5 @@ class SaslPlainKafkaConsumer(KafkaConsumerManuallyCommit):
             kw = {'partition': msg.partition(), 'offset': msg.offset(), 'body': msg.value()}  # noqa
             if self.consumer_params.is_show_message_get_from_broker:
                 self.logger.debug(
-                    f'从kafka的 [{self._queue_name}] 主题,分区 {msg.partition()} 中 的 offset {msg.offset()} 取出的消息是：  {msg.value()}')  # noqa
+                    f'Message fetched from kafka topic [{self._queue_name}], partition {msg.partition()}, offset {msg.offset()}: {msg.value()}')  # noqa
             self._submit_task(kw)

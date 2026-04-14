@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-测试 Watchdog 文件系统监控 Broker
+Test Watchdog File System Monitor Broker
 
-Watchdog Broker 是事件驱动型中间件：
-1. 无需手动发布消息
-2. 文件创建/修改自动触发消费
-3. 适合文件处理管道场景
-4. 证明 funboost 中万物可为broker，funboost具有超高无限的扩展性
+Watchdog Broker is an event-driven middleware:
+1. No need to manually publish messages
+2. File creation/modification automatically triggers consumption
+3. Suitable for file processing pipeline scenarios
+4. Demonstrates that in funboost, anything can be a broker;
+   funboost has extremely high and unlimited extensibility
 """
 
 import time
@@ -16,9 +17,9 @@ from pathlib import Path
 from funboost import boost, BoosterParams, ctrl_c_recv, BrokerEnum
 
 
-# 测试目录
+# Test directory
 TEST_DIR = Path(__file__).parent / "watchdog_test_data"
-# 归档目录（必须在监控目录外部）
+# Archive directory (must be outside the monitored directory)
 ARCHIVE_DIR = Path(__file__).parent / "watchdog_archive"
 
 
@@ -29,57 +30,58 @@ ARCHIVE_DIR = Path(__file__).parent / "watchdog_archive"
         qps=10,
         concurrent_num=3,
         broker_exclusive_config={
-            # ==================== 必填配置 ====================
-            "watch_path": TEST_DIR.absolute().as_posix(),  # 监控目录路径（必须使用绝对路径的 POSIX 格式）
-            
-            # ==================== 文件匹配配置 ====================
-            "patterns": ["*.txt", "*.json", "*.csv", "*.msg"],  # 匹配的文件模式，['*'] 表示所有文件
-            "ignore_patterns": [],               # 忽略的文件模式，如 ['*.tmp', '*.log']
-            "ignore_directories": True,          # 是否忽略目录事件
-            "case_sensitive": False,             # 文件名匹配是否区分大小写
-            
-            # ==================== 事件类型配置 ====================
-            # event_types 枚举: ['created', 'modified', 'deleted', 'moved', 'existing']
-            # - created: 文件新建
-            # - modified: 文件修改
-            # - deleted: 文件删除
-            # - moved: 文件移动/重命名
-            # - existing: 启动时已存在的文件（原生 watchdog 不支持，funboost 扩展支持）
+            # ==================== Required configuration ====================
+            "watch_path": TEST_DIR.absolute().as_posix(),  # Monitored directory path (must use absolute POSIX format)
+
+            # ==================== File matching configuration ====================
+            "patterns": ["*.txt", "*.json", "*.csv", "*.msg"],  # File patterns to match; ['*'] means all files
+            "ignore_patterns": [],               # File patterns to ignore, e.g. ['*.tmp', '*.log']
+            "ignore_directories": True,          # Whether to ignore directory events
+            "case_sensitive": False,             # Whether filename matching is case-sensitive
+
+            # ==================== Event type configuration ====================
+            # event_types enum: ['created', 'modified', 'deleted', 'moved', 'existing']
+            # - created: file newly created
+            # - modified: file modified
+            # - deleted: file deleted
+            # - moved: file moved/renamed
+            # - existing: files already present at startup (not natively supported by watchdog; extended by funboost)
             "event_types": [
-                "created",   # 如果只监听 modified，则一次性写入文件只触发1次；同时监听 created+modified 会触发2次
-                "existing",    # 完美解决 funboost 服务重启后，停机期间堆积的文件
+                "created",   # If only listening to modified, a single-write file only triggers 1 event; listening to both created+modified triggers 2 events
+                "existing",  # Perfectly handles files accumulated during service downtime before funboost restarts
                 "modified",
             ],
-            
-            # ==================== 目录递归配置 ====================
-            "recursive": True,                  # 是否递归监控子目录
-            
-            # ==================== 消费确认配置 ====================
-            # ack_action 枚举: 'delete' | 'archive' | 'none'
-            # - delete: 消费成功后删除文件
-            # - archive: 消费成功后移动到 archive_path 指定的目录
-            # - none: 纯监控模式，不做任何操作
+
+            # ==================== Directory recursion configuration ====================
+            "recursive": True,                  # Whether to recursively monitor subdirectories
+
+            # ==================== Consumption acknowledgment configuration ====================
+            # ack_action enum: 'delete' | 'archive' | 'none'
+            # - delete: delete the file after successful consumption
+            # - archive: move the file to the directory specified by archive_path after successful consumption
+            # - none: monitoring only; no action taken
             "ack_action": "archive",
-            
-            # ==================== 归档目录配置 ====================
-            # 仅 ack_action='archive' 时需要配置
-            # 重要：archive_path 不能是 watch_path 的子目录！
+
+            # ==================== Archive directory configuration ====================
+            # Only needed when ack_action='archive'
+            # Important: archive_path must NOT be a subdirectory of watch_path!
             "archive_path": ARCHIVE_DIR.absolute().as_posix(),
-            
-            # ==================== 文件内容读取 ====================
-            "read_file_content": True,           # 是否自动读取文件内容（仅小于 1MB 的文件）
-            
-            # ==================== 防抖配置 ====================
+
+            # ==================== File content reading ====================
+            "read_file_content": True,           # Whether to automatically read file content (only for files smaller than 1MB)
+
+            # ==================== Debounce configuration ====================
             # debounce_seconds: None | float
-            # - None: 不防抖，每次文件事件都触发消费
-            # - float: 防抖时间（秒），在该时间内对同一文件的多次事件只触发一次消费
-            # 例如：debounce_seconds=2，第0秒创建文件、第1秒修改、第2秒又修改，只会在最后一次修改后2秒触发一次消费
-            "debounce_seconds": 30,               # 2秒防抖，短时间内多次操作同一文件只触发一次
+            # - None: no debounce; every file event triggers consumption
+            # - float: debounce time (seconds); multiple events for the same file within this window trigger only one consumption
+            # Example: debounce_seconds=2 — file created at 0s, modified at 1s, modified again at 2s;
+            #          only one consumption is triggered 2 seconds after the last modification
+            "debounce_seconds": 30,               # 2-second debounce; multiple operations on the same file in a short time trigger only once
         },
         should_check_publish_func_params=False,
     )
 )
-def process_file(   # 此函数入参固定是这些就可以了。
+def process_file(   # The function parameters are fixed to these.
     event_type,
     src_path,
     dest_path,
@@ -88,36 +90,38 @@ def process_file(   # 此函数入参固定是这些就可以了。
     file_content,
 ):
     print(locals())
-    """处理文件事件"""
-    print(f"[{event_type}] 处理文件: {src_path}")
+    """Process file event"""
+    print(f"[{event_type}] Processing file: {src_path}")
     if file_content:
         preview = (
             file_content[:500] + "..." if len(file_content) > 500 else file_content
         )
-        print(f"  内容预览: {preview}")
+        print(f"  Content preview: {preview}")
     time.sleep(0.3)
-    return f"处理完成: {Path(src_path).name}"
+    return f"Processing complete: {Path(src_path).name}"
 
 
 def create_test_files():
-    """创建测试文件，触发文件创建和文件修改事件"""
+    """Create test files to trigger file creation and file modification events"""
     pending_dir = TEST_DIR
     pending_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"创建测试文件到: {pending_dir}")
+    print(f"Creating test files in: {pending_dir}")
 
     for i in range(5):
         file_path = pending_dir / f"test_file_{i}.txt"
-        file_path.write_text(f"这是测试文件 {i}\n内容行 1\n内容行 2", encoding="utf-8")
-        print(f"  创建: {file_path.name}")
+        file_path.write_text(f"This is test file {i}\nContent line 1\nContent line 2", encoding="utf-8")
+        print(f"  Created: {file_path.name}")
 
-    print(f"已创建 5 个测试文件")
+    print(f"5 test files created")
 
 
 def manual_push():
     """
-    watchdog作为broker时候， funboost 允许手动发布消息，
-    但手动发布消息是非必须的，原理是watchdog监听到文件变更后，自动触发消费者运行函数，所以不需要人工调用push方法。
+    When watchdog is used as a broker, funboost allows manually publishing messages.
+    However, manual publishing is not required; the mechanism is that watchdog automatically
+    triggers the consumer function when it detects file changes, so there is no need to
+    call push manually.
     """
     for i in range(3):
         process_file.push(a=i, b=i * 2)

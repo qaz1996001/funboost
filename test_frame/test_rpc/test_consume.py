@@ -16,8 +16,8 @@ from funboost import boost, BrokerEnum,ExceptionForRequeue
 def add(a, b):
     time.sleep(2)
     if random.random() >0.5:
-        raise ValueError('模拟消费函数出错，触发重试')
-        # raise ExceptionForRequeue('模拟消费函数可能出错,抛出ExceptionForRequeue类型的错误可以使消息立即重回消息队列')
+        raise ValueError('Simulating consumer function error, triggering retry')
+        # raise ExceptionForRequeue('Simulating possible consumer function error; raising ExceptionForRequeue will immediately requeue the message')
     return a + b
 
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-KafkaManyThreadsConsumer 快速开始示例
+KafkaManyThreadsConsumer quick start example
 
-运行前准备:
+Prerequisites:
 1. pip install kafka-python
-2. 启动Kafka服务器 (localhost:9092)  
-3. 创建测试topic: kafka-topics.sh --create --topic test-topic --partitions 2 --bootstrap-server localhost:9092
+2. Start Kafka server (localhost:9092)
+3. Create test topic: kafka-topics.sh --create --topic test-topic --partitions 2 --bootstrap-server localhost:9092
 
-运行方式:
+How to run:
 python quick_start.py
 """
 
@@ -18,102 +18,102 @@ from kafka_many_threads_consumer import KafkaManyThreadsConsumer
 
 def simple_message_handler(message):
     """
-    简单的消息处理函数
-    演示如何处理Kafka消息
+    Simple message handler function
+    Demonstrates how to process Kafka messages
     """
-    # 模拟业务处理时间
+    # Simulate business processing time
     processing_time = random.uniform(0.1, 2.0)
     time.sleep(processing_time)
-    
-    print(f"✅ 处理完成: partition={message.partition}, offset={message.offset}, "
-          f"耗时={processing_time:.2f}s")
-    
-    # 模拟偶尔的处理失败 (5%几率)
+
+    print(f"✅ Processing complete: partition={message.partition}, offset={message.offset}, "
+          f"time_taken={processing_time:.2f}s")
+
+    # Simulate occasional processing failure (5% chance)
     if random.random() < 0.05:
-        print(f"❌ 模拟处理失败: partition={message.partition}, offset={message.offset}")
-        raise Exception("模拟的业务处理失败")
+        print(f"❌ Simulated processing failure: partition={message.partition}, offset={message.offset}")
+        raise Exception("Simulated business processing failure")
 
 
 def main():
-    print("🚀 启动 KafkaManyThreadsConsumer 演示")
+    print("🚀 Starting KafkaManyThreadsConsumer demo")
     print("=" * 50)
-    
-    # 创建消费者实例
+
+    # Create consumer instance
     consumer = KafkaManyThreadsConsumer(
-        kafka_broker_address="localhost:9092",  # Kafka地址
-        topic="test-topic",                     # 主题名称
-        group_id="demo-group",                  # 消费者组
-        num_threads=20,                         # 线程数 (可以远超分区数)
-        callback_func=simple_message_handler   # 消息处理函数
+        kafka_broker_address="localhost:9092",  # Kafka address
+        topic="test-topic",                     # Topic name
+        group_id="demo-group",                  # Consumer group
+        num_threads=20,                         # Thread count (can far exceed partition count)
+        callback_func=simple_message_handler   # Message handler function
     )
-    
+
     try:
-        # 启动消费者
-        print("📡 启动消费者...")
+        # Start consumer
+        print("📡 Starting consumer...")
         consumer.start()
-        print("✅ 消费者启动成功!")
+        print("✅ Consumer started successfully!")
         print()
-        
-        # 运行60秒，每10秒打印一次统计信息
+
+        # Run for 60 seconds, print statistics every 10 seconds
         for i in range(6):
             time.sleep(10)
-            
+
             stats = consumer.get_stats()
-            print(f"📊 统计信息 ({(i+1)*10}秒):")
-            print(f"   消费消息数: {stats['consumed_count']}")
-            print(f"   处理成功数: {stats['processed_count']}")
-            print(f"   处理失败数: {stats['failed_count']}")
-            print(f"   已提交数: {stats['committed_count']}")
-            
-            # 显示详细的offset状态
+            print(f"📊 Statistics ({(i+1)*10}s):")
+            print(f"   Messages consumed: {stats['consumed_count']}")
+            print(f"   Processing successes: {stats['processed_count']}")
+            print(f"   Processing failures: {stats['failed_count']}")
+            print(f"   Committed count: {stats['committed_count']}")
+
+            # Show detailed offset status
             offset_status = stats['offset_manager_status']
             if offset_status['pending_count']:
-                print(f"   待处理队列: {offset_status['pending_count']}")
+                print(f"   Pending queue: {offset_status['pending_count']}")
             if offset_status['committable_offsets']:
-                print(f"   可提交offset: {offset_status['committable_offsets']}")
+                print(f"   Committable offsets: {offset_status['committable_offsets']}")
             print()
-            
+
     except KeyboardInterrupt:
-        print("\n🛑 接收到中断信号，正在优雅停止...")
-        
+        print("\n🛑 Received interrupt signal, stopping gracefully...")
+
     finally:
-        # 停止消费者
-        print("⏹️  停止消费者...")
+        # Stop consumer
+        print("⏹️  Stopping consumer...")
         consumer.stop()
-        print("✅ 消费者已停止")
-        
-        # 显示最终统计
+        print("✅ Consumer stopped")
+
+        # Show final statistics
         final_stats = consumer.get_stats()
-        print("\n📈 最终统计:")
-        print(f"   总消费: {final_stats['consumed_count']}")
-        print(f"   总处理成功: {final_stats['processed_count']}")
-        print(f"   总处理失败: {final_stats['failed_count']}")
-        print(f"   总提交: {final_stats['committed_count']}")
+        print("\n📈 Final statistics:")
+        print(f"   Total consumed: {final_stats['consumed_count']}")
+        print(f"   Total processing successes: {final_stats['processed_count']}")
+        print(f"   Total processing failures: {final_stats['failed_count']}")
+        print(f"   Total committed: {final_stats['committed_count']}")
 
 
 if __name__ == "__main__":
-    # 检查依赖
+    # Check dependencies
     try:
         import kafka
-        print(f"✅ kafka-python 版本: {kafka.__version__}")
+        print(f"✅ kafka-python version: {kafka.__version__}")
     except ImportError:
-        print("❌ 请先安装kafka-python: pip install kafka-python")
+        print("❌ Please install kafka-python first: pip install kafka-python")
         exit(1)
-    
-    print("🔧 配置检查:")
-    print("   Kafka地址: localhost:9092")
-    print("   主题: test-topic")
-    print("   消费者组: demo-group")
-    print("   线程数: 20")
+
+    print("🔧 Configuration check:")
+    print("   Kafka address: localhost:9092")
+    print("   Topic: test-topic")
+    print("   Consumer group: demo-group")
+    print("   Thread count: 20")
     print()
-    
-    input("按Enter键开始演示... (确保Kafka服务器已启动并创建了test-topic)")
-    
+
+    input("Press Enter to start the demo... (ensure Kafka server is running and test-topic is created)")
+
     main()
-    
-    print("\n🎉 演示完成!")
-    print("💡 提示:")
-    print("   - 这个实现确保了消息不丢失")
-    print("   - 支持kill -9重启后继续消费")
-    print("   - 线程数可以远超分区数")
-    print("   - 自动管理offset提交顺序")
+
+    print("\n🎉 Demo complete!")
+    print("💡 Tips:")
+    print("   - This implementation ensures no message loss")
+    print("   - Supports kill -9 restart and continues consuming")
+    print("   - Thread count can far exceed partition count")
+    print("   - Automatically manages offset commit order")

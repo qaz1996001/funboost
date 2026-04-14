@@ -1,27 +1,30 @@
-﻿
+
 """
-这个代码是模拟常规并发手段无法达到每秒持续精确运行8次函数(请求flask接口8次)的目的。
-但是使用分布式函数调度框架能轻松达到这个目的。
+This code simulates why conventional concurrency cannot achieve a sustained, precise 8 calls per second
+(i.e., 8 requests to a Flask API per second).
+But using a distributed function scheduling framework easily achieves this goal.
 
-下面的代码使用分部署函数调度框架来调度运行 request_flask_api 函数，
+The code below uses the distributed function scheduling framework to schedule and run the request_flask_api function.
 
-flask_veiw_mock 接口耗时0.1秒时候，控制台每秒打印8次 hello world，非常精确的符合控频目标
-flask_veiw_mock 接口耗时1秒时候，控制台每秒打印8次 hello world，非常精确的符合控频目标
-flask_veiw_mock 接口耗时10秒时候控，控制台每秒打印8次 hello world，非常精确的符合控频目标
-flask_veiw_mock 接口耗时0.001秒时候，控制台每秒打印8次 hello world，非常精确的符合控频目标
-flask_veiw_mock 接口耗时50 秒时候，控制台每秒打印8次 hello world，非常精确的符合控频目标
-可以发现分布式函数调度框架无视函数耗时大小，都能做到精确控频，常规的线程池 asyncio什么的，面对这种不确定的接口耗时，简直毫无办法。
+When flask_veiw_mock takes 0.1 seconds:  console prints 'hello world' 8 times per second - precisely meets the frequency target.
+When flask_veiw_mock takes 1 second:     console prints 'hello world' 8 times per second - precisely meets the frequency target.
+When flask_veiw_mock takes 10 seconds:   console prints 'hello world' 8 times per second - precisely meets the frequency target.
+When flask_veiw_mock takes 0.001 second: console prints 'hello world' 8 times per second - precisely meets the frequency target.
+When flask_veiw_mock takes 50 seconds:   console prints 'hello world' 8 times per second - precisely meets the frequency target.
+The distributed function scheduling framework ignores function duration and always achieves precise frequency control.
+Thread pools, asyncio, etc. are simply helpless when faced with uncertain API response times.
 
-有些人到现在还没明白并发数量和qps(每秒执行多少次)之间的区别，并发数量只有在函数耗时刚好精确等于1秒时候才等于qps。
+Some people still don't understand the difference between concurrency and qps (how many times per second):
+concurrency count only equals qps when the function duration is exactly 1 second.
 """
 import time
 from funboost import boost,BrokerEnum
 
 
 def flask_veiw_mock(x):
-    time.sleep(0.1)  # 通过不同的sleep大小来模拟服务端响应需要消耗的时间
-    # time.sleep(1)   # 通过不同的sleep大小来模拟服务端响应需要消耗的时间
-    # time.sleep(10)  # 通过不同的sleep大小来模拟服务端响应需要消耗的时间
+    time.sleep(0.1)  # Use different sleep durations to simulate server response time
+    # time.sleep(1)   # Use different sleep durations to simulate server response time
+    # time.sleep(10)  # Use different sleep durations to simulate server response time
     return f"hello world {x}"
 
 @boost("test_qps", broker_kind=BrokerEnum.MEMORY_QUEUE, qps=8)

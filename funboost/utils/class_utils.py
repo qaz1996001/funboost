@@ -60,8 +60,8 @@ class ClsHelper:
                     if not line.startswith('def') and re.search('\(\s*?self\s*?,',line):
                         return True
         # method_class = getattr(method, '__qualname__', '').rsplit('.', 1)[0]
-        # if method_class:  # 如果能找到类名，说明是类的成员
-        #     print( f"{method.__name__} 属于类 {method_class} 的成员")
+        # if method_class:  # If we can find the class name, it means it's a class member
+        #     print( f"{method.__name__} belongs to class {method_class}")
         #
         #     return True
 

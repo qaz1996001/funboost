@@ -10,7 +10,7 @@ from funboost.core.func_params_model import PublisherParams
 
 class HttpsqsConsumer(AbstractConsumer):
     """
-    httpsqs作为中间件
+    Consumer implemented using httpsqs as middleware
     """
 
 

@@ -16,9 +16,9 @@ from funboost.utils.redis_manager import RedisMixin
 
 class RedisPublisher(FlushRedisQueueMixin, AbstractPublisher, RedisMixin, ):
     """
-    使用redis作为中间件,这个是大幅优化了发布速度的方式。简单的发布是 redis_publisher_0000.py 中的代码方式。
+    Uses redis as the broker. This is the heavily optimized version for publishing speed.
 
-    这个是复杂版，批量推送，简单版在 funboost/publishers/redis_publisher_simple.py
+    This is the complex version with batch pushing; the simple version is in funboost/publishers/redis_publisher_simple.py
     """
     _push_method = 'rpush'
 
@@ -36,15 +36,15 @@ class RedisPublisher(FlushRedisQueueMixin, AbstractPublisher, RedisMixin, ):
             getattr(self.redis_db_frame, self._push_method)(self._queue_name, *self._temp_msg_list)
             self._temp_msg_list = []
 
-    def _initiative_bulk_push_to_broker(self):  # 主动触发。_publish_impl防止发布最后一条后没达到2000但sleep很久，无法触发at_exit，不能自动触发进入消息队列。
+    def _initiative_bulk_push_to_broker(self):  # Proactively triggered. Prevents the case where the last message doesn't reach the batch threshold but sleeps for a long time, unable to trigger at_exit.
         with self._lock_for_bulk_push:
             self.__bulk_push_and_init()
 
     def _publish_impl(self, msg):
         # print(getattr(frame_config,'has_start_a_consumer_flag',0))
-        # 这里的 has_start_a_consumer_flag 是一个标志，借用此模块设置的一个标识变量而已，框架运行时候自动设定的，不要把这个变量写到模块里面。
-        # if getattr(funboost_config_deafult, 'has_start_a_consumer_flag', 0) == 0:  # 加快速度推送，否则每秒只能推送4000次。如果是独立脚本推送，使用批量推送，如果是消费者中发布任务，为了保持原子性，用原来的单个推送。
-        if self.publisher_params.broker_exclusive_config.get('redis_bulk_push', 0) == 1:  # RedisConsumer传了,  RedisAckAble  没传
+        # The has_start_a_consumer_flag is just a flag variable set by the framework at runtime; do not write this variable into the module.
+        # if getattr(funboost_config_deafult, 'has_start_a_consumer_flag', 0) == 0:  # Speed up pushing, otherwise only 4000 pushes per second. For standalone script pushing, use batch push; for publishing tasks within consumers, use single push to maintain atomicity.
+        if self.publisher_params.broker_exclusive_config.get('redis_bulk_push', 0) == 1:  # RedisConsumer passes this, RedisAckAble does not
             # self._temp_msg_queue.put(msg)
             with self._lock_for_bulk_push:
                 self._temp_msg_list.append(msg)
@@ -63,7 +63,7 @@ class RedisPublisher(FlushRedisQueueMixin, AbstractPublisher, RedisMixin, ):
         pass
 
     def _at_exit(self):
-        # time.sleep(2) # 不需要
+        # time.sleep(2) # not needed
         # self._real_bulk_push_to_broker()
         with self._lock_for_bulk_push:
             self.__bulk_push_and_init()

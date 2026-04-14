@@ -15,7 +15,7 @@ http://blog.zyan.cc/httpsqs/
 
 class HttpsqsPublisher(AbstractPublisher):
     """
-    使用httpsqs作为中间件
+    Uses httpsqs as the broker.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -45,7 +45,7 @@ class HttpsqsPublisher(AbstractPublisher):
         return resp_text
 
     def _publish_impl(self, msg):
-        # curl "http://host:port/?name=your_queue_name&opt=put&data=经过URL编码的文本消息&auth=mypass123"
+        # curl "http://host:port/?name=your_queue_name&opt=put&data=URL_encoded_text_message&auth=mypass123"
         text = self.opt_httpsqs('put', msg)
         if text != 'HTTPSQS_PUT_OK':
             self.logger.critical(text)
@@ -57,7 +57,7 @@ class HttpsqsPublisher(AbstractPublisher):
         if text != 'HTTPSQS_RESET_OK':
             self.logger.critical(text)
         else:
-            self.logger.warning(f'清除 {self._queue_name} 队列中的消息成功')
+            self.logger.warning(f'Successfully cleared messages in queue {self._queue_name}')
 
     def get_message_count(self):
         text = self.opt_httpsqs('status_json')

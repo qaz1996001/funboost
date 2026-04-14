@@ -10,7 +10,7 @@ from funboost.queues.peewee_queue import PeeweeQueue,TaskStatus
 
 class PeeweeConsumer(AbstractConsumer):
     """
-    peewee实现的操作5种数据库模拟消息队列，支持消费确认。
+    Message queue simulated using peewee to operate 5 types of databases, supports consumption confirmation.
     """
 
 
@@ -19,7 +19,7 @@ class PeeweeConsumer(AbstractConsumer):
         while True:
             task_dict = self.queue.get()
             # print(task_dict)
-            # self.logger.debug(f'从数据库 {frame_config.SQLACHEMY_ENGINE_URL[:25]}。。 的 [{self._queue_name}] 队列中 取出的消息是：   消息是：  {sqla_task_dict}')
+            # self.logger.debug(f'Message fetched from database {frame_config.SQLACHEMY_ENGINE_URL[:25]}.. queue [{self._queue_name}]:  {sqla_task_dict}')
             kw = {'body':task_dict['body'], 'job_id': task_dict['job_id']}
             self._submit_task(kw)
 

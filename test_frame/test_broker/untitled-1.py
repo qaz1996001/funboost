@@ -3,19 +3,19 @@ import requests
 from bs4 import BeautifulSoup
 from funboost import boost, BrokerEnum, ConcurrentModeEnum, BoosterParams
 
-# 定义爬虫任务函数
+# Define the crawler task function
 @boost(BoosterParams(queue_name='test_queue70ac', do_task_filtering=True, qps=5, log_level=10, broker_exclusive_config={'a': 1}))
 def crawl(url):
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
-    # 解析数据，这里只是一个示例，你可以根据实际需求进行修改
+    # Parse the data; this is just an example, modify as needed for your use case
     title = soup.title.string
     return title
 
-# 运行爬虫
+# Run the crawler
 if __name__ == '__main__':
-    # 假设你有一个 URL 列表
+    # Assume you have a list of URLs
     urls = ['https://www.example.com', 'https://www.example.org', 'https://www.example.net']
     for url in urls:
-        crawl.push(url)  # 将任务添加到队列中
-    crawl.consume()  # 启动爬虫任务
+        crawl.push(url)  # Add task to the queue
+    crawl.consume()  # Start the crawler task

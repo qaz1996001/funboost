@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-测试周期配额控频 (PeriodicQuotaConsumerMixin)
+Test periodic quota rate limiting (PeriodicQuotaConsumerMixin)
 
-场景：每秒执行1次，但每分钟最多执行6次，配额用完后等待60秒重置
+Scenario: Execute once per second, but at most 6 times per minute;
+after the quota is exhausted, wait 60 seconds for the quota to reset.
 
-运行方式：
+Usage:
     python test_periodic_quota.py
-    
-预期行为（滑动窗口模式，默认）：
-1. 每秒执行1次（qps=1 控制间隔）
-2. 前6秒执行6次后，配额用完
-3. 等待60秒（从启动时刻开始算的1分钟周期结束）
-4. 配额重置，继续每秒执行1次...
+
+Expected behavior (sliding window mode, default):
+1. Execute once per second (controlled by qps=1)
+2. After 6 executions in the first 6 seconds, the quota is exhausted
+3. Wait 60 seconds (until the 1-minute period from the start time ends)
+4. Quota resets; continue executing once per second...
 """
 
 import datetime
@@ -21,49 +22,49 @@ from funboost.contrib.override_publisher_consumer_cls.periodic_quota_mixin impor
 )
 
 
-# 每秒1次，每分钟最多6次
+# 1 per second, at most 6 per minute
 @boost(BoosterParams(
     queue_name='test_periodic_quota_queue',
     broker_kind=BrokerEnum.MEMORY_QUEUE,
     consumer_override_cls=PeriodicQuotaConsumerMixin,
     is_show_message_get_from_broker = True,
     user_options={
-        'quota_limit': 6,       # 每分钟最多6次
-        'quota_period': 'm',    # 周期为分钟
-        'sliding_window': False, # 固定窗口（从0秒/分/小时/天开始算）
+        'quota_limit': 6,        # At most 6 times per minute
+        'quota_period': 'm',     # Period is one minute
+        'sliding_window': False, # Fixed window (counting from 0 seconds/minutes/hours/days)
     },
-    qps=1,  # 每秒执行1次 # 周期额度可以和qps一起使用
+    qps=1,  # Execute once per second; periodic quota can be used together with qps
 ))
 def task_periodic_quota(x):
-    print(f'⏰ [周期配额] 执行任务 x={x}, 时间: {datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]}')
+    print(f'[Periodic Quota] Executing task x={x}, time: {datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]}')
 
 
 if __name__ == '__main__':
     print("=" * 70)
-    print("周期配额控频测试")
+    print("Periodic Quota Rate Limiting Test")
     print("=" * 70)
     print()
-    print("配置说明：")
-    print("  - quota_limit=6, quota_period='m' (每分钟最多6次)")
-    print("  - qps=1 (每秒执行1次)")
-    print("  - sliding_window=True (默认，滑动窗口模式)")
+    print("Configuration:")
+    print("  - quota_limit=6, quota_period='m' (at most 6 times per minute)")
+    print("  - qps=1 (execute once per second)")
+    print("  - sliding_window=True (default, sliding window mode)")
     print()
-    print("预期行为（滑动窗口模式）：")
-    print("  ⏰ 前6秒：每秒执行1次")
-    print("  ⏰ 第7秒开始：配额用完，等待至启动后60秒（滑动周期结束）")
-    print("  ⏰ 周期重置后：配额恢复，继续每秒执行")
+    print("Expected behavior (sliding window mode):")
+    print("  First 6 seconds: execute once per second")
+    print("  From second 7 onward: quota exhausted; wait until 60 seconds after start (end of sliding period)")
+    print("  After quota reset: resume executing once per second")
     print()
     print("=" * 70)
     print()
-    
-    # 发布100个任务
+
+    # Publish 100 tasks
     for i in range(100):
         task_periodic_quota.push(i)
-    
-    print(f"已发布 100 个任务，开始消费... (时间: {datetime.datetime.now().strftime('%H:%M:%S')})")
+
+    print(f"Published 100 tasks, starting consumption... (time: {datetime.datetime.now().strftime('%H:%M:%S')})")
     print()
-    
-    # 启动消费
+
+    # Start consuming
     task_periodic_quota.consume()
-    
+
     ctrl_c_recv()

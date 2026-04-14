@@ -20,7 +20,7 @@ class MyBackgroundScheduler(BackgroundScheduler):
     def start(self, *args, **kwargs):
         def _when_exit():
             while 1:
-                print('阻止退出')
+                print('Blocking exit')
                 time.sleep(10)
         atexit.register(_when_exit)
 

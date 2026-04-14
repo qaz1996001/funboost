@@ -25,48 +25,48 @@ from .tasks import (
 
 
 def flow_chain_basics(x: int = 3, y: int = 5) -> Any:
-    # 链式： (x + y) * 8
+    # Chain: (x + y) * 8
     c = chain(add.s(x, y), mul.s(8))
     return c.apply_async().get()
 
 
 def flow_group_and_chord(urls: List[str]) -> Dict[str, Any]:
-    # group 并行抓取 -> chord 汇总
+    # group parallel fetch -> chord aggregate
     g = group(fetch_url.s(url) for url in urls)
     result = chord(g)(aggregate_dicts.s()).get()
     return result
 
 
 def flow_chord_with_error_callback(values: List[int]) -> Dict[str, Any]:
-    # 有失败时触发自定义 error 回调
+    # Trigger custom error callback on failure
     g = group(error_prone.s(v) for v in values)
     try:
         res = chord(g)(sum_list.s()).get()
         return {"ok": True, "sum": res}
-    except Exception as exc:  # 捕获 chord 异常，触发自定义收集
+    except Exception as exc:  # Catch chord exception, trigger custom collection
         tb = traceback.format_exc()
         collected = on_error_collect.apply_async(kwargs={"request": {}, "exc": str(exc), "traceback_str": tb}).get()
         return {"ok": False, "error": collected}
 
 
 def flow_nested_chain_group(values: List[int]) -> List[Any]:
-    # 嵌套：chain 中包含 group，再接后续任务
+    # Nested: chain containing group, then further tasks
     g = group(retryable_task.s(v) for v in values)
     c = chain(g, sum_list.s())
     return c.apply_async().get()
 
 
 def flow_map_and_starmap(numbers: List[int]) -> Tuple[List[int], List[int]]:
-    # map: 将列表作为单参数映射
+    # map: map list as single-argument
     mapped = group(add.s(n, 1) for n in numbers).apply_async().get()
-    # starmap: 将多个参数展开
+    # starmap: expand multiple arguments
     pairs = group(to_pair.s(n) for n in numbers).apply_async().get()
     starmapped = group(mul.s(a, b) for a, b in pairs).apply_async().get()
     return mapped, starmapped
 
 
 def flow_chain_link_error_ignored() -> Dict[str, Any]:
-    # 某步返回 Ignore，不影响后续（链会被中断，需用 link_error 或 try/except 兜底）
+    # A step returns Ignore; subsequent steps are not affected (chain is interrupted; use link_error or try/except as fallback)
     try:
         c = chain(raise_ignore.s("skip"), add.s(1))
         res = c.apply_async().get()
@@ -76,11 +76,11 @@ def flow_chain_link_error_ignored() -> Dict[str, Any]:
 
 
 def flow_complex_mix(urls: List[str], numbers: List[int]) -> Dict[str, Any]:
-    # 复杂组合：
+    # Complex combination:
     # - chord(fetch_url) -> aggregate
     # - chain(sum_list(numbers), mul(2))
     # - group(retryable_task(numbers))
-    # 最后汇总 concat_strings
+    # Finally aggregate with concat_strings
     chord_part = chord(group(fetch_url.s(u) for u in urls))(aggregate_dicts.s())
     chain_part = chain(group(add.s(n, 0) for n in numbers), sum_list.s(), mul.s(2))
     retry_part = group(retryable_task.s(v) for v in numbers)
@@ -94,7 +94,7 @@ def flow_complex_mix(urls: List[str], numbers: List[int]) -> Dict[str, Any]:
     )
     results = g.apply_async().get(propagate=False)
 
-    # 处理内置任务不存在或失败的情况
+    # Handle the case where built-in tasks don't exist or fail
     pretty = []
     for item in results:
         try:
@@ -110,20 +110,20 @@ def flow_complex_mix(urls: List[str], numbers: List[int]) -> Dict[str, Any]:
 
 
 def flow_video_pipeline(url: str) -> Dict[str, Any]:
-    """将 funboost 示例转换为 Celery canvas：
+    """Convert funboost example to Celery canvas:
 
-    等价流程：
+    Equivalent flow:
     chain(download_video(url), chord(group(transform_video(file, r) for r in [360p,720p,1080p]), send_finish_msg(files, url)))
-    
-    表达为：先下载得到 file -> header(group) 生成多个分辨率 -> body 收敛并发送完成消息。
+
+    Expressed as: first download to get file -> header(group) generates multiple resolutions -> body converges and sends finish message.
     """
-    # 1) 先下载视频
-    # 2) header: 对下载结果文件并行转码
+    # 1) First download the video
+    # 2) header: transcode downloaded file in parallel
     header = group(
         download_video.s(url) | signature("test_frame.test_celery_canvas.tasks.transform_video").s(res)
         for res in ["360p", "720p", "1080p"]
     )
-    # 3) body: 汇总并发送完成消息（body 的参数接收 header 的列表结果）
+    # 3) body: aggregate and send finish message (body's parameter receives header's list result)
     body = send_finish_msg.s(url=url)
     ch = chord(header, body)
     return ch.apply_async().get()

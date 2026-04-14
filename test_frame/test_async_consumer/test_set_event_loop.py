@@ -8,28 +8,28 @@ async def main():
     print("Goodbye, world!")
     print("Current event loop:", id(loop))
 
-# 创建一个新的事件循环
+# Create a new event loop
 loop = asyncio.new_event_loop()
 print("loop:", id(loop))
-# 不设置默认事件循环，直接使用 loop 运行异步函数
+# Do not set default event loop; run async function directly using loop
 print("Running without setting default event loop:")
 loop.run_until_complete(main())
 
-# # 尝试获取当前事件循环，这里可能会出现问题
+# # Try to get the current event loop; this may cause issues
 # try:
 #     current_loop = asyncio.get_event_loop()
 #     print("Current event loop without setting:", current_loop)
 # except RuntimeError as e:
 #     print("Error when getting event loop without setting:", e)
 #
-# # 正确的方式是设置默认事件循环
+# # The correct approach is to set the default event loop
 # asyncio.set_event_loop(loop)
 # print("\nRunning with setting default event loop:")
 # loop.run_until_complete(main())
 #
-# # 现在获取当前事件循环是正确的
+# # Now getting the current event loop is correct
 # current_loop = asyncio.get_event_loop()
 # print("Current event loop after setting:", current_loop)
 #
-# # 最后，关闭事件循环
+# # Finally, close the event loop
 # loop.close()

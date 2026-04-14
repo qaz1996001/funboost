@@ -10,28 +10,28 @@ t_start = time.time()
 @boost('queue_test2_qps', qps=2, broker_kind=BrokerEnum.REDIS, concurrent_mode=ConcurrentModeEnum.THREADING, )
 def f2(a, b):
     """
-    concurrent_num = 600 不用怕，因为这是智能线程池，如果函数耗时短，不会真开那么多线程。
-    这个例子是测试函数耗时是动态变化的，这样就不可能通过提前设置参数预估函数固定耗时和搞鬼了。看看能不能实现qps稳定和线程池自动扩大自动缩小
-    要说明的是打印的线程数量也包含了框架启动时候几个其他的线程，所以数量不是刚好和所需的线程计算一样的。
+    concurrent_num = 600 is fine because this is a smart thread pool. If the function is fast, it won't actually open that many threads.
+    This example tests dynamic function execution time, making it impossible to predict via fixed parameter pre-estimation. Let's see if stable qps and auto thread pool scaling can be achieved.
+    Note that the printed thread count also includes a few other threads started by the framework, so the number is not exactly the same as the calculated required threads.
 
-    ## 可以在运行控制台搜索 新启动线程  这个关键字，看看是不是何时适合扩大线程数量。
-    ## 可以在运行控制台搜索 停止线程  这个关键字，看看是不是何时适合缩小线程数量。
+    ## Search for the keyword "new thread started" in the console to see when it's appropriate to expand the thread count.
+    ## Search for the keyword "thread stopped" in the console to see when it's appropriate to shrink the thread count.
     """
     result = a + b
     sleep_time = 0.01
-    if time.time() - t_start > 60:  # 先测试函数耗时慢慢变大了，框架能不能按需自动增大线程数量
+    if time.time() - t_start > 60:  # First test with slowly increasing function execution time to see if the framework can auto-scale threads as needed
         sleep_time = 7
     if time.time() - t_start > 120:
         sleep_time = 31
     if time.time() - t_start > 200:
         sleep_time = 79
-    if time.time() - t_start > 400: # 最后把函数耗时又减小，看看框架能不能自动缩小线程数量。
+    if time.time() - t_start > 400: # Finally reduce function execution time again to see if the framework can automatically shrink the thread count.
         sleep_time = 0.8
     if time.time() - t_start > 500:
         sleep_time = None
-    print(f'{time.strftime("%H:%M:%S")}  ，当前线程数量是 {threading.active_count()},   {a} + {b} 的结果是 {result}， sleep {sleep_time} 秒')
+    print(f'{time.strftime("%H:%M:%S")}  , current thread count is {threading.active_count()},   result of {a} + {b} is {result}, sleep {sleep_time} seconds')
     if sleep_time is not None:
-        time.sleep(sleep_time)  # 模拟做某事需要阻塞n秒种，必须用并发绕过此阻塞。
+        time.sleep(sleep_time)  # Simulate blocking for n seconds doing something; must use concurrency to bypass this blocking.
     return result
 
 if __name__ == '__main__':

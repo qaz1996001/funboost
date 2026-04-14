@@ -13,7 +13,7 @@ from funboost.constant import RedisKeys
 from funboost.core.func_params_model import TaskOptions, PublisherParams
 from funboost.core.msg_result_getter import AsyncResult
 from funboost.core.serialization import Serialization
-from funboost.utils import time_util, decorators  # LoggerMixin 已废弃，Statistic类不再使用
+from funboost.utils import time_util, decorators  # LoggerMixin is deprecated, Statistic class is no longer used
 from funboost.utils.mongo_util import MongoMixin
 from funboost.utils.redis_manager import RedisMixin
 from funboost.core.active_cousumer_info_getter import QueuesConusmerParamsGetter, SingleQueueConusmerParamsGetter
@@ -25,16 +25,16 @@ from funboost.core.active_cousumer_info_getter import QueuesConusmerParamsGetter
 
 def get_mongo_table_name_by_queue_name(queue_name: str) -> str:
     """
-    根据 queue_name 获取对应的 MongoDB 表名
-    
-    从队列配置的 function_result_status_persistance_conf.table_name 获取，
-    如果没有配置 table_name，则使用 queue_name 作为表名
-    
+    Get the corresponding MongoDB collection name for a given queue_name.
+
+    Looks up function_result_status_persistance_conf.table_name from the queue configuration.
+    If table_name is not configured, queue_name is used as the collection name.
+
     Args:
-        queue_name: 队列名称
-        
+        queue_name: Queue name
+
     Returns:
-        MongoDB 表名
+        MongoDB collection name
     """
     queue_params = SingleQueueConusmerParamsGetter(queue_name).get_one_queue_params_use_cache()
     persistance_conf = queue_params['function_result_status_persistance_conf']
@@ -44,8 +44,8 @@ def get_mongo_table_name_by_queue_name(queue_name: str) -> str:
 
 def get_all_queue_table_info() -> dict:
     """
-    获取所有队列及其对应的 MongoDB 表名映射
-    
+    Get the mapping of all queues and their corresponding MongoDB collection names.
+
     Returns:
         {queue_name: table_name, ...}
     """
@@ -60,31 +60,31 @@ def get_all_queue_table_info() -> dict:
 
 def get_cols(queue_name_search: str):
     """
-    获取队列列表，并返回每个队列对应的 MongoDB 表的记录数
-    
-    不再使用 db.list_collection_names()，而是从队列配置中获取表名
-    注意：因为多个队列可能共享同一个表，所以查询时必须加上 queue_name 条件
+    Get the list of queues and return the record count for each queue's corresponding MongoDB collection.
+
+    No longer uses db.list_collection_names(); instead retrieves collection names from queue configuration.
+    Note: Because multiple queues may share the same collection, queries must include a queue_name condition.
     """
     db = MongoMixin().mongo_db_task_status
-    
-    # 从队列配置获取所有队列及其对应的表名
+
+    # Get all queues and their corresponding collection names from queue configuration
     queue_table_map = get_all_queue_table_info()
-    
+
     result = []
     for queue_name, table_name in queue_table_map.items():
-        # 根据搜索条件过滤
+        # Filter by search criteria
         if queue_name_search and queue_name_search not in queue_name:
             continue
-        
+
         try:
-            # 必须加上 queue_name 条件，因为多个队列可能共享同一个表
+            # Must include queue_name condition because multiple queues may share the same collection
             count = db.get_collection(table_name).count_documents({'queue_name': queue_name})
         except Exception:
             count = 0
-        
+
         result.append({
-            'collection_name': queue_name,  # 返回队列名（用于前端显示和后续查询）
-            'table_name': table_name,       # 实际的 MongoDB 表名
+            'collection_name': queue_name,  # Returns queue name (used for frontend display and subsequent queries)
+            'table_name': table_name,       # Actual MongoDB collection name
             'count': count
         })
     
@@ -93,30 +93,30 @@ def get_cols(queue_name_search: str):
 
 def query_result(queue_name, start_time, end_time, is_success, function_params: str, page, task_id: str = ''):
     """
-    查询函数执行结果
-    
+    Query function execution results.
+
     Args:
-        queue_name: 队列名称（不是表名，会自动转换为对应的 MongoDB 表名）
-    
-    注意：因为多个队列可能共享同一个表，所以查询时必须加上 queue_name 条件
+        queue_name: Queue name (not the collection name; will be automatically converted to the corresponding MongoDB collection name)
+
+    Note: Because multiple queues may share the same collection, queries must include a queue_name condition.
     """
     query_kw = copy.copy(locals())
     t0 = time.time()
     if not queue_name:
         return []
     db = MongoMixin().mongo_db_task_status
-    
-    # 根据队列名获取实际的 MongoDB 表名
+
+    # Get the actual MongoDB collection name from the queue name
     table_name = get_mongo_table_name_by_queue_name(queue_name)
-    
-    # 基础条件：必须加上 queue_name，因为多个队列可能共享同一个表
+
+    # Base condition: must include queue_name because multiple queues may share the same collection
     condition = {'queue_name': queue_name}
-    
-    # 如果传了 task_id，忽略其他条件（时间、运行状态等），直接根据 task_id 查询
+
+    # If task_id is provided, ignore other conditions (time range, run status, etc.) and query by task_id directly
     if task_id and task_id.strip():
         condition.update({'task_id': {'$regex': f'^{task_id.strip()}'}})
     else:
-        # 正常查询：使用时间范围和其他条件
+        # Normal query: use time range and other conditions
         condition.update({
             'insert_time': {'$gt': time_util.DatetimeConverter(start_time).datetime_obj,
                             '$lt': time_util.DatetimeConverter(end_time).datetime_obj},
@@ -127,11 +127,11 @@ def query_result(queue_name, start_time, end_time, is_success, function_params: 
             condition.update({"success": False})
         if function_params.strip():
             condition.update({'params_str': {'$regex': function_params.strip()}})
-    
+
     # nb_print(col_name)
     # nb_print(condition)
     # with decorators.TimerContextManager():
-    # 按时间逆序排序，最新的在前面
+    # Sort by time in descending order, newest first
     results = list(db.get_collection(table_name).find(condition, {'insert_time': 0, 'utime': 0}).sort([('time_start', -1)]).skip(int(page) * 100).limit(100))
     # nb_print(results)
     nb_print(time.time() -t0, query_kw, len(results), f'table: {table_name}')
@@ -140,19 +140,19 @@ def query_result(queue_name, start_time, end_time, is_success, function_params: 
 
 def get_speed(queue_name, start_time, end_time):
     """
-    获取指定时间范围内的消费速率统计
-    
+    Get consumption rate statistics for a specified time range.
+
     Args:
-        queue_name: 队列名称（不是表名，会自动转换为对应的 MongoDB 表名）
-    
-    注意：因为多个队列可能共享同一个表，所以查询时必须加上 queue_name 条件
+        queue_name: Queue name (not the collection name; will be automatically converted to the corresponding MongoDB collection name)
+
+    Note: Because multiple queues may share the same collection, queries must include a queue_name condition.
     """
     db = MongoMixin().mongo_db_task_status
-    
-    # 根据队列名获取实际的 MongoDB 表名
+
+    # Get the actual MongoDB collection name from the queue name
     table_name = get_mongo_table_name_by_queue_name(queue_name)
-    
-    # 基础条件：必须加上 queue_name，因为多个队列可能共享同一个表
+
+    # Base condition: must include queue_name because multiple queues may share the same collection
     condition = {
         'queue_name': queue_name,
         'insert_time': {'$gt': time_util.DatetimeConverter(start_time).datetime_obj,
@@ -175,14 +175,14 @@ def get_speed(queue_name, start_time, end_time):
 
 def get_consume_speed_curve(queue_name: str, start_time: str, end_time: str, granularity: str = 'auto'):
     """
-    获取消费速率曲线数据
-    
+    Get consumption rate curve data.
+
     Args:
-        queue_name: 队列名称（不是表名，会自动转换为对应的 MongoDB 表名）
-        start_time: 开始时间，格式 'YYYY-MM-DD HH:MM:SS'
-        end_time: 结束时间，格式 'YYYY-MM-DD HH:MM:SS'
-        granularity: 时间粒度，'second', 'minute', 'hour', 'day' 或 'auto'
-    
+        queue_name: Queue name (not the collection name; will be automatically converted to the corresponding MongoDB collection name)
+        start_time: Start time, format 'YYYY-MM-DD HH:MM:SS'
+        end_time: End time, format 'YYYY-MM-DD HH:MM:SS'
+        granularity: Time granularity: 'second', 'minute', 'hour', 'day', or 'auto'
+
     Returns:
         {
             'time_arr': [...],
@@ -194,28 +194,28 @@ def get_consume_speed_curve(queue_name: str, start_time: str, end_time: str, gra
         }
     """
     db = MongoMixin().mongo_db_task_status
-    
-    # 根据队列名获取实际的 MongoDB 表名
+
+    # Get the actual MongoDB collection name from the queue name
     table_name = get_mongo_table_name_by_queue_name(queue_name)
-    
+
     start_dt = time_util.DatetimeConverter(start_time).datetime_obj
     end_dt = time_util.DatetimeConverter(end_time).datetime_obj
-    
-    # 计算时间跨度（秒）
+
+    # Calculate time span (seconds)
     time_span = (end_dt - start_dt).total_seconds()
-    
-    # 自动选择粒度
+
+    # Automatically select granularity
     if granularity == 'auto':
-        if time_span <= 120:  # <= 2分钟
+        if time_span <= 120:  # <= 2 minutes
             granularity = 'second'
-        elif time_span <= 3600:  # <= 1小时
+        elif time_span <= 3600:  # <= 1 hour
             granularity = 'minute'
-        elif time_span <= 86400 * 2:  # <= 2天
+        elif time_span <= 86400 * 2:  # <= 2 days
             granularity = 'hour'
         else:
             granularity = 'day'
-    
-    # 根据粒度设置时间格式和步长
+
+    # Set time format and step size based on granularity
     if granularity == 'second':
         time_format = '%Y-%m-%d %H:%M:%S'
         step = datetime.timedelta(seconds=1)
@@ -227,16 +227,16 @@ def get_consume_speed_curve(queue_name: str, start_time: str, end_time: str, gra
     elif granularity == 'hour':
         time_format = '%Y-%m-%d %H:00'
         step = datetime.timedelta(hours=1)
-        max_points = 168  # 7天
+        max_points = 168  # 7 days
     else:  # day
         time_format = '%Y-%m-%d'
         step = datetime.timedelta(days=1)
         max_points = 60
     
-    # 限制数据点数量，避免太多
+    # Limit the number of data points to avoid too many
     actual_points = int(time_span / step.total_seconds()) + 1
     if actual_points > max_points:
-        # 调整步长
+        # Adjust step size
         step = datetime.timedelta(seconds=time_span / max_points)
         actual_points = max_points
     
@@ -252,7 +252,7 @@ def get_consume_speed_curve(queue_name: str, start_time: str, end_time: str, gra
         if next_time > end_dt:
             next_time = end_dt
         
-        # 基础条件：必须加上 queue_name，因为多个队列可能共享同一个表
+        # Base condition: must include queue_name because multiple queues may share the same collection
         condition_base = {
             'queue_name': queue_name,
             'insert_time': {'$gte': current, '$lt': next_time}

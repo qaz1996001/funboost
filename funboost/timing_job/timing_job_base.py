@@ -1,5 +1,5 @@
 """
-集成定时任务。
+Integrated scheduled task support.
 """
 import atexit
 
@@ -26,7 +26,7 @@ from funboost.core.func_params_model import BoosterParams
 from funboost.concurrent_pool.custom_threadpool_executor import ThreadPoolExecutorShrinkAble,ThreadPoolExecutorShrinkAbleNonDaemon
 
 
-@deprecated.deprecated(reason='以后不要再使用这种方式，对于job_store为数据库时候需要序列化不好。使用内存和数据库都兼容的添加任务方式: add_push_job')
+@deprecated.deprecated(reason='Do not use this approach anymore. It has serialization issues when job_store is a database. Use add_push_job which is compatible with both memory and database: add_push_job')
 def timing_publish_deco(consuming_func_decorated_or_consumer: Union[callable, AbstractConsumer]):
     def _deco(*args, **kwargs):
         if getattr(consuming_func_decorated_or_consumer, 'is_decorated_as_consume_function', False) is True:
@@ -34,15 +34,15 @@ def timing_publish_deco(consuming_func_decorated_or_consumer: Union[callable, Ab
         elif isinstance(consuming_func_decorated_or_consumer, AbstractConsumer):
             consuming_func_decorated_or_consumer.publisher_of_same_queue.push(*args, **kwargs)
         else:
-            raise TypeError('consuming_func_decorated_or_consumer 必须是被 boost 装饰的函数或者consumer类型')
+            raise TypeError('consuming_func_decorated_or_consumer must be a function decorated with @boost or a consumer type')
 
     return _deco
 
 
 def push_fun_params_to_broker(queue_name: str, *args, **kwargs):
     """
-    queue_name 队列名字
-    *args **kwargs 是消费函数的入参
+    queue_name: queue name
+    *args **kwargs are the input parameters of the consumer function
     """
     try:
         booster = BoostersManager.get_or_create_booster_by_queue_name(queue_name)
@@ -68,14 +68,14 @@ class ThreadPoolExecutorForAps(BasePoolExecutor):
     def __init__(self, max_workers=100, pool_kwargs=None):
 
         # pool = ThreadPoolExecutorShrinkAble(int(max_workers), )
-        pool = ThreadPoolExecutorShrinkAbleNonDaemon(int(max_workers), ) 
+        pool = ThreadPoolExecutorShrinkAbleNonDaemon(int(max_workers), )
 
         """
         raise RuntimeError('cannot schedule new futures after ' RuntimeError: cannot schedule new futures after interpreter shutdown
-        
-        ThreadPoolExecutorShrinkAbleNonDaemon 这个更好，阻止主线程退出导致apschrduler使用了守护线程的线程池而导致这个报错。
-        ThreadPoolExecutorShrinkAbleNonDaemon 线程池里面的线程不是守护线程，
-        
+
+        ThreadPoolExecutorShrinkAbleNonDaemon is better - it prevents the error caused by the main thread exiting
+        while apscheduler uses a daemon-threaded thread pool.
+        ThreadPoolExecutorShrinkAbleNonDaemon's threads are non-daemon threads.
         """
 
         super().__init__(pool)
@@ -83,14 +83,14 @@ class ThreadPoolExecutorForAps(BasePoolExecutor):
 
 class FunboostBackgroundScheduler(BackgroundScheduler):
     """
-    自定义的， 继承了官方BackgroundScheduler，
-    通过重写 _main_loop ，使得动态修改增加删除定时任务配置更好。
+    Custom class, inherits from the official BackgroundScheduler.
+    By overriding _main_loop, it provides better support for dynamically modifying, adding, and deleting scheduled task configurations.
     """
 
     _last_wait_seconds = None
     _last_has_task = False
 
-    @deprecated.deprecated(reason='以后不要再使用这种方式，对于job_store为数据库时候需要序列化不好。使用内存和数据库都兼容的添加任务方式: add_push_job')
+    @deprecated.deprecated(reason='Do not use this approach anymore. It has serialization issues when job_store is a database. Use add_push_job which is compatible with both memory and database: add_push_job')
     def add_timing_publish_job(self, func, trigger=None, args=None, kwargs=None, id=None, name=None,
                                misfire_grace_time=undefined, coalesce=undefined, max_instances=undefined,
                                next_run_time=undefined, jobstore='default', executor='default',
@@ -106,7 +106,7 @@ class FunboostBackgroundScheduler(BackgroundScheduler):
                      next_run_time=undefined, jobstore='default', executor='default',
                      replace_existing=False, **trigger_args, ):
         """
-        :param func: 被@boost装饰器装饰的函数
+        :param func: Function decorated with @boost decorator
         :param trigger:
         :param args:
         :param kwargs:
@@ -126,8 +126,10 @@ class FunboostBackgroundScheduler(BackgroundScheduler):
         # kwargs['queue_name'] = func.queue_name
 
         """
-        用户如果不使用funboost的 FunboostBackgroundScheduler 类型对象，而是使用原生的apscheduler类型对象，可以scheduler.add_job(push_fun_params_to_broker,args=(,),kwargs={}) 
-        push_fun_params_to_broker函数入参是消费函数队列的 queue_name 加上 原消费函数的入参
+        If users don't use funboost's FunboostBackgroundScheduler but instead use the native apscheduler object,
+        they can use scheduler.add_job(push_fun_params_to_broker, args=(,), kwargs={}).
+        push_fun_params_to_broker's input parameters are the consumer function queue's queue_name plus
+        the original consumer function's input parameters.
         """
         if args is None:
             args = tuple()
@@ -137,7 +139,7 @@ class FunboostBackgroundScheduler(BackgroundScheduler):
         args = tuple(args_list)
         if name is None:
             name = f'push_fun_params_to_broker_for_queue_{func.queue_name}'
-        func.publisher.check_func_input_params(*args[1:], **(kwargs or {})) # 这一行是检查入参是否合法，防止添加了不合法的定时入参，到执行时候才发现，这比官方apscheduler更靠谱。
+        func.publisher.check_func_input_params(*args[1:], **(kwargs or {})) # This line validates input parameters, preventing invalid scheduled parameters from being added and only discovered at execution time. This is more reliable than the official apscheduler.
         return self.add_job(push_fun_params_to_broker, trigger, args, kwargs, id, name,
                             misfire_grace_time, coalesce, max_instances,
                             next_run_time, jobstore, executor,
@@ -148,21 +150,21 @@ class FunboostBackgroundScheduler(BackgroundScheduler):
         #     while True:
         #         time.sleep(3600)
         #
-        # threading.Thread(target=_block_exit,).start()  # 既不希望用BlockingScheduler阻塞主进程也不希望定时退出。
+        # threading.Thread(target=_block_exit,).start()  # Neither want to block the main process with BlockingScheduler nor want to exit on a timer.
         # self._daemon = False
         # def _when_exit():
         #     while 1:
-        #         # print('阻止退出')
+        #         # print('prevent exit')
         #         time.sleep(100)
 
         # if block_exit:
         #     atexit.register(_when_exit)
-        self._daemon = False   # 这里魔改了BackgroundScheduler的daemon的_daemon属性，强制默认改成非守护线程。默认是守护线程，主线程退出会报错 RuntimeError: cannot schedule new futures after interpreter shutdown。
+        self._daemon = False   # Here we override BackgroundScheduler's _daemon attribute, forcing it to non-daemon thread by default. The default is daemon thread, which causes RuntimeError: cannot schedule new futures after interpreter shutdown when the main thread exits.
         super().start(paused=paused, )
         # _block_exit() 
     def _main_loop00000(self):
         """
-        原来的代码是这，动态添加任务不友好。
+        The original code was this, not friendly for dynamically adding tasks.
         :return:
         """
         wait_seconds = threading.TIMEOUT_MAX
@@ -174,9 +176,9 @@ class FunboostBackgroundScheduler(BackgroundScheduler):
             wait_seconds = self._process_jobs()
 
     def _main_loop(self):
-        """原来的_main_loop 删除所有任务后wait_seconds 会变成None，无限等待。
-        或者下一个需要运行的任务的wait_seconds是3600秒后，此时新加了一个动态任务需要3600秒后，
-        现在最多只需要1秒就能扫描到动态新增的定时任务了。
+        """The original _main_loop would set wait_seconds to None after all tasks are deleted, causing infinite waiting.
+        Or if the next task to run has a wait_seconds of 3600 seconds, and a new dynamic task is added during that time,
+        now it takes at most 1 second to detect newly added dynamic scheduled tasks.
         """
         MAX_WAIT_SECONDS_FOR_NEX_PROCESS_JOBS = 0.5
         wait_seconds = None
@@ -188,34 +190,36 @@ class FunboostBackgroundScheduler(BackgroundScheduler):
                 self._last_has_task = False
             else:
                 self._last_has_task = True
-            time.sleep(self._last_wait_seconds)  # 这个要取最小值，不然例如定时间隔0.1秒运行，不取最小值，不会每隔0.1秒运行。
+            time.sleep(self._last_wait_seconds)  # Must take the minimum value, otherwise e.g. with a 0.1 second interval, without taking the minimum it won't run every 0.1 seconds.
             wait_seconds = self._process_jobs()
 
     def _create_default_executor(self):
-        return ThreadPoolExecutorForAps()  # 必须是apscheduler pool的子类
+        return ThreadPoolExecutorForAps()  # Must be a subclass of apscheduler pool
 
 
-FsdfBackgroundScheduler = FunboostBackgroundScheduler  # 兼容一下名字，fsdf是 function-scheduling-distributed-framework 老框架名字的缩写
-# funboost_aps_scheduler定时配置基于内存的，不可以跨机器远程动态添加/修改/删除定时任务配置。如果需要动态增删改查定时任务，可以使用funboost_background_scheduler_redis_store
+FsdfBackgroundScheduler = FunboostBackgroundScheduler  # Backward compatibility for the name, fsdf is the abbreviation of function-scheduling-distributed-framework (the old framework name)
+# funboost_aps_scheduler's scheduled configuration is memory-based, cannot remotely add/modify/delete scheduled task configurations across machines. For dynamic CRUD of scheduled tasks, use funboost_background_scheduler_redis_store
 
 """
-建议不要亲自使用这个 funboost_aps_scheduler 对象，而是 ApsJobAdder来添加定时任务，自动多个apscheduler对象实例，
-尤其是redis作为jobstores时候，使用不同的jobstores，每个消费函数使用各自单独的jobs_key和 run_times_key
+It is recommended not to use this funboost_aps_scheduler object directly, but instead use ApsJobAdder
+to add scheduled tasks, which automatically creates multiple apscheduler object instances.
+Especially when using Redis as jobstores, it uses different jobstores with separate jobs_key and run_times_key
+for each consumer function.
 """
-# funboost_aps_scheduler是使用内存作为 job_store
+# funboost_aps_scheduler uses memory as job_store
 funboost_aps_scheduler = FunboostBackgroundScheduler(timezone=FunboostCommonConfig.TIMEZONE, daemon=False, )
-fsdf_background_scheduler = funboost_aps_scheduler  # 兼容一下老名字。
+fsdf_background_scheduler = funboost_aps_scheduler  # Backward compatibility for the old name.
 
 
 
 if __name__ == '__main__':
 
     """
-    下面的例子过时了，可以用但不建议，建议统一使用 ApsJobAdder 来添加定时任务。
-
+    The examples below are outdated. They still work but are not recommended.
+    It is recommended to use ApsJobAdder uniformly to add scheduled tasks.
     """
 
-    # 定时运行消费演示
+    # Scheduled consumption demo
     import datetime
     from funboost import boost, BrokerEnum, fsdf_background_scheduler, timing_publish_deco, run_forever
 
@@ -227,21 +231,21 @@ if __name__ == '__main__':
 
     print(consume_func, type(consume_func))
 
-    # 定时每隔3秒执行一次。
+    # Schedule to run every 3 seconds.
     funboost_aps_scheduler.add_push_job(consume_func,
                                         'interval', id='3_second_job', seconds=3, kwargs={"x": 5, "y": 6})
 
-    # 定时，只执行一次
+    # Schedule to run only once
     funboost_aps_scheduler.add_push_job(consume_func,
                                         'date', run_date=datetime.datetime(2020, 7, 24, 13, 53, 6), args=(5, 6,))
 
-    # 定时，每天的11点32分20秒都执行一次。
+    # Schedule to run every day at 11:32:20.
     funboost_aps_scheduler.add_push_job(consume_func,
                                         'cron', day_of_week='*', hour=18, minute=22, second=20, args=(5, 6,))
 
-    # 启动定时
+    # Start scheduler
     funboost_aps_scheduler.start()
 
-    # 启动消费
+    # Start consuming
     consume_func.consume()
     run_forever()

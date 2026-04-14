@@ -11,14 +11,14 @@ from funboost.utils.redis_manager import RedisMixin
 
 class RedisBrpopLpushConsumer(AbstractConsumer, RedisMixin):
     """
-    redis作为中间件实现的，使用redis brpoplpush 实现的，并且使用心跳来解决 关闭/掉线 重新分发问题。
+    Consumer implemented using Redis as middleware, using redis brpoplpush, with heartbeat to solve disconnection/shutdown redistribution issues.
 
     """
 
 
     def start_consuming_message(self):
         self.consumer_params.is_send_consumer_heartbeat_to_redis = True
-        # 方案C：注册当前消费者的 unack list key，作为“全量索引”
+        # Plan C: Register current consumer's unack list key as a “full index”
         self._unack_list_name = f'unack_{self._queue_name}_{self.consumer_identification}'
         self._unack_registry_key = RedisKeys.gen_funboost_unack_registry_key_by_queue_name(self._queue_name)
         self.redis_db_frame.sadd(self._unack_registry_key, self._unack_list_name)
@@ -54,8 +54,8 @@ class RedisBrpopLpushConsumer(AbstractConsumer, RedisMixin):
                         continue
                     msg_list = self.redis_db_frame.lrange(current_queue_unacked_msg_queue_str, 0, -1)
                     if msg_list:
-                        self.logger.warning(f"""{current_queue_unacked_msg_queue_str} 是掉线或关闭消费者的待确认任务, 将 一共 {len(msg_list)} 个消息,
-                                        详情是 {msg_list} 推送到正常消费队列 {self._queue_name} 队列中。
+                        self.logger.warning(f"""{current_queue_unacked_msg_queue_str} contains pending tasks from disconnected or closed consumer, pushing a total of {len(msg_list)} messages,
+                                        details: {msg_list} to the normal consumption queue {self._queue_name}.
                                         """)
                         self.redis_db_frame.lpush(self._queue_name, *msg_list)
                     self.redis_db_frame.delete(current_queue_unacked_msg_queue_str)

@@ -1,2 +1,2 @@
-测试使用gevent并发模式。设置concurent_mode为2
-默认是使用了线程。
+Tests using gevent concurrency mode. Set concurrent_mode to 2.
+The default is thread-based concurrency.

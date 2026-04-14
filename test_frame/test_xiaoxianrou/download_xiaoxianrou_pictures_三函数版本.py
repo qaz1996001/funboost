@@ -5,7 +5,7 @@ from parsel import Selector
 from pathlib import Path
 
 """
-http://www.5442tu.com/mingxing/list_2_1.html  下载所有明星图片
+http://www.5442tu.com/mingxing/list_2_1.html  Download all celebrity pictures
 """
 
 
@@ -23,7 +23,7 @@ def cralw_list_page(page_index):
 def crawl_detail_page(url, title, picture_index, is_first_picture=False):
     resp = requests.get(url)
     sel = Selector(resp.content.decode('gbk'))
-    if is_first_picture:  # 详情页图册也需要翻页。
+    if is_first_picture:  # The detail page album also needs pagination.
         total_page_str = sel.xpath('//div[@class="page"]/ul/li/a/text()').extract_first()
         total_page = int(re.search('共(\d+)页', total_page_str).group(1))
         for p in range(2, total_page + 1):
@@ -38,12 +38,12 @@ def downlaod_picture(pic_url, title, picture_index):
     print(pic_url)
     resp_pic = requests.get(pic_url)
     Path(f'./pictures/{title}/').mkdir(parents=True, exist_ok=True)
-    (Path(f'./pictures/{title}/') / Path(f'./{title}_{picture_index}.jpg')).write_bytes(resp_pic.content)  # 保存图片。
+    (Path(f'./pictures/{title}/') / Path(f'./{title}_{picture_index}.jpg')).write_bytes(resp_pic.content)  # Save the picture.
 
 
 if __name__ == '__main__':
     # cralw_list_page(1)
-    # crawl_detail_page('https://www.5442tu.com/mingxing/20181105/78924.html','范冰冰弟弟范丞丞阳光帅气明星壁纸图片高清',1,True)
+    # crawl_detail_page('https://www.5442tu.com/mingxing/20181105/78924.html','Fan Bingbing brother Fan Chengcheng sunny handsome celebrity wallpaper HD',1,True)
     cralw_list_page.clear()
     crawl_detail_page.clear()
     downlaod_picture.clear()

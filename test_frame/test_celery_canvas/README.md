@@ -1,19 +1,19 @@
-### Celery Canvas 复杂编排示例
+### Celery Canvas Complex Orchestration Example
 
-本示例演示 Celery 的 chain/group/chord、嵌套、map/starmap、错误回调、重试与忽略等用法。支持两种模式：
+This example demonstrates Celery's chain/group/chord, nesting, map/starmap, error callbacks, retries, and ignore patterns. It supports two modes:
 
-- 单机无 Broker（默认）：本地 eager 同进程执行，方便快速体验
-- 分布式（推荐）：配置 Redis/RabbitMQ，启动 worker 并观察真正的并行与容错
+- Single-machine without a broker (default): local eager in-process execution for quick experimentation
+- Distributed (recommended): configure Redis/RabbitMQ, start a worker, and observe true parallelism and fault tolerance
 
-#### 1) 安装依赖
+#### 1) Install dependencies
 
 ```bash
 pip install celery[redis]==5.3.6 requests
 ```
 
-#### 2) 运行方式 A：本地 eager 模式（不需要 broker）
+#### 2) Mode A: Local eager mode (no broker required)
 
-直接运行某个 Flow：
+Run a flow directly:
 
 ```bash
 python -m test_frame.test_celery_canvas.run_flow chain_basics
@@ -26,28 +26,28 @@ python -m test_frame.test_celery_canvas.run_flow complex_mix --urls https://http
 python -m test_frame.test_celery_canvas.run_flow video_pipeline --video-url https://example.com/video.mp4
 ```
 
-#### 3) 运行方式 B：分布式 Worker 模式（需要 broker）
+#### 3) Mode B: Distributed worker mode (broker required)
 
-设置环境变量：
+Set environment variables:
 
 ```bash
 set CELERY_BROKER_URL=redis://127.0.0.1:6379/0
 set CELERY_RESULT_BACKEND=redis://127.0.0.1:6379/0
 ```
 
-启动 worker（Windows 建议使用 eventlet/gevent 或在 WSL/Linux/Mac 上运行）：
+Start a worker (on Windows, it is recommended to use eventlet/gevent or run on WSL/Linux/Mac):
 
 ```bash
 celery -A test_frame.test_celery_canvas.celery_app:app worker -l info -Q canvas_default,io,cpu
 ```
 
-另一个终端运行 Flow，同上步骤 2 的命令。
+In another terminal, run a flow using the same commands as in step 2.
 
-#### 4) 目录结构
+#### 4) Directory structure
 
-- `celery_app.py`: 应用初始化，支持 eager 回退
-- `tasks.py`: 示例任务集合（加法、乘法、HTTP 请求、重试、错误、Ignore、聚合等）
-- `flows.py`: 多种编排示例，含 chain/group/chord 嵌套
-- `run_flow.py`: 命令行入口
+- `celery_app.py`: Application initialization with eager fallback support
+- `tasks.py`: Example task set (addition, multiplication, HTTP requests, retries, errors, Ignore, aggregation, etc.)
+- `flows.py`: Multiple orchestration examples including chain/group/chord nesting
+- `run_flow.py`: Command-line entry point
 
 

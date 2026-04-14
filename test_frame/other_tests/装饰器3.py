@@ -11,13 +11,13 @@ class Undefind:
 F = typing.TypeVar('F')
 class BaseDecorator(metaclass=abc.ABCMeta):
     """
-    简化了装饰器的编写。
+    Simplifies decorator writing.
 
-    用户的装饰器需要继承这个，用户可以按需重新定义 before，after，when_exception 方法。
+    User decorators need to inherit this. Users can redefine the before, after, when_exception methods as needed.
 
-    为了一致性和省事，统一采用有参数装饰器，用户的装饰器后面必须带括号。
+    For consistency and convenience, all decorators must have parameters — user decorators must always include parentheses.
 
-    用户可以选择重写 before  after  when_exception 三个方法
+    Users can choose to override the three methods: before, after, when_exception
     """
 
     # def __init__(self, *args, **kwargs):
@@ -26,14 +26,14 @@ class BaseDecorator(metaclass=abc.ABCMeta):
     raw_fun = Undefind()
     raw_result = Undefind()
     exc_info = Undefind()
-    final_result = Undefind()  # 用户可以自己定义final_result的值，如果定义了就把这个值作为函数的结果，否则把函数原始结果作为结果。
+    final_result = Undefind()  # Users can define the value of final_result themselves. If defined, this value is used as the function result; otherwise the raw function result is used.
 
     def __call__(self, fun:F, *args, **kwargs)->F:
         # print(locals())
-        if not callable(fun) or args or kwargs:  # 正常是只有fun一个参数，除非是装饰器没加括号造成的。
-            raise ValueError('为了简单和一致起见，所有装饰器都采用有参数装饰器，被装饰函数上面的装饰器后面别忘了加括号')
+        if not callable(fun) or args or kwargs:  # Normally there is only one parameter fun, unless the decorator was used without parentheses.
+            raise ValueError('For simplicity and consistency, all decorators use parameterized form. Do not forget to add parentheses after the decorator on the decorated function')
         self.raw_fun = fun
-        f = functools.partial(BaseDecorator._execute, self)  # 比 self.execute 利于补全
+        f = functools.partial(BaseDecorator._execute, self)  # Better for auto-completion than self.execute
         functools.update_wrapper(f, fun, )
         functools.wraps(fun)(f)
         return f
@@ -46,7 +46,7 @@ class BaseDecorator(metaclass=abc.ABCMeta):
         except Exception as e:
             self.exc_info = sys.exc_info()
             self.when_exception()
-        if not isinstance(self.final_result, Undefind):  # 用户可以自己定义final_result的值，如果定义了就把这个值作为函数的结果。
+        if not isinstance(self.final_result, Undefind):  # Users can define final_result themselves; if defined it becomes the function result.
             return self.final_result
         else:
             return self.raw_result
@@ -72,7 +72,7 @@ if __name__ == '__main__':
             self.b = b
 
         def before(self):
-            print('开始执行')
+            print('Starting execution')
 
         # noinspection PyAttributeOutsideInit
         def after(self):
@@ -80,13 +80,13 @@ if __name__ == '__main__':
 
 
     def common_deco(a=5, b=6):
-        """  上面的逻辑如果用常规方式写"""
+        """  The above logic written in the conventional way"""
 
         def _inner(f):
             @functools.wraps(f)
             def __inner(*args, **kwargs):
                 try:
-                    print('开始执行')
+                    print('Starting execution')
                     result = f(*args, **kwargs)
                     return a * b * result
                 except Exception as e:
@@ -98,7 +98,7 @@ if __name__ == '__main__':
 
 
     @MyDeco(b=4)
-    # @common_deco(b=4)  # 这两个装饰器等效，二选一。
+    # @common_deco(b=4)  # These two decorators are equivalent; choose one.
     def fun3(x):
         print(x)
         return x * 2

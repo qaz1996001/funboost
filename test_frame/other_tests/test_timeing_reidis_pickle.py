@@ -5,39 +5,39 @@ s1 = b'''
 
 import pickle
 
-# 修复问题：移除二进制数据前后的换行符和额外字符
-# 这是导致反序列化失败的主要原因
+# Fix: Remove leading and trailing newlines and extra characters from binary data
+# This is the main reason for deserialization failure
 cleaned_data = s1.strip()
 
-print(f"原始数据长度: {len(s1)}")
-print(f"清理后数据长度: {len(cleaned_data)}")
+print(f"Original data length: {len(s1)}")
+print(f"Cleaned data length: {len(cleaned_data)}")
 
 try:
     job = pickle.loads(cleaned_data)
     print(job)
-    print("✅ 反序列化成功!")
+    print("✅ Deserialization successful!")
     print(f"Job ID: {job['id']}")
-    print(f"Job 函数: {job['func']}")
-    print(f"Job 触发器: {job['trigger']}")
-    print(f"Job 参数: args={job['args']}, kwargs={job['kwargs']}")
-    print(f"下次运行时间: {job['next_run_time']}")
-    
-    # 这是一个 APScheduler job 的字典表示
-    print(f"\nJob 类型: {type(job)}")
-    
+    print(f"Job function: {job['func']}")
+    print(f"Job trigger: {job['trigger']}")
+    print(f"Job parameters: args={job['args']}, kwargs={job['kwargs']}")
+    print(f"Next run time: {job['next_run_time']}")
+
+    # This is a dictionary representation of an APScheduler job
+    print(f"\nJob type: {type(job)}")
+
 except Exception as e:
-    print(f"❌ 反序列化失败: {e}")
-    print("请确保数据格式正确，并检查是否有额外的字符")
+    print(f"❌ Deserialization failed: {e}")
+    print("Please ensure the data format is correct and check for extra characters")
 
-print("\n=== 问题总结 ===")
+print("\n=== Problem Summary ===")
 print("""
-APScheduler Redis 序列化问题的原因:
-1. 二进制数据包含了前后的换行符 \\n
-2. pickle.loads() 要求数据格式严格，不能有额外字符
-3. 解决方案：使用 data.strip() 清理数据
+Cause of APScheduler Redis serialization issue:
+1. Binary data contains leading/trailing newlines \\n
+2. pickle.loads() requires strict data format with no extra characters
+3. Solution: Use data.strip() to clean the data
 
-预防措施:
-1. 在 Redis 存储时确保数据格式正确
-2. 读取时进行数据验证和清理
-3. 使用合适的序列化配置
+Prevention:
+1. Ensure data format is correct when storing in Redis
+2. Validate and clean data when reading
+3. Use appropriate serialization configuration
 """)

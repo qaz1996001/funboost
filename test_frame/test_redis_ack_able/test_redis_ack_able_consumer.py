@@ -1,5 +1,6 @@
 """
-这个是用来测试，以redis为中间件，随意关闭代码会不会造成任务丢失的。
+This is used to test whether tasks are lost when using Redis as the middleware
+and the code is arbitrarily shut down.
 """
 import os
 import time
@@ -13,9 +14,9 @@ import multiprocessing
        )
 def cost_long_time_fun(x):
     pass
-    # print(f'正在消费 {x} 中 。。。。')
+    # print(f'consuming {x} ...')
     # time.sleep(30)
-    # print(f'消费完成 {x} ')
+    # print(f'consumption complete {x} ')
 
     if x%1000 == 0:
         print(multiprocessing.current_process().pid,x)

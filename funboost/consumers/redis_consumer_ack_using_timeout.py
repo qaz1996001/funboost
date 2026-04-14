@@ -11,8 +11,8 @@ from funboost.utils.redis_manager import RedisMixin
 
 class RedisConsumerAckUsingTimeout(AbstractConsumer, RedisMixin):
     """
-    redis作为中间件实现的。
-    使用超时未能ack就自动重入消息队列，例如消息取出后，由于突然断电或重启或其他原因，导致消息以后再也不能主动ack了，超过一定时间就重新放入消息队列
+    Consumer implemented using Redis as middleware.
+    Uses timeout-based automatic re-queueing: if a message is not acked within the timeout (e.g., due to sudden power loss, restart, or other reasons preventing active ack), it is automatically re-queued.
     """
 
 
@@ -57,17 +57,17 @@ class RedisConsumerAckUsingTimeout(AbstractConsumer, RedisMixin):
                 time.sleep(0.1)
 
     def _requeue_tasks_which_unconfirmed(self):
-        """不使用这种方案，不适合本来来就需要长耗时的函数，很死板"""
-        # 防止在多个进程或多个机器中同时做扫描和放入未确认消费的任务。使用个分布式锁。
+        """This approach is not suitable for inherently long-running functions, it is too rigid"""
+        # Prevent simultaneous scanning and re-queueing of unconfirmed tasks across multiple processes or machines. Use a distributed lock.
         lock_key = f'funboost_lock__requeue_tasks_which_unconfirmed_timeout:{self._queue_name}'
         with RedisDistributedLockContextManager(self.redis_db_frame, lock_key, ) as lock:
             if lock.has_aquire_lock:
                 time_max = time.time() - self._ack_timeout
                 for value in self.redis_db_frame.zrangebyscore(self._unack_zset_name, 0, time_max):
-                    self.logger.warning(f'超过了 {self._ack_timeout} 秒未能确认消费, 向 {self._queue_name} 队列重新放入未消费确认的任务 {value} ,')
+                    self.logger.warning(f'Failed to confirm consumption within {self._ack_timeout} seconds, re-queuing unacknowledged task {value} to queue {self._queue_name}')
                     self._requeue({'body': value})
                     self.redis_db_frame.zrem(self._unack_zset_name, value)
-                if time.time() - self._last_show_unack_ts > 600:  # 不要频繁提示打扰
-                    self.logger.info(f'{self._unack_zset_name} 中有待确认消费任务的数量是'
-                                     f' {self.redis_db_frame.zcard(self._unack_zset_name)}')
+                if time.time() - self._last_show_unack_ts > 600:  # Don't display too frequently
+                    self.logger.info(f'{self._unack_zset_name} has '
+                                     f'{self.redis_db_frame.zcard(self._unack_zset_name)} pending consumption confirmation tasks')
                     self._last_show_unack_ts = time.time()

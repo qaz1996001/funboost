@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-熔断器 CircuitBreakerConsumerMixin 测试
+CircuitBreakerConsumerMixin test
 
-Part 1: CircuitBreaker 状态机单元测试（本地内存，无需 funboost 运行环境）
-  - 1a: consecutive 策略
-  - 1b: rate 策略
-  - 1c: half_open_ttl 超时
-  - 1d: 多线程并发安全
-Part 2: 与 funboost MEMORY_QUEUE 集成测试
-  - 2a: 阻塞模式（consecutive 策略）
-  - 2b: Fallback 模式（consecutive 策略）
-  - 2c: 错误率策略 + exceptions 过滤
+Part 1: CircuitBreaker state machine unit tests (local memory, no funboost runtime needed)
+  - 1a: consecutive strategy
+  - 1b: rate strategy
+  - 1c: half_open_ttl timeout
+  - 1d: multi-thread concurrency safety
+Part 2: Integration tests with funboost MEMORY_QUEUE
+  - 2a: blocking mode (consecutive strategy)
+  - 2b: Fallback mode (consecutive strategy)
+  - 2c: error rate strategy + exceptions filter
 """
 import time
 import threading
@@ -23,7 +23,7 @@ from funboost.contrib.override_publisher_consumer_cls.circuit_breaker_mixin impo
 
 
 def _elapsed(t0):
-    """返回距 t0 的经过秒数字符串"""
+    """Return a string showing elapsed seconds since t0"""
     return f'[T+{time.time() - t0:.1f}s]'
 
 
@@ -35,7 +35,7 @@ def test_initial_state():
     cb = CircuitBreaker(strategy='consecutive', failure_threshold=3, recovery_timeout=5, half_open_max_calls=2)
     assert cb.state == CircuitState.CLOSED
     assert cb.failure_count == 0
-    print('  [PASS] 初始状态为 CLOSED')
+    print('  [PASS] Initial state is CLOSED')
 
 
 def test_success_resets_failure_count():
@@ -46,7 +46,7 @@ def test_success_resets_failure_count():
     cb.record_success()
     assert cb.failure_count == 0
     assert cb.state == CircuitState.CLOSED
-    print('  [PASS] 成功重置失败计数')
+    print('  [PASS] Success resets failure count')
 
 
 def test_failures_trigger_open():
@@ -56,7 +56,7 @@ def test_failures_trigger_open():
     assert cb.state == CircuitState.CLOSED
     cb.record_failure()
     assert cb.state == CircuitState.OPEN
-    print('  [PASS] 连续失败 >= threshold 触发 OPEN')
+    print('  [PASS] Consecutive failures >= threshold triggers OPEN')
 
 
 def test_open_to_half_open_after_timeout():
@@ -67,12 +67,12 @@ def test_open_to_half_open_after_timeout():
 
     remaining = cb.time_until_half_open()
     assert remaining > 0
-    print(f'  等待恢复 ({remaining:.1f}s)...')
+    print(f'  Waiting for recovery ({remaining:.1f}s)...')
     time.sleep(1.1)
 
     assert cb.state == CircuitState.HALF_OPEN
     assert cb.time_until_half_open() == 0.0
-    print('  [PASS] OPEN -> HALF_OPEN 超时自动转换')
+    print('  [PASS] OPEN -> HALF_OPEN automatic transition after timeout')
 
 
 def test_half_open_success_closes():
@@ -87,7 +87,7 @@ def test_half_open_success_closes():
     cb.record_success()
     assert cb.state == CircuitState.CLOSED
     assert cb.failure_count == 0
-    print('  [PASS] HALF_OPEN 连续成功 -> CLOSED')
+    print('  [PASS] HALF_OPEN consecutive successes -> CLOSED')
 
 
 def test_half_open_failure_reopens():
@@ -100,7 +100,7 @@ def test_half_open_failure_reopens():
     cb.record_success()
     cb.record_failure()
     assert cb.state == CircuitState.OPEN
-    print('  [PASS] HALF_OPEN 失败 -> 重新 OPEN')
+    print('  [PASS] HALF_OPEN failure -> re-OPEN')
 
 
 # ================================================================
@@ -111,8 +111,8 @@ def test_rate_strategy_no_open_below_min_calls():
     cb = CircuitBreaker(strategy='rate', errors_rate=0.5, period=10.0, min_calls=5, recovery_timeout=5)
     for _ in range(4):
         cb.record_failure()
-    assert cb.state == CircuitState.CLOSED, '调用数不足 min_calls 时不应触发 OPEN'
-    print('  [PASS] rate: 调用数不足 min_calls 时不触发 OPEN')
+    assert cb.state == CircuitState.CLOSED, 'Should not trigger OPEN when calls < min_calls'
+    print('  [PASS] rate: does not trigger OPEN when calls < min_calls')
 
 
 def test_rate_strategy_opens_on_high_error_rate():
@@ -122,9 +122,9 @@ def test_rate_strategy_opens_on_high_error_rate():
     cb.record_failure()
     cb.record_failure()
     info = cb.get_error_rate_info()
-    print(f'  当前错误率: {info["rate"]:.0%} ({info["failures"]}/{info["total"]})')
-    assert cb.state == CircuitState.OPEN, f'错误率 75% >= 50%，应触发 OPEN，实际 {cb.state}'
-    print('  [PASS] rate: 错误率达到阈值触发 OPEN')
+    print(f'  Current error rate: {info["rate"]:.0%} ({info["failures"]}/{info["total"]})')
+    assert cb.state == CircuitState.OPEN, f'Error rate 75% >= 50%, should trigger OPEN, actual {cb.state}'
+    print('  [PASS] rate: error rate at threshold triggers OPEN')
 
 
 def test_rate_strategy_no_open_below_threshold():
@@ -134,9 +134,9 @@ def test_rate_strategy_no_open_below_threshold():
     cb.record_success()
     cb.record_failure()
     info = cb.get_error_rate_info()
-    print(f'  当前错误率: {info["rate"]:.0%} ({info["failures"]}/{info["total"]})')
-    assert cb.state == CircuitState.CLOSED, '错误率 25% < 50%，不应触发 OPEN'
-    print('  [PASS] rate: 错误率低于阈值不触发 OPEN')
+    print(f'  Current error rate: {info["rate"]:.0%} ({info["failures"]}/{info["total"]})')
+    assert cb.state == CircuitState.CLOSED, 'Error rate 25% < 50%, should not trigger OPEN'
+    print('  [PASS] rate: error rate below threshold does not trigger OPEN')
 
 
 def test_rate_strategy_window_expiry():
@@ -155,12 +155,12 @@ def test_rate_strategy_window_expiry():
     cb._state = CircuitState.CLOSED
     cb._failure_count = 0
 
-    print('  等待窗口过期 (1s)...')
+    print('  Waiting for window expiry (1s)...')
     time.sleep(1.1)
 
     cb.record_failure()
-    assert cb.state == CircuitState.CLOSED, '旧记录过期后, 1次失败不应达到 min_calls=2'
-    print('  [PASS] rate: 滑动窗口过期后旧记录不再计入')
+    assert cb.state == CircuitState.CLOSED, 'After old records expire, 1 failure should not reach min_calls=2'
+    print('  [PASS] rate: old records no longer counted after sliding window expires')
 
 
 # ================================================================
@@ -175,11 +175,11 @@ def test_half_open_ttl_timeout():
     assert cb.state == CircuitState.HALF_OPEN
 
     cb.record_success()
-    print('  等待 half_open_ttl 超时 (0.5s)...')
+    print('  Waiting for half_open_ttl timeout (0.5s)...')
     time.sleep(0.6)
 
-    assert cb.state == CircuitState.OPEN, '半开状态超时应回到 OPEN'
-    print('  [PASS] HALF_OPEN 超过 half_open_ttl -> OPEN')
+    assert cb.state == CircuitState.OPEN, 'Half-open state timeout should return to OPEN'
+    print('  [PASS] HALF_OPEN exceeds half_open_ttl -> OPEN')
 
 
 # ================================================================
@@ -208,7 +208,7 @@ def test_thread_safety():
 
     assert not errors
     assert cb.state in (CircuitState.CLOSED, CircuitState.OPEN)
-    print('  [PASS] 多线程并发安全')
+    print('  [PASS] Multi-thread concurrency safe')
 
 
 def test_parse_exception_names():
@@ -216,15 +216,15 @@ def test_parse_exception_names():
     assert _parse_exception_names((ValueError, TimeoutError)) == {'ValueError', 'TimeoutError'}
     assert _parse_exception_names(('RuntimeError',)) == {'RuntimeError'}
     assert _parse_exception_names((ConnectionError, 'CustomError')) == {'ConnectionError', 'CustomError'}
-    print('  [PASS] _parse_exception_names 正确解析异常类型')
+    print('  [PASS] _parse_exception_names correctly parses exception types')
 
 
 def run_unit_tests():
     print('=' * 60)
-    print('Part 1: CircuitBreaker 状态机单元测试')
+    print('Part 1: CircuitBreaker State Machine Unit Tests')
     print('=' * 60)
 
-    print('--- 1a: consecutive 策略 ---')
+    print('--- 1a: consecutive strategy ---')
     test_initial_state()
     test_success_resets_failure_count()
     test_failures_trigger_open()
@@ -232,7 +232,7 @@ def run_unit_tests():
     test_half_open_success_closes()
     test_half_open_failure_reopens()
 
-    print('--- 1b: rate 策略 ---')
+    print('--- 1b: rate strategy ---')
     test_rate_strategy_no_open_below_min_calls()
     test_rate_strategy_opens_on_high_error_rate()
     test_rate_strategy_no_open_below_threshold()
@@ -241,12 +241,12 @@ def run_unit_tests():
     print('--- 1c: half_open_ttl ---')
     test_half_open_ttl_timeout()
 
-    print('--- 1d: 其他 ---')
+    print('--- 1d: other ---')
     test_thread_safety()
     test_parse_exception_names()
 
     print('-' * 60)
-    print('Part 1 全部通过!')
+    print('Part 1 all passed!')
     print()
 
 
@@ -256,16 +256,16 @@ def run_unit_tests():
 
 def run_integration_test_block_mode():
     """
-    阻塞模式：consecutive 策略 + 本地计数
+    Blocking mode: consecutive strategy + local counting
 
-    预期时序 (recovery_timeout=2.0s):
-      T+0.0  consume() 启动
-      T+0.3  consumer 就绪，push 3 条消息
-      T+0.5  3 条消息消费完毕，连续失败 3 次 → OPEN
-      T+1.3  assert OPEN ✓，push(100)
-      T+1.3  _submit_task 阻塞等待 (remaining≈1.2s)
-      T+2.5  recovery_timeout 到期 → HALF_OPEN，task 100 被执行 (should_fail=False → 成功)
-      T+4.3  main 线程唤醒，检查 task 100 已执行 ✓
+    Expected timing (recovery_timeout=2.0s):
+      T+0.0  consume() starts
+      T+0.3  consumer ready, push 3 messages
+      T+0.5  3 messages consumed, 3 consecutive failures -> OPEN
+      T+1.3  assert OPEN ok, push(100)
+      T+1.3  _submit_task blocks waiting (remaining~1.2s)
+      T+2.5  recovery_timeout expires -> HALF_OPEN, task 100 executed (should_fail=False -> success)
+      T+4.3  main thread wakes, verify task 100 executed ok
     """
     from funboost import boost, BoosterParams, BrokerEnum
     from funboost.contrib.override_publisher_consumer_cls.circuit_breaker_mixin import (
@@ -273,7 +273,7 @@ def run_integration_test_block_mode():
     )
 
     print('=' * 60)
-    print('Part 2a: 集成测试 - 阻塞模式 (consecutive)')
+    print('Part 2a: Integration test - blocking mode (consecutive)')
     print('=' * 60)
 
     call_log = []
@@ -304,45 +304,45 @@ def run_integration_test_block_mode():
     task_block.consume()
     time.sleep(0.3)
     t0 = time.time()
-    print(f'  {_elapsed(t0)} consumer 启动完成')
+    print(f'  {_elapsed(t0)} consumer started')
 
     for i in range(3):
         task_block.push(i)
     time.sleep(1.0)
 
     cb = task_block.consumer._circuit_breaker
-    print(f'  {_elapsed(t0)} 失败 3 次后状态: {cb.state}, failure_count={cb.failure_count}')
+    print(f'  {_elapsed(t0)} State after 3 failures: {cb.state}, failure_count={cb.failure_count}')
     assert cb.state == CircuitState.OPEN
 
     should_fail = False
     task_block.push(100)
-    print(f'  {_elapsed(t0)} 发送消息 100, 等待 recovery_timeout=2.0s 后恢复...')
+    print(f'  {_elapsed(t0)} Sent message 100, waiting recovery_timeout=2.0s to recover...')
     time.sleep(3.0)
 
     success_calls = [log for log in call_log if log[1] == 100]
     if success_calls:
-        print(f'  {_elapsed(t0)} 消息 100 在 T+{success_calls[0][2] - t0:.1f}s 被执行 (预期 T+~2.2s，即 OPEN 后约 recovery_timeout=2.0s)')
+        print(f'  {_elapsed(t0)} Message 100 executed at T+{success_calls[0][2] - t0:.1f}s (expected T+~2.2s, about recovery_timeout=2.0s after OPEN)')
     else:
-        print(f'  {_elapsed(t0)} 消息 100 未被执行!')
+        print(f'  {_elapsed(t0)} Message 100 was not executed!')
     assert len(success_calls) >= 1
-    print(f'  {_elapsed(t0)} [PASS] 阻塞模式 consecutive 测试通过')
+    print(f'  {_elapsed(t0)} [PASS] Blocking mode consecutive test passed')
     print()
 
 
 def run_integration_test_fallback_mode():
     """
-    Fallback 模式：consecutive 策略 + 本地计数
+    Fallback mode: consecutive strategy + local counting
 
-    预期时序 (recovery_timeout=2.0s):
-      T+0.0  consume() 启动
-      T+0.3  consumer 就绪，push 3 条消息（全部失败）
+    Expected timing (recovery_timeout=2.0s):
+      T+0.0  consume() starts
+      T+0.3  consumer ready, push 3 messages (all fail)
       T+0.5  OPEN
-      T+1.3  assert OPEN ✓，push(100), push(101) → fallback 立即执行
-      T+1.5  fallback 完成
-      T+2.3  assert fallback ✓
-      T+2.5  recovery_timeout 到期 → HALF_OPEN（lazy 触发）
-      T+3.8  push(200)，此时状态已是 HALF_OPEN → 真实函数执行
-      T+4.8  assert task 200 成功 ✓
+      T+1.3  assert OPEN ok, push(100), push(101) -> fallback executes immediately
+      T+1.5  fallback complete
+      T+2.3  assert fallback ok
+      T+2.5  recovery_timeout expires -> HALF_OPEN (lazy trigger)
+      T+3.8  push(200), state is now HALF_OPEN -> real function executes
+      T+4.8  assert task 200 success ok
     """
     from funboost import boost, BoosterParams, BrokerEnum
     from funboost.contrib.override_publisher_consumer_cls.circuit_breaker_mixin import (
@@ -350,7 +350,7 @@ def run_integration_test_fallback_mode():
     )
 
     print('=' * 60)
-    print('Part 2b: 集成测试 - Fallback 模式 (consecutive)')
+    print('Part 2b: Integration test - Fallback mode (consecutive)')
     print('=' * 60)
 
     call_log = []
@@ -386,28 +386,28 @@ def run_integration_test_fallback_mode():
     task_fb.consume()
     time.sleep(0.3)
     t0 = time.time()
-    print(f'  {_elapsed(t0)} consumer 启动完成')
+    print(f'  {_elapsed(t0)} consumer started')
 
     for i in range(3):
         task_fb.push(i)
     time.sleep(1.0)
 
     cb = task_fb.consumer._circuit_breaker
-    print(f'  {_elapsed(t0)} 失败 3 次后状态: {cb.state}')
+    print(f'  {_elapsed(t0)} State after 3 failures: {cb.state}')
     assert cb.state == CircuitState.OPEN
 
     task_fb.push(100)
     task_fb.push(101)
     time.sleep(1.0)
 
-    print(f'  {_elapsed(t0)} fallback 调用次数: {len(fallback_log)}')
+    print(f'  {_elapsed(t0)} fallback call count: {len(fallback_log)}')
     assert len(fallback_log) >= 2
     for log in fallback_log:
         print(f'    -> T+{log[2] - t0:.1f}s fallback({log[1]})')
 
     should_fail = False
-    print(f'  {_elapsed(t0)} 当前状态: {cb.state}, 距 HALF_OPEN 剩余 {cb.time_until_half_open():.1f}s')
-    print(f'  {_elapsed(t0)} 等待确保超过 recovery_timeout 后发送新消息...')
+    print(f'  {_elapsed(t0)} Current state: {cb.state}, remaining until HALF_OPEN {cb.time_until_half_open():.1f}s')
+    print(f'  {_elapsed(t0)} Waiting to ensure past recovery_timeout before sending new message...')
     time.sleep(1.5)
 
     task_fb.push(200)
@@ -415,23 +415,23 @@ def run_integration_test_fallback_mode():
 
     success_calls = [log for log in call_log if log[1] == 200]
     if success_calls:
-        print(f'  {_elapsed(t0)} 消息 200 在 T+{success_calls[0][2] - t0:.1f}s 被真正执行 (状态应为 HALF_OPEN)')
+        print(f'  {_elapsed(t0)} Message 200 truly executed at T+{success_calls[0][2] - t0:.1f}s (state should be HALF_OPEN)')
     else:
-        print(f'  {_elapsed(t0)} 消息 200 未被执行!')
+        print(f'  {_elapsed(t0)} Message 200 was not executed!')
     assert len(success_calls) >= 1
-    print(f'  {_elapsed(t0)} [PASS] Fallback 模式测试通过')
+    print(f'  {_elapsed(t0)} [PASS] Fallback mode test passed')
     print()
 
 
 def run_integration_test_rate_with_exceptions():
     """
-    错误率策略 + exceptions 过滤
+    Error rate strategy + exceptions filter
 
-    预期时序:
-      T+0.3  push 3 条消息 → RuntimeError (不在 exceptions 中，不被跟踪)
-      T+1.3  assert CLOSED ✓
-      T+1.3  push 3 条消息 → ConnectionError (被跟踪)
-      T+2.3  错误率 = 3/3 = 100% >= 50%, min_calls=3 满足 → OPEN ✓
+    Expected timing:
+      T+0.3  push 3 messages -> RuntimeError (not in exceptions, not tracked)
+      T+1.3  assert CLOSED ok
+      T+1.3  push 3 messages -> ConnectionError (tracked)
+      T+2.3  error rate = 3/3 = 100% >= 50%, min_calls=3 satisfied -> OPEN ok
     """
     from funboost import boost, BoosterParams, BrokerEnum
     from funboost.contrib.override_publisher_consumer_cls.circuit_breaker_mixin import (
@@ -439,7 +439,7 @@ def run_integration_test_rate_with_exceptions():
     )
 
     print('=' * 60)
-    print('Part 2c: 集成测试 - rate 策略 + exceptions 过滤')
+    print('Part 2c: Integration test - rate strategy + exceptions filter')
     print('=' * 60)
 
     call_log = []
@@ -475,27 +475,27 @@ def run_integration_test_rate_with_exceptions():
     task_rate.consume()
     time.sleep(0.3)
     t0 = time.time()
-    print(f'  {_elapsed(t0)} consumer 启动完成')
+    print(f'  {_elapsed(t0)} consumer started')
 
     for i in range(3):
         task_rate.push(i)
     time.sleep(1.0)
 
     cb = task_rate.consumer._circuit_breaker
-    print(f'  {_elapsed(t0)} RuntimeError 3 次后状态: {cb.state} (预期 CLOSED，因为 RuntimeError 不被跟踪)')
-    assert cb.state == CircuitState.CLOSED, f'RuntimeError 不被跟踪，不应触发 OPEN，实际 {cb.state}'
+    print(f'  {_elapsed(t0)} State after 3 RuntimeErrors: {cb.state} (expected CLOSED, because RuntimeError is not tracked)')
+    assert cb.state == CircuitState.CLOSED, f'RuntimeError is not tracked and should not trigger OPEN, actual {cb.state}'
 
     error_type = 'connection'
     for i in range(10, 13):
         task_rate.push(i)
     time.sleep(1.0)
 
-    print(f'  {_elapsed(t0)} ConnectionError 3 次后状态: {cb.state}')
+    print(f'  {_elapsed(t0)} State after 3 ConnectionErrors: {cb.state}')
     rate_info = cb.get_error_rate_info()
-    print(f'  {_elapsed(t0)} 错误率信息: {rate_info}')
-    assert cb.state == CircuitState.OPEN, f'ConnectionError 被跟踪且错误率 >= 50%，应触发 OPEN，实际 {cb.state}'
+    print(f'  {_elapsed(t0)} Error rate info: {rate_info}')
+    assert cb.state == CircuitState.OPEN, f'ConnectionError is tracked and error rate >= 50%, should trigger OPEN, actual {cb.state}'
 
-    print(f'  {_elapsed(t0)} [PASS] rate 策略 + exceptions 过滤测试通过')
+    print(f'  {_elapsed(t0)} [PASS] rate strategy + exceptions filter test passed')
     print()
 
 
@@ -505,5 +505,5 @@ if __name__ == '__main__':
     run_integration_test_fallback_mode()
     run_integration_test_rate_with_exceptions()
     print('=' * 60)
-    print('所有测试通过!')
+    print('All tests passed!')
     print('=' * 60)

@@ -9,14 +9,14 @@ import asyncio
 from funboost.publishers.base_publisher import AbstractPublisher
 from funboost.queues.memory_queues_map import PythonQueues
 
-local_pyhton_queue_name__local_pyhton_queue_obj_map = dict()  # 使local queue和其他中间件完全一样的使用方式，使用映射保存队列的名字，使消费和发布通过队列名字能找到队列对象。
+local_pyhton_queue_name__local_pyhton_queue_obj_map = dict()  # Use the same pattern as other brokers, using a mapping to save queue names so consumers and publishers can find queue objects by name.
 
 
 class LocalPythonQueuePublisher(AbstractPublisher):
     """
-    使用python内置queue对象作为中间件。
-    内存队列非常重要，性能强，不担心有的对象无法pickle序列化
-    可以通过get_future和get_aio_future方法不依赖Redis实现rpc获取结果
+    Uses Python's built-in queue object as the broker.
+    Memory queues are very important: high performance, no worries about objects that can't be pickle-serialized.
+    Can use get_future and get_aio_future methods to get results via RPC without relying on Redis.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -35,7 +35,7 @@ class LocalPythonQueuePublisher(AbstractPublisher):
     def clear(self):
         # noinspection PyUnresolvedReferences
         self.local_python_queue.queue.clear()
-        self.logger.warning(f'清除 本地队列中的消息成功')
+        self.logger.warning(f'Successfully cleared messages in local queue')
 
     def get_message_count(self):
         return self.local_python_queue.qsize()
@@ -44,47 +44,47 @@ class LocalPythonQueuePublisher(AbstractPublisher):
         pass
 
 
-    # 内存队列独有方法，获取结果直接通过future.result()获取，不依赖Redis实现rpc获取结果
+    # Memory queue exclusive method, get results directly via future.result(), without relying on Redis for RPC
     def get_future(self, *func_args, **func_kwargs) -> Future:
         """
-        内存队列专用方法，发布消息并返回 concurrent.futures.Future 对象，不依赖 Redis 作为 RPC。
-        
-        利用内存队列不序列化的特性，直接把 Future 对象塞进消息体的 extra 中随消息一起流转，
-        消费端执行完函数后，将 FunctionResultStatus 通过 future.set_result() 设置回来。
-        完全零外部依赖，纯进程内通信。
+        Memory queue exclusive method. Publishes a message and returns a concurrent.futures.Future object, without relying on Redis as RPC.
 
-        用法:
+        Takes advantage of memory queues not serializing, directly putting the Future object into the message body's extra field to flow with the message.
+        After the consumer executes the function, it sets the FunctionResultStatus back via future.set_result().
+        Completely zero external dependencies, pure in-process communication.
+
+        Usage:
             future = task_fun.publisher.get_future(1, y=2)
-            function_result_status = future.result(timeout=10)   # 阻塞等待结果
-            print(function_result_status.result)    # 获取函数返回值
-            print(function_result_status.success)   # 是否成功
+            function_result_status = future.result(timeout=10)   # Block and wait for result
+            print(function_result_status.result)    # Get function return value
+            print(function_result_status.success)   # Whether successful
         """
         future = Future()
-        # 构造 msg_dict
+        # Build msg_dict
         msg_dict = dict(func_kwargs)
         for index, arg in enumerate(func_args):
             msg_dict[self.publish_params_checker.all_arg_name_list[index]] = arg
-        # 将 Future 对象直接放入消息的 extra 中，内存队列不序列化，Future 对象可以直接传递
+        # Put Future object directly into message's extra field; memory queue doesn't serialize, so Future objects can be passed directly
         msg_dict['extra'] = {'_memory_call_future': future}
         self.publish(msg_dict)
         return future
     
-    # 内存队列独有方法，获取结果直接通过 await future 获取，不依赖Redis实现rpc获取结果
+    # Memory queue exclusive method, get results directly via await future, without relying on Redis for RPC
     def get_aio_future(self, *func_args, **func_kwargs) -> asyncio.Future:
         """
-        内存队列专用方法，发布消息并返回 asyncio.Future 对象，不依赖 Redis 作为 RPC。
+        Memory queue exclusive method. Publishes a message and returns an asyncio.Future object, without relying on Redis as RPC.
 
-        注意：此方法本身是同步的，返回值是 asyncio.Future，需要在异步上下文中 await 使用。
-        内部调用 get_future() 获取 concurrent.futures.Future，
-        再通过 asyncio.wrap_future() 将其桥接为 asyncio.Future。
+        Note: This method itself is synchronous; the return value is asyncio.Future, which needs to be awaited in an async context.
+        Internally calls get_future() to get a concurrent.futures.Future,
+        then bridges it to asyncio.Future via asyncio.wrap_future().
 
-        用法（在异步上下文中）:
-            # 先拿到 future，稍后再 await（推荐，可并发多个任务）
+        Usage (in async context):
+            # Get the future first, await later (recommended, allows concurrent tasks)
             future = task_fun.publisher.get_aio_future(1, y=2)
-            # ... 做其他事 ...
+            # ... do other things ...
             result_status = await future
-            print(result_status.result)    # 获取函数返回值
-            print(result_status.success)   # 是否成功
+            print(result_status.result)    # Get function return value
+            print(result_status.success)   # Whether successful
         """
         sync_future = self.get_future(*func_args, **func_kwargs)
         loop = asyncio.get_running_loop()

@@ -5,7 +5,7 @@ from funboost import boost,FunctionResultStatusPersistanceConfig
        function_result_status_persistance_conf=FunctionResultStatusPersistanceConfig(is_save_status=True,is_save_result=True))
 def add(a,b):
     time.sleep(1)
-    raise Exception('出错')
+    raise Exception('error occurred')
     print('a +b :', a+b)
     return a+b
 

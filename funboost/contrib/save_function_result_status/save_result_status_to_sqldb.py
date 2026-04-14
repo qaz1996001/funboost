@@ -1,8 +1,9 @@
 
 """
-一个贡献,保存函数结果状态到 mysql postgre 等等,因为默认是使用mongo保存.
+A contrib module for saving function result status to MySQL, PostgreSQL, etc.,
+since the default storage backend is MongoDB.
 
-可以在 @boost里面指定 user_custom_record_process_info_func= save_result_status_to_sqlalchemy
+You can specify user_custom_record_process_info_func=save_result_status_to_sqlalchemy in @boost.
 """
 
 
@@ -22,13 +23,13 @@ def _gen_insert_sql_and_values_by_dict(dictx: dict):
     key_list = [f'`{k}`' for k in dictx.keys()]
     fields = ", ".join(key_list)
 
-    # 构建占位符字符串
+    # Build placeholder string
     placeholders = ", ".join(['%s'] * len(dictx))
 
-    # 构建插入语句
+    # Build insert statement
     insert_sql = f"INSERT INTO funboost_consume_results ({fields}) VALUES ({placeholders})"
 
-    # 获取数据字典的值作为插入的值
+    # Get the values from the data dictionary as the values to insert
     values = tuple(dictx.values())
     values_new = tuple([json.dumps(v) if isinstance(v, dict) else v for v in values])
     return insert_sql, values_new
@@ -42,7 +43,7 @@ def _gen_insert_sqlalchemy(dictx: dict):
     value_list_2 = [f':{f}' for f in value_list]
     values = ", ".join(value_list_2)
 
-    # 构建插入语句
+    # Build insert statement
     insert_sql = f"INSERT INTO funboost_consume_results ({fields}) VALUES ({values})"
 
     return insert_sql
@@ -52,10 +53,10 @@ def _gen_insert_sqlalchemy(dictx: dict):
 def get_sqla_helper():
     enginex = create_engine(
         funboost_config_deafult.BrokerConnConfig.SQLACHEMY_ENGINE_URL,
-        max_overflow=10,  # 超过连接池大小外最多创建的连接
-        pool_size=50,  # 连接池大小
-        pool_timeout=30,  # 池中没有线程最多等待的时间，否则报错
-        pool_recycle=3600,  # 多久之后对线程池中的线程进行一次连接的回收（重置）
+        max_overflow=10,  # Maximum additional connections beyond the pool size
+        pool_size=50,  # Connection pool size
+        pool_timeout=30,  # Maximum wait time when no connection is available in the pool, otherwise raises an error
+        pool_recycle=3600,  # How often to recycle (reset) connections in the thread pool
         echo=True)
     sqla_helper = SqlaReflectHelper(enginex)
     t_funboost_consume_results = sqla_helper.base_classes.funboost_consume_results
@@ -63,10 +64,10 @@ def get_sqla_helper():
 
 
 def save_result_status_to_sqlalchemy(function_result_status: FunctionResultStatus):
-    """ function_result_status变量上有各种丰富的信息 ,用户可以使用其中的信息
-    用户自定义记录函数消费信息的钩子函数
+    """ The function_result_status variable contains various rich information that users can access.
+    This is a user-defined hook function for recording function consumption information.
 
-    例如  @boost('test_user_custom', user_custom_record_process_info_func=save_result_status_to_sqlalchemy)
+    Example: @boost('test_user_custom', user_custom_record_process_info_func=save_result_status_to_sqlalchemy)
     """
     enginex, sqla_helper, t_funboost_consume_results = get_sqla_helper()
 
@@ -76,6 +77,6 @@ def save_result_status_to_sqlalchemy(function_result_status: FunctionResultStatu
         for k, v in status_dict.items():
             if isinstance(v, dict):
                 status_dict_new[k] = json.dumps(v)
-        # sql = _gen_insert_sqlalchemy(status_dict) # 这种是sqlahemy sql方式插入.
+        # sql = _gen_insert_sqlalchemy(status_dict) # This is the SQLAlchemy raw SQL insert approach.
         # ss.execute(sql, status_dict_new)
-        ss.merge(t_funboost_consume_results(**status_dict_new)) # 这种是orm方式插入.
+        ss.merge(t_funboost_consume_results(**status_dict_new))  # This is the ORM insert approach.

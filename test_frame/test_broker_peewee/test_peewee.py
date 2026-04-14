@@ -8,7 +8,7 @@ from funboost import BrokerEnum, boost, FunctionResultStatusPersistanceConfig, f
 
 @boost('test_kombu2b', broker_kind=BrokerEnum.PEEWEE, qps=0.1,)
 def f1(x, y):
-    print(f'start {x} {y} 。。。')
+    print(f'start {x} {y} ...')
     time.sleep(60)
     print(f'{x} + {y} = {x + y}')
     print(f'over {x} {y}')

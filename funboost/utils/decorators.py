@@ -27,7 +27,7 @@ from funboost.utils import LogManager, nb_print, LoggerMixin
 from nb_log import LoggerLevelSetterMixin
 
 os_name = os.name
-# nb_print(f' 操作系统类型是  {os_name}')
+# nb_print(f' OS type is {os_name}')
 handle_exception_log = LogManager('function_error').get_logger_and_add_handlers()
 run_times_log = LogManager('run_many_times').get_logger_and_add_handlers(20)
 
@@ -39,16 +39,16 @@ class CustomException(Exception):
 
 
 def run_many_times(times=1):
-    """把函数运行times次的装饰器
-    :param times:运行次数
-    没有捕获错误，出错误就中断运行，可以配合handle_exception装饰器不管是否错误都运行n次。
+    """Decorator to run a function multiple times.
+    :param times: number of times to run
+    Does not catch errors; errors will interrupt execution. Can be combined with handle_exception decorator to run n times regardless of errors.
     """
 
     def _run_many_times(func):
         @wraps(func)
         def __run_many_times(*args, **kwargs):
             for i in range(times):
-                run_times_log.debug('* ' * 50 + '当前是第 {} 次运行[ {} ]函数'.format(i + 1, func.__name__))
+                run_times_log.debug('* ' * 50 + 'Currently running function [ {} ] for the {} time'.format(func.__name__, i + 1))
                 func(*args, **kwargs)
 
         return __run_many_times
@@ -58,15 +58,15 @@ def run_many_times(times=1):
 
 # noinspection PyIncorrectDocstring
 def handle_exception(retry_times=0, error_detail_level=0, is_throw_error=False, time_sleep=0):
-    """捕获函数错误的装饰器,重试并打印日志
-    :param retry_times : 重试次数
-    :param error_detail_level :为0打印exception提示，为1打印3层深度的错误堆栈，为2打印所有深度层次的错误堆栈
-    :param is_throw_error : 在达到最大次数时候是否重新抛出错误
+    """Decorator to catch function errors, retry and log.
+    :param retry_times : number of retries
+    :param error_detail_level : 0 prints exception message, 1 prints 3-level deep stack trace, 2 prints full stack trace
+    :param is_throw_error : whether to re-raise the error after max retries
     :type error_detail_level: int
     """
 
     if error_detail_level not in [0, 1, 2]:
-        raise Exception('error_detail_level参数必须设置为0 、1 、2')
+        raise Exception('error_detail_level parameter must be set to 0, 1, or 2')
 
     def _handle_exception(func):
         @wraps(func)
@@ -76,21 +76,21 @@ def handle_exception(retry_times=0, error_detail_level=0, is_throw_error=False, 
                     result = func(*args, **keyargs)
                     if i:
                         handle_exception_log.debug(
-                            u'%s\n调用成功，调用方法--> [  %s  ] 第  %s  次重试成功' % ('# ' * 40, func.__name__, i))
+                            u'%s\nCall succeeded, method --> [  %s  ] retry #%s succeeded' % ('# ' * 40, func.__name__, i))
                     return result
 
                 except BaseException as e:
                     error_info = ''
                     if error_detail_level == 0:
-                        error_info = '错误类型是：' + str(e.__class__) + '  ' + str(e)
+                        error_info = 'Error type: ' + str(e.__class__) + '  ' + str(e)
                     elif error_detail_level == 1:
-                        error_info = '错误类型是：' + str(e.__class__) + '  ' + traceback.format_exc(limit=3)
+                        error_info = 'Error type: ' + str(e.__class__) + '  ' + traceback.format_exc(limit=3)
                     elif error_detail_level == 2:
-                        error_info = '错误类型是：' + str(e.__class__) + '  ' + traceback.format_exc()
+                        error_info = 'Error type: ' + str(e.__class__) + '  ' + traceback.format_exc()
 
                     handle_exception_log.exception(
-                        u'%s\n记录错误日志，调用方法--> [  %s  ] 第  %s  次错误重试， %s\n' % ('- ' * 40, func.__name__, i, error_info))
-                    if i == retry_times and is_throw_error:  # 达到最大错误次数后，重新抛出错误
+                        u'%s\nError log recorded, method --> [  %s  ] error retry #%s, %s\n' % ('- ' * 40, func.__name__, i, error_info))
+                    if i == retry_times and is_throw_error:  # Re-raise error after reaching max retry count
                         raise e
                 time.sleep(time_sleep)
 
@@ -100,11 +100,11 @@ def handle_exception(retry_times=0, error_detail_level=0, is_throw_error=False, 
 
 
 def keep_circulating(time_sleep=0.001, exit_if_function_run_sucsess=False, is_display_detail_exception=True, block=True, daemon=False):
-    """间隔一段时间，一直循环运行某个方法的装饰器
-    :param time_sleep :循环的间隔时间
-    :param exit_if_function_run_sucsess :如果成功了就退出循环
+    """Decorator to keep running a method in a loop at regular intervals.
+    :param time_sleep : interval time between loops
+    :param exit_if_function_run_sucsess : exit the loop if the function succeeds
     :param is_display_detail_exception
-    :param block :是否阻塞主主线程，False时候开启一个新的线程运行while 1。
+    :param block : whether to block the main thread. When False, starts a new thread to run the while loop.
     """
     if not hasattr(keep_circulating, 'keep_circulating_log'):
         keep_circulating.log = LogManager('keep_circulating').get_logger_and_add_handlers()
@@ -121,7 +121,7 @@ def keep_circulating(time_sleep=0.001, exit_if_function_run_sucsess=False, is_di
                         if exit_if_function_run_sucsess:
                             return result
                     except BaseException as e:
-                        msg = func.__name__ + '   运行出错\n ' + traceback.format_exc(limit=10) if is_display_detail_exception else str(e)
+                        msg = func.__name__ + '   execution error\n ' + traceback.format_exc(limit=10) if is_display_detail_exception else str(e)
                         keep_circulating.log.error(msg)
                     finally:
                         time.sleep(time_sleep)
@@ -137,7 +137,7 @@ def keep_circulating(time_sleep=0.001, exit_if_function_run_sucsess=False, is_di
 
 
 def synchronized(func):
-    """线程锁装饰器，可以加在单例模式上"""
+    """Thread lock decorator, can be applied to singleton patterns"""
     func.__lock__ = threading.Lock()
 
     @wraps(func)
@@ -150,7 +150,7 @@ def synchronized(func):
 ClSX = TypeVar('CLSX')
 def singleton(cls:ClSX)  -> ClSX:
     """
-    单例模式装饰器,新加入线程锁，更牢固的单例模式，主要解决多线程如100线程同时实例化情况下可能会出现三例四例的情况,实测。
+    Singleton pattern decorator with thread lock for a more robust singleton. Mainly solves the issue where multiple threads (e.g. 100 threads) instantiating simultaneously could create 3 or 4 instances.
     """
     _instance = {}
     singleton.__lock = threading.Lock()
@@ -166,7 +166,7 @@ def singleton(cls:ClSX)  -> ClSX:
 
 def singleton_no_lock(cls:ClSX)  -> ClSX:
     """
-    单例模式装饰器,新加入线程锁，更牢固的单例模式，主要解决多线程如100线程同时实例化情况下可能会出现三例四例的情况,实测。
+    Singleton pattern decorator without thread lock. May produce multiple instances under heavy concurrent instantiation.
     """
     _instance = {}
 
@@ -190,21 +190,21 @@ class SingletonMeta(type):
 
 class SingletonBaseCall(metaclass=SingletonMeta):
     """
-    单例基类。任何继承自这个基类的子类都会自动成为单例。
+    Singleton base class. Any subclass inheriting from this base class will automatically become a singleton.
 
-    示例：
+    Example:
     class MyClass(SingletonBase):
         pass
 
     instance1 = MyClass()
     instance2 = MyClass()
 
-    assert instance1 is instance2  # 实例1和实例2实际上是同一个对象
+    assert instance1 is instance2  # instance1 and instance2 are actually the same object
     """
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        # 可以在此处添加对子类的额外处理，比如检查其是否符合单例要求等
+        # Additional subclass processing can be added here, e.g. checking singleton requirements
 
 
 class SingletonBaseNew:
@@ -217,7 +217,7 @@ class SingletonBaseNew:
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        # 可以在此处添加对子类的额外处理，比如检查其是否符合单例要求等
+        # Additional subclass processing can be added here, e.g. checking singleton requirements
 
 
 class SingletonBaseCustomInit(metaclass=abc.ABCMeta):
@@ -236,21 +236,21 @@ class SingletonBaseCustomInit(metaclass=abc.ABCMeta):
 
 def flyweight(cls):
     """
-    享元模式装饰器，有限的多例模式，相同参数返回同一个实例。
-    
-    改进：兼容位置传参和关键字传参，以下两种调用方式会返回同一个实例：
-        cls('value')           # 位置参数
-        cls(param='value')     # 关键字参数
+    Flyweight pattern decorator, a limited multi-instance pattern that returns the same instance for identical parameters.
+
+    Improvement: Compatible with both positional and keyword arguments. The following two calls return the same instance:
+        cls('value')           # positional argument
+        cls(param='value')     # keyword argument
     """
     import inspect
     
-    # 1. 闭包内的存储，每个类独立拥有自己的实例缓存，互不干扰
+    # 1. Storage within closure, each class independently owns its own instance cache without interference
     _instances = {}
     
-    # 2. 为每个类创建一个独立的锁，避免全局锁竞争
+    # 2. Create an independent lock for each class to avoid global lock contention
     _class_lock = threading.Lock()
     
-    # 3. 获取类的 __init__ 方法的签名，用于规范化参数
+    # 3. Get the signature of the class's __init__ method for parameter normalization
     try:
         _sig = inspect.signature(cls.__init__)
     except (ValueError, TypeError):
@@ -267,27 +267,27 @@ def flyweight(cls):
 
     def _make_key(args, kwds):
         """
-        生成唯一的 Key，兼容位置传参和关键字传参。
-        使用 inspect.signature.bind 将所有参数规范化为统一形式。
+        Generate a unique key, compatible with both positional and keyword arguments.
+        Uses inspect.signature.bind to normalize all arguments into a unified form.
         """
         if _sig is not None:
             try:
-                # 绑定参数到签名，将位置参数和关键字参数统一规范化
-                # 传入 None 作为 self 参数的占位符
+                # Bind arguments to the signature, normalizing positional and keyword args uniformly
+                # Pass None as a placeholder for the self parameter
                 bound = _sig.bind(None, *args, **kwds)
-                bound.apply_defaults()  # 应用默认值，确保相同语义的调用生成相同的 key
-                
-                # 获取绑定后的参数字典，移除 self 参数
+                bound.apply_defaults()  # Apply defaults to ensure calls with same semantics generate same key
+
+                # Get the bound arguments dict, remove self parameter
                 arguments = dict(bound.arguments)
                 arguments.pop('self', None)
-                
-                # 转换为可哈希的排序元组，确保顺序一致
+
+                # Convert to hashable sorted tuple, ensuring consistent order
                 return tuple(sorted((k, _make_hashable(v)) for k, v in arguments.items()))
             except TypeError:
-                # 如果绑定失败（参数不匹配等），回退到原来的方式
+                # If binding fails (argument mismatch, etc.), fall back to the original approach
                 pass
         
-        # 回退方案：使用原来的方式
+        # Fallback: use the original approach
         key_args = _make_hashable(args)
         if not kwds:
             return key_args
@@ -296,14 +296,14 @@ def flyweight(cls):
 
     @wraps(cls)
     def _flyweight(*args, **kwargs):
-        # 1. 生成 Key
+        # 1. Generate Key
         cache_key = _make_key(args, kwargs)
         
-        # 2. 第一次检查 (无锁，高性能)
+        # 2. First check (no lock, high performance)
         if cache_key not in _instances:
-            # 3. 加锁 (仅针对当前类加锁)
+            # 3. Acquire lock (only for the current class)
             with _class_lock:
-                # 4. 第二次检查 (Double-Checked Locking)
+                # 4. Second check (Double-Checked Locking)
                 if cache_key not in _instances:
                     _instances[cache_key] = cls(*args, **kwargs)
         
@@ -313,7 +313,7 @@ def flyweight(cls):
 
 
 def timer(func):
-    """计时器装饰器，只能用来计算函数运行时间"""
+    """Timer decorator, only used to measure function execution time"""
     if not hasattr(timer, 'log'):
         timer.log = LogManager(f'timer_{func.__name__}').get_logger_and_add_handlers(log_filename=f'timer_{func.__name__}.log')
 
@@ -323,7 +323,7 @@ def timer(func):
         result = func(*args, **kwargs)
         t2 = time.time()
         t_spend = round(t2 - t1, 2)
-        timer.log.debug('执行[ {} ]方法用时 {} 秒'.format(func.__name__, t_spend))
+        timer.log.debug('Executing method [ {} ] took {} seconds'.format(func.__name__, t_spend))
         return result
 
     return _timer
@@ -332,7 +332,7 @@ def timer(func):
 # noinspection PyProtectedMember
 class TimerContextManager(LoggerMixin):
     """
-    用上下文管理器计时，可对代码片段计时
+    Timer using context manager, can time code snippets.
     """
 
     def __init__(self, is_print_log=True):
@@ -343,23 +343,23 @@ class TimerContextManager(LoggerMixin):
         self.time_start = None
 
     def __enter__(self):
-        self._line = sys._getframe().f_back.f_lineno  # 调用此方法的代码的函数
-        self._file_name = sys._getframe(1).f_code.co_filename  # 哪个文件调了用此方法
+        self._line = sys._getframe().f_back.f_lineno  # Line number of the code calling this method
+        self._file_name = sys._getframe(1).f_code.co_filename  # Which file called this method
         self.time_start = time.time()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.t_spend = time.time() - self.time_start
         if self._is_print_log:
-            self.logger.debug(f'对下面代码片段进行计时:  \n执行"{self._file_name}:{self._line}" 用时 {round(self.t_spend, 2)} 秒')
+            self.logger.debug(f'Timing code snippet:  \nExecuting "{self._file_name}:{self._line}" took {round(self.t_spend, 2)} seconds')
 
 
 class RedisDistributedLockContextManager(LoggerMixin, LoggerLevelSetterMixin):
     """
-    分布式redis锁上下文管理.
+    Distributed Redis lock context manager.
     """
     '''
-    redis 官方推荐的 redlock-py
+    Redis officially recommended redlock-py
     https://github.com/SPSCommerce/redlock-py/blob/master/redlock/__init__.py
     '''
     unlock_script = """
@@ -378,15 +378,15 @@ class RedisDistributedLockContextManager(LoggerMixin, LoggerLevelSetterMixin):
         self.logger.setLevel(logging.INFO)
 
     def __enter__(self):
-        self._line = sys._getframe().f_back.f_lineno  # 调用此方法的代码的函数
-        self._file_name = sys._getframe(1).f_code.co_filename  # 哪个文件调了用此方法
+        self._line = sys._getframe().f_back.f_lineno  # Line number of the code calling this method
+        self._file_name = sys._getframe(1).f_code.co_filename  # Which file called this method
         ret = self.redis_client.set(self.redis_lock_key, value=self.identifier, ex=self._expire_seconds, nx=True)
 
         self.has_aquire_lock = False if ret is None else True
         if self.has_aquire_lock:
-            log_msg = f'\n"{self._file_name}:{self._line}" 这行代码获得了redis锁 {self.redis_lock_key}'
+            log_msg = f'\n"{self._file_name}:{self._line}" this line acquired redis lock {self.redis_lock_key}'
         else:
-            log_msg = f'\n"{self._file_name}:{self._line}" 这行代码此次没有获得redis锁 {self.redis_lock_key}'
+            log_msg = f'\n"{self._file_name}:{self._line}" this line did not acquire redis lock {self.redis_lock_key}'
         # print(self.logger.level,log_msg)
         self.logger.debug(log_msg)
         return self
@@ -412,14 +412,14 @@ class RedisDistributedBlockLockContextManager(RedisDistributedLockContextManager
 
     def __enter__(self):
         while True:
-            self._line = sys._getframe().f_back.f_lineno  # 调用此方法的代码的函数
-            self._file_name = sys._getframe(1).f_code.co_filename  # 哪个文件调了用此方法
+            self._line = sys._getframe().f_back.f_lineno  # Line number of the code calling this method
+            self._file_name = sys._getframe(1).f_code.co_filename  # Which file called this method
             ret = self.redis_client.set(self.redis_lock_key, value=self.identifier, ex=self._expire_seconds, nx=True)
             has_aquire_lock = False if ret is None else True
             if has_aquire_lock:
-                log_msg = f'\n"{self._file_name}:{self._line}" 这行代码获得了redis锁 {self.redis_lock_key}'
+                log_msg = f'\n"{self._file_name}:{self._line}" this line acquired redis lock {self.redis_lock_key}'
             else:
-                log_msg = f'\n"{self._file_name}:{self._line}" 这行代码此次没有获得redis锁 {self.redis_lock_key}'
+                log_msg = f'\n"{self._file_name}:{self._line}" this line did not acquire redis lock {self.redis_lock_key}'
             # print(self.logger.level,log_msg)
             self.logger.debug(log_msg)
             if has_aquire_lock:
@@ -444,13 +444,13 @@ class RedisDistributedBlockLockContextManager(RedisDistributedLockContextManager
 
 class ExceptionContextManager:
     """
-    用上下文管理器捕获异常，可对代码片段进行错误捕捉，比装饰器更细腻
+    Exception catching using context manager, can catch errors in code snippets, more granular than decorators.
     """
 
     def __init__(self, logger_name='ExceptionContextManager', verbose=100, donot_raise__exception=True, ):
         """
-        :param verbose: 打印错误的深度,对应traceback对象的limit，为正整数
-        :param donot_raise__exception:是否不重新抛出错误，为Fasle则抛出，为True则不抛出
+        :param verbose: Depth of error printing, corresponds to traceback's limit parameter, must be a positive integer
+        :param donot_raise__exception: Whether to suppress the exception. False re-raises, True suppresses.
         """
         self.logger = LogManager(logger_name).get_logger_and_add_handlers()
         self._verbose = verbose
@@ -467,33 +467,33 @@ class ExceptionContextManager:
         if self._donot_raise__exception:
             if exc_tb is not None:
                 self.logger.error('\n'.join(traceback.format_tb(exc_tb)[:self._verbose]) + exc_str_color)
-        return self._donot_raise__exception  # __exit__方法必须retuen True才会不重新抛出错误
+        return self._donot_raise__exception  # __exit__ method must return True to suppress the exception
 
 
 def where_is_it_called(func):
-    """一个装饰器，被装饰的函数，如果被调用，将记录一条日志,记录函数被什么文件的哪一行代码所调用"""
+    """A decorator that logs which file and line number called the decorated function"""
     if not hasattr(where_is_it_called, 'log'):
         where_is_it_called.log = LogManager('where_is_it_called').get_logger_and_add_handlers()
 
     # noinspection PyProtectedMember
     @wraps(func)
     def _where_is_it_called(*args, **kwargs):
-        # 获取被调用函数名称
+        # Get the called function name
         # func_name = sys._getframe().f_code.co_name
         func_name = func.__name__
-        # 什么函数调用了此函数
+        # Which function called this function
         which_fun_call_this = sys._getframe(1).f_code.co_name  # NOQA
 
-        # 获取被调用函数在被调用时所处代码行数
+        # Get the line number where the called function was invoked
         line = sys._getframe().f_back.f_lineno
 
-        # 获取被调用函数所在模块文件名
+        # Get the module file name of the called function
         file_name = sys._getframe(1).f_code.co_filename
 
         # noinspection PyPep8
         where_is_it_called.log.debug(
-            f'文件[{func.__code__.co_filename}]的第[{func.__code__.co_firstlineno}]行即模块 [{func.__module__}] 中的方法 [{func_name}] 正在被文件 [{file_name}] 中的'
-            f'方法 [{which_fun_call_this}] 中的第 [{line}] 行处调用，传入的参数为[{args},{kwargs}]')
+            f'Method [{func_name}] at line [{func.__code__.co_firstlineno}] of file [{func.__code__.co_filename}] in module [{func.__module__}] is being called from '
+            f'method [{which_fun_call_this}] at line [{line}] in file [{file_name}], with arguments [{args},{kwargs}]')
         try:
             t0 = time.time()
             result = func(*args, **kwargs)
@@ -502,11 +502,11 @@ def where_is_it_called(func):
             if isinstance(result, dict):
                 result = json.dumps(result)
             if len(str(result)) > 200:
-                result = str(result)[0:200] + '  。。。。。。  '
-            where_is_it_called.log.debug('执行函数[{}]消耗的时间是{}秒，返回的结果是 --> '.format(func_name, t_spend) + str(result))
+                result = str(result)[0:200] + '  ......  '
+            where_is_it_called.log.debug('Executing function [{}] took {} seconds, returned result --> '.format(func_name, t_spend) + str(result))
             return result_raw
         except BaseException as e:
-            where_is_it_called.log.debug('执行函数{}，发生错误'.format(func_name))
+            where_is_it_called.log.debug('Executing function {}, an error occurred'.format(func_name))
             where_is_it_called.log.exception(e)
             raise e
 
@@ -515,7 +515,7 @@ def where_is_it_called(func):
 
 # noinspection PyPep8Naming
 class cached_class_property(object):
-    """类属性缓存装饰器"""
+    """Class property cache decorator"""
 
     def __init__(self, func):
         self.func = func
@@ -530,7 +530,7 @@ class cached_class_property(object):
 
 # noinspection PyPep8Naming
 class cached_property(object):
-    """实例属性缓存装饰器"""
+    """Instance property cache decorator"""
 
     def __init__(self, func):
         self.func = func
@@ -544,7 +544,7 @@ class cached_property(object):
 
 
 def cached_method_result(fun):
-    """方法的结果装饰器,不接受self以外的多余参数，主要用于那些属性类的property方法属性上，配合property装饰器，主要是在pycahrm自动补全上比上面的装饰器好"""
+    """Method result caching decorator. Does not accept parameters other than self. Mainly used on property-like methods, combined with @property. Better PyCharm auto-completion than the decorators above."""
 
     @wraps(fun)
     def inner(self):
@@ -562,7 +562,7 @@ def cached_method_result(fun):
 
 
 def cached_method_result_for_instance(fun):
-    """方法的结果装饰器,不接受self以外的多余参数，主要用于那些属性类的property方法属性上"""
+    """Method result caching decorator for instances. Does not accept parameters other than self. Mainly used on property-like methods."""
 
     @wraps(fun)
     def inner(self):
@@ -591,8 +591,8 @@ class FunctionResultCacher:
     @classmethod
     def cached_function_result_for_a_time(cls, cache_time: float):
         """
-        函数的结果缓存一段时间装饰器,不要装饰在返回结果是超大字符串或者其他占用大内存的数据结构上的函数上面。
-        :param cache_time :缓存的时间
+        Decorator to cache function results for a period of time. Do not use on functions that return very large strings or memory-intensive data structures.
+        :param cache_time : cache duration in seconds
         :type cache_time : float
         """
 
@@ -609,7 +609,7 @@ class FunctionResultCacher:
                 if (fun, key) in cls.func_result_dict and time.time() - cls.func_result_dict[(fun, key)][1] < cache_time:
                     return cls.func_result_dict[(fun, key)][0]
                 else:
-                    cls.logger.debug('函数 [{}] 此次不能使用缓存'.format(fun.__name__))
+                    cls.logger.debug('Function [{}] cannot use cache this time'.format(fun.__name__))
                     result = fun(*args, **kwargs)
                     cls.func_result_dict[(fun, key)] = (result, time.time())
                     return result
@@ -625,7 +625,7 @@ class FunctionResultCacher:
             sorted_items = sorted(kwds.items())
             for item in sorted_items:
                 key += item
-        return key  # 元祖可以相加。
+        return key  # Tuples can be concatenated.
 
 
 # noinspection PyUnusedLocal
@@ -670,9 +670,9 @@ class TIMEOUT_EXCEPTION(Exception):
 
 
 def timeout(seconds):
-    """超时装饰器，指定超时时间
+    """Timeout decorator, specifies a timeout duration.
 
-    若被装饰的方法在指定的时间内未返回，则抛出Timeout异常"""
+    If the decorated method does not return within the specified time, a Timeout exception is raised."""
 
     def timeout_decorator(func):
 
@@ -696,7 +696,7 @@ def timeout(seconds):
 
             if alive:
                 # raise TIMEOUT_EXCEPTION('function run too long, timeout %d seconds.' % seconds)
-                raise TIMEOUT_EXCEPTION(f'{func.__name__}运行时间超过{seconds}秒')
+                raise TIMEOUT_EXCEPTION(f'{func.__name__} execution time exceeded {seconds} seconds')
             else:
                 if result:
                     return result[0]
@@ -713,7 +713,7 @@ def timeout(seconds):
 class _Test(unittest.TestCase):
     @unittest.skip
     def test_superposition(self):
-        """测试多次运行和异常重试,测试装饰器叠加"""
+        """Test multiple runs and exception retry, test decorator stacking"""
 
         @run_many_times(3)
         @handle_exception(2, 1)
@@ -725,7 +725,7 @@ class _Test(unittest.TestCase):
 
     @unittest.skip
     def test_run_many_times(self):
-        """测试运行5次"""
+        """Test running 5 times"""
 
         @run_many_times(5)
         def f1():
@@ -736,7 +736,7 @@ class _Test(unittest.TestCase):
 
     @unittest.skip
     def test_tomorrow_threads(self):
-        """测试多线程装饰器,每2秒打印5次"""
+        """Test multi-thread decorator, print 5 times every 2 seconds"""
 
         @tomorrow_threads(5)
         def f2():
@@ -747,7 +747,7 @@ class _Test(unittest.TestCase):
 
     @unittest.skip
     def test_singleton(self):
-        """测试单例模式的装饰器"""
+        """Test singleton pattern decorator"""
 
         @singleton
         class A(object):
@@ -765,13 +765,13 @@ class _Test(unittest.TestCase):
         class A:
             def __init__(self, x, y, z, q=4):
                 in_param = copy.deepcopy(locals())
-                nb_print(f'执行初始化啦, {in_param}')
+                nb_print(f'Initialization executed, {in_param}')
 
         @flyweight
         class B:
             def __init__(self, x, y, z):
                 in_param = copy.deepcopy(locals())
-                nb_print(f'执行初始化啦, {in_param}')
+                nb_print(f'Initialization executed, {in_param}')
 
         A(1, 2, 3)
         A(1, 2, 3)
@@ -780,17 +780,17 @@ class _Test(unittest.TestCase):
 
     @unittest.skip
     def test_keep_circulating(self):
-        """测试间隔时间，循环运行"""
+        """Test interval time, looping execution"""
 
         @keep_circulating(3)
         def f6():
-            print("每隔3秒，一直打印   " + time.strftime('%H:%M:%S'))
+            print("Printing every 3 seconds   " + time.strftime('%H:%M:%S'))
 
         f6()
 
     @unittest.skip
     def test_timer(self):
-        """测试计时器装饰器"""
+        """Test timer decorator"""
 
         @timer
         def f7():
@@ -801,7 +801,7 @@ class _Test(unittest.TestCase):
     @unittest.skip
     def test_timer_context(self):
         """
-        测试上下文，对代码片段进行计时
+        Test context manager for timing code snippets
         """
         with TimerContextManager(is_print_log=False) as tc:
             time.sleep(2)
@@ -809,7 +809,7 @@ class _Test(unittest.TestCase):
 
     @unittest.skip
     def test_where_is_it_called(self):
-        """测试函数被调用的装饰器，被调用2次将会记录2次被调用的日志"""
+        """Test the function-call-tracking decorator; calling twice will log two invocation records"""
 
         @where_is_it_called
         def f9(a, b):
@@ -827,7 +827,7 @@ class _Test(unittest.TestCase):
     def test_cached_function_result(self):
         @FunctionResultCacher.cached_function_result_for_a_time(3)
         def f10(a, b, c=3, d=4):
-            print('计算中。。。')
+            print('Calculating...')
             return a + b + c + d
 
         print(f10(1, 2, 3, d=6))
@@ -864,7 +864,7 @@ class _Test(unittest.TestCase):
     @unittest.skip
     def test_timeout(self):
         """
-        测试超时装饰器
+        Test timeout decorator
         :return:
         """
 

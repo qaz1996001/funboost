@@ -6,9 +6,9 @@ from funboost import boost, BrokerEnum, FunctionResultStatusPersistanceConfig
 @boost('test_kafka12', broker_kind=BrokerEnum.KAFKA_CONFLUENT, qps=3,
        function_result_status_persistance_conf=FunctionResultStatusPersistanceConfig(True, True, 3600, is_use_bulk_insert=False))
 def f(x):
-    print(f'开始 {x}')
+    print(f'Starting {x}')
     time.sleep(random.randint(1, 50))
-    print(f'结束 {x}')
+    print(f'Finished {x}')
     return x*10
 
 

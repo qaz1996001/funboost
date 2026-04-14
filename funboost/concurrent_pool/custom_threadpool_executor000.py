@@ -1,14 +1,18 @@
 """
-可自动实时调节线程数量的线程池。
-比官方ThreadpoolExecutor的改进是
-1.有界队列
-2.实时调节线程数量，指的是当任务很少时候会去关闭很多线程。官方ThreadpoolExecurot只能做到忙时候开启很多线程，但不忙时候线程没有关闭线程，
-此线程池实现了java ThreadpoolExecutor线程池的keppaliveTime参数的功能，linux系统能承受的线程总数有限，一般不到2万。
-3.能非常智能节制的开启多线程。比如设置线程池大小为500，线程池的运行函数消耗时间是只需要0.1秒，如果每隔2秒钟来一个任务。1个线程足够了，官方线程池是一直增长到500，然后不增长，官方的太不智能了。
+A thread pool that can automatically adjust thread count in real-time.
+Improvements over the official ThreadPoolExecutor:
+1. Bounded queue
+2. Real-time thread count adjustment - threads are closed when there are few tasks. The official ThreadPoolExecutor
+   can only scale up when busy but doesn't close threads when idle. This pool implements the keepAliveTime parameter
+   functionality from Java's ThreadPoolExecutor. Linux systems can only handle a limited total number of threads,
+   typically under 20,000.
+3. Very intelligent and conservative thread creation. For example, with a pool size of 500, if the function takes
+   only 0.1 seconds and a task arrives every 2 seconds, 1 thread is sufficient. The official pool would keep growing
+   to 500, which is not intelligent.
 
-这个线程池是框架的默认线程方式的线程池，如果不设置并发方式就用的这里。
+This thread pool is the framework's default threading pool. If no concurrency mode is set, this one is used.
 
-此实现了submit，但没实现future相关的内容。
+This implements submit but does not implement future-related functionality.
 """
 
 import atexit
@@ -50,7 +54,7 @@ class _WorkItem(LoggerMixin):
         try:
             self.fn(*self.args, **self.kwargs)
         except BaseException as exc:
-            self.logger.exception(f'函数 {self.fn.__name__} 中发生错误，错误原因是 {type(exc)} {exc} ')
+            self.logger.exception(f'Error occurred in function {self.fn.__name__}, reason: {type(exc)} {exc} ')
 
     def __str__(self):
         return f'{(self.fn.__name__, self.args, self.kwargs)}'
@@ -58,20 +62,21 @@ class _WorkItem(LoggerMixin):
 
 def check_not_monkey():
     if check_gevent_monkey_patch(raise_exc=False):
-        raise Exception('请不要打gevent包的补丁')
+        raise Exception('Please do not apply gevent monkey patch')
     if check_evenlet_monkey_patch(raise_exc=False):
-        raise Exception('请不要打evenlet包的补丁')
+        raise Exception('Please do not apply eventlet monkey patch')
 
 
 class CustomThreadPoolExecutor(LoggerMixin, LoggerLevelSetterMixin):
     def __init__(self, max_workers=None, thread_name_prefix=''):
         """
-        最好需要兼容官方concurren.futures.ThreadPoolExecutor 和改版的BoundedThreadPoolExecutor，入参名字和个数保持了一致。
+        Maintains compatibility with the official concurrent.futures.ThreadPoolExecutor and the modified
+        BoundedThreadPoolExecutor, keeping parameter names and count consistent.
         :param max_workers:
         :param thread_name_prefix:
         """
         self._max_workers = max_workers or 4
-        self._min_workers = 5  # 这是对应的 java Threadpoolexecutor的corePoolSize，为了保持线程池公有方法和与py官方内置的concurren.futures.ThreadPoolExecutor一致，不增加更多的实例化时候入参，这里写死为5.
+        self._min_workers = 5  # This corresponds to Java's ThreadPoolExecutor corePoolSize. To keep the pool's public methods consistent with Python's built-in concurrent.futures.ThreadPoolExecutor, no additional init params are added; hardcoded to 5.
         self._thread_name_prefix = thread_name_prefix
         self.work_queue = queue.Queue(max_workers)
         # self._threads = set()
@@ -93,7 +98,7 @@ class CustomThreadPoolExecutor(LoggerMixin, LoggerLevelSetterMixin):
     def submit(self, func, *args, **kwargs):
         with self._shutdown_lock:
             if self._shutdown:
-                raise RuntimeError('不能添加新的任务到线程池')
+                raise RuntimeError('Cannot add new tasks to the thread pool')
         self.work_queue.put(_WorkItem(func, args, kwargs))
         self._adjust_thread_count()
 
@@ -136,7 +141,7 @@ class _CustomThread(threading.Thread, LoggerMixin, LoggerLevelSetterMixin):
     # noinspection PyProtectedMember
     def _remove_thread(self, stop_resson=''):
         # noinspection PyUnresolvedReferences
-        self.logger.debug(f'停止线程 {self._ident}, 触发条件是 {stop_resson} ')
+        self.logger.debug(f'Stopping thread {self._ident}, trigger condition: {stop_resson} ')
         self._executorx.change_threads_free_count(-1)
         self._executorx._threads.remove(self)
         _threads_queues.pop(self)
@@ -144,7 +149,7 @@ class _CustomThread(threading.Thread, LoggerMixin, LoggerLevelSetterMixin):
     # noinspection PyProtectedMember
     def run(self):
         # noinspection PyUnresolvedReferences
-        self.logger.debug(f'新启动线程 {self._ident} ')
+        self.logger.debug(f'New thread started {self._ident} ')
         self._executorx.change_threads_free_count(1)
         while True:
             try:
@@ -152,8 +157,8 @@ class _CustomThread(threading.Thread, LoggerMixin, LoggerLevelSetterMixin):
             except queue.Empty:
                 with self._lock_for_judge_threads_free_count:
                     if self._executorx.threads_free_count > self._executorx._min_workers:
-                        self._remove_thread(f'当前线程超过60秒没有任务，线程池中不在工作状态中的线程数量是 {self._executorx.threads_free_count}，超过了指定的数量 {self._executorx._min_workers}')
-                        break  # 退出while 1，即是结束。这里才是决定线程结束销毁，_remove_thread只是个名字而已，不是由那个来销毁线程。
+                        self._remove_thread(f'Current thread has had no tasks for 60 seconds. Number of idle threads in pool: {self._executorx.threads_free_count}, exceeds the specified count {self._executorx._min_workers}')
+                        break  # Exit while loop, i.e., terminate. This is where the thread actually ends; _remove_thread is just a name, it doesn't destroy the thread.
                     else:
                         continue
 
@@ -179,8 +184,8 @@ def show_current_threads_num(sleep_time=60, process_name='', block=False):
 
     def _show_current_threads_num():
         while True:
-            # logger_show_current_threads_num.info(f'{process_name} 进程 的 并发数量是 -->  {threading.active_count()}')
-            nb_print(f'{process_name} 进程 的 线程数量是 -->  {threading.active_count()}')
+            # logger_show_current_threads_num.info(f'{process_name} process concurrency count -->  {threading.active_count()}')
+            nb_print(f'{process_name} process thread count -->  {threading.active_count()}')
             time.sleep(sleep_time)
 
     if process_name not in process_name_set:
@@ -204,22 +209,22 @@ if __name__ == '__main__':
     # @decorators.keep_circulating(1)
     def f1(a):
         time.sleep(0.2)
-        nb_print(f'{a} 。。。。。。。')
-        # raise Exception('抛个错误测试')
+        nb_print(f'{a} .......')
+        # raise Exception('Throw an error for testing')
 
 
     # show_current_threads_num()
     pool = CustomThreadPoolExecutor(200).set_log_level(10).set_min_workers()
-    # pool = BoundedThreadPoolExecutor(200)   # 测试对比原来写的BoundedThreadPoolExecutor
+    # pool = BoundedThreadPoolExecutor(200)   # For comparison testing with the original BoundedThreadPoolExecutor
     show_current_threads_num(sleep_time=5)
     for i in range(300):
-        time.sleep(0.3)  # 这里的间隔时间模拟，当任务来临不密集，只需要少量线程就能搞定f1了，因为f1的消耗时间短，不需要开那么多线程，CustomThreadPoolExecutor比BoundedThreadPoolExecutor 优势之一。
+        time.sleep(0.3)  # This interval simulates infrequent task arrival; only a few threads are needed since f1 runs quickly. No need for so many threads - one advantage of CustomThreadPoolExecutor over BoundedThreadPoolExecutor.
         pool.submit(f1, str(i))
 
     nb_print(6666)
     # pool.shutdown(wait=True)
     pool.submit(f1, 'yyyy')
 
-    # 下面测试阻塞主线程退出的情况。注释掉可以测主线程退出的情况。
+    # Below tests blocking the main thread from exiting. Comment out to test main thread exit behavior.
     while True:
         time.sleep(10)

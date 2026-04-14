@@ -1,5 +1,5 @@
-# 需要用publish，而不是push，这个前面已经说明了，如果要传函数入参本身以外的参数到中间件，需要用publish。
-# 不然框架分不清哪些是函数入参，哪些是控制参数。如果无法理解就，就好好想想琢磨下celery的 apply_async 和 delay的关系。
+# Must use publish, not push, as explained earlier: to pass parameters beyond the function's own arguments to the broker, use publish.
+# Otherwise the framework cannot distinguish function arguments from control parameters. If unclear, think carefully about the relationship between celery's apply_async and delay.
 from test_frame.test_delay_task.test_delay_consume import f
 import datetime
 import time

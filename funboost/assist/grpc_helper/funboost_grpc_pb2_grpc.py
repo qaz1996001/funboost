@@ -6,7 +6,7 @@ import funboost.assist.grpc_helper.funboost_grpc_pb2 as funboost__grpc__pb2
 
 
 class FunboostBrokerServiceStub(object):
-    """定义服务
+    """Service definition
     """
 
     def __init__(self, channel):
@@ -23,11 +23,11 @@ class FunboostBrokerServiceStub(object):
 
 
 class FunboostBrokerServiceServicer(object):
-    """定义服务
+    """Service definition
     """
 
     def Call(self, request, context):
-        """简单的问候方法
+        """Simple greeting method
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -49,7 +49,7 @@ def add_FunboostBrokerServiceServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class FunboostBrokerService(object):
-    """定义服务
+    """Service definition
     """
 
     @staticmethod

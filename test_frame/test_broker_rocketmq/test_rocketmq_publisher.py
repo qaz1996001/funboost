@@ -1,34 +1,34 @@
 # -*- coding: utf-8 -*-
 """
-RocketMQ 5.x 发布者测试
+RocketMQ 5.x publisher test.
 
-使用方法:
-1. 首先确保 RocketMQ 5.x 服务器已启动
-   默认 gRPC 端点地址为 127.0.0.1:8081
+Usage:
+1. First ensure the RocketMQ 5.x server is started.
+   Default gRPC endpoint address is 127.0.0.1:8081.
 
-2. 运行此脚本发布消息:
+2. Run this script to publish messages:
    python test_rocketmq_publisher.py
 
-安装依赖:
+Install dependencies:
     pip install rocketmq-python-client
 
-特性:
-    - 基于 gRPC 协议，纯 Python 实现
-    - 支持 Windows / Linux / macOS
+Features:
+    - Based on gRPC protocol, pure Python implementation
+    - Supports Windows / Linux / macOS
 """
 
-# 导入消费者中定义的函数
+# Import the function defined in the consumer
 from test_rocketmq_consumer import test_rocketmq_task
 
 
 if __name__ == '__main__':
-    print('开始发布消息到 RocketMQ 5.x...')
-    
-    # 发布 20 条测试消息
+    print('Starting to publish messages to RocketMQ 5.x...')
+
+    # Publish 20 test messages
     for i in range(20):
-        # 使用 push 方法发布消息（简写方式）
+        # Use push method to publish messages (shorthand)
         test_rocketmq_task.push(i, i * 2)
-        print(f'已发布消息: x={i}, y={i * 2}')
-    
-    print('消息发布完成!')
-    print('现在可以运行 test_rocketmq_consumer.py 来消费消息')
+        print(f'Published message: x={i}, y={i * 2}')
+
+    print('Message publishing complete!')
+    print('You can now run test_rocketmq_consumer.py to consume the messages')

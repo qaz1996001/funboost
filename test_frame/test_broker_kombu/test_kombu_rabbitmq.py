@@ -11,7 +11,7 @@ from funboost.funboost_config_deafult import BrokerConnConfig
            'transport_options': {},
            'prefetch_count': 1000},log_level=20)
 def f1(x, y):
-    print(f'start {x} {y} 。。。')
+    print(f'start {x} {y} ...')
     time.sleep(60)
     print(f'{x} + {y} = {x + y}')
     print(f'over {x} {y}')

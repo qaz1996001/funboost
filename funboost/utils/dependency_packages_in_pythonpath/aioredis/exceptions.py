@@ -11,7 +11,7 @@ class ConnectionError(RedisError):
     pass
 
 
-''' 这个在python3.11有问题'''
+''' This has issues in Python 3.11 '''
 # class TimeoutError(asyncio.TimeoutError, builtins.TimeoutError, RedisError):
 #     pass
 

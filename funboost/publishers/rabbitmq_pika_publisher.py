@@ -10,7 +10,7 @@ from funboost.funboost_config_deafult import BrokerConnConfig
 
 class RabbitmqPublisher(AbstractPublisher):
     """
-    使用pika实现的。
+    Implemented using pika.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -19,7 +19,7 @@ class RabbitmqPublisher(AbstractPublisher):
 
     # noinspection PyAttributeOutsideInit
     def init_broker(self):
-        self.logger.warning(f'使用pika 链接mq')
+        self.logger.warning(f'Connecting to MQ using pika')
         credentials = pikav1.PlainCredentials(BrokerConnConfig.RABBITMQ_USER, BrokerConnConfig.RABBITMQ_PASS)
         self.connection = pikav1.BlockingConnection(pikav1.ConnectionParameters(
             BrokerConnConfig.RABBITMQ_HOST, BrokerConnConfig.RABBITMQ_PORT, BrokerConnConfig.RABBITMQ_VIRTUAL_HOST, credentials, heartbeat=60))
@@ -29,19 +29,19 @@ class RabbitmqPublisher(AbstractPublisher):
     # noinspection PyAttributeOutsideInit
     @deco_mq_conn_error
     def _publish_impl(self, msg):
-        with self._lock_for_pika:  # 亲测pika多线程publish会出错
+        with self._lock_for_pika:  # Confirmed that pika multi-threaded publish causes errors
             self.channel.basic_publish(exchange='',
                                        routing_key=self._queue_name,
                                        body=msg,
                                        properties=BasicProperties(
-                                           delivery_mode=2,  # make message persistent   2(1是非持久化)
+                                           delivery_mode=2,  # make message persistent   2 (1 is non-persistent)
                                        )
                                        )
 
     @deco_mq_conn_error
     def clear(self):
         self.channel.queue_purge(self._queue_name)
-        self.logger.warning(f'清除 {self._queue_name} 队列中的消息成功')
+        self.logger.warning(f'Successfully cleared messages in queue {self._queue_name}')
 
     @deco_mq_conn_error
     def get_message_count(self):
@@ -53,4 +53,4 @@ class RabbitmqPublisher(AbstractPublisher):
     def close(self):
         self.channel.close()
         self.connection.close()
-        self.logger.warning('关闭pika包 链接')
+        self.logger.warning('Closing pika connection')

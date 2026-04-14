@@ -8,8 +8,8 @@ from funboost.queues.memory_queues_map import PythonQueues
 
 class LocalPythonQueueConsumer(AbstractConsumer):
     """
-    python 内置queue对象作为消息队列，这个要求发布和消费必须在同一python解释器内部运行，不支持分布式。
-    但是重要性是sss级别，高性能 不担心有的对象无法pickele序列化，
+    Uses Python's built-in queue object as message queue. This requires publishing and consuming to run within the same Python interpreter, does not support distributed mode.
+    But it is SSS-level important, high performance, no worry about objects that cannot be pickle-serialized.
     """
 
     @property
@@ -31,9 +31,9 @@ class LocalPythonQueueConsumer(AbstractConsumer):
 
     def _set_rpc_result(self, task_id, kw, current_function_result_status, current_retry_times, **kwargs):
         """
-        重写父类的 _set_rpc_result，优先检查消息体中是否携带了 _memory_call_future（由 publisher.call 方法塞入）。
-        如果有，直接通过 Future.set_result 将 FunctionResultStatus 设置回去，不依赖 Redis。
-        如果没有，回退到父类的 Redis RPC 逻辑（用于 is_using_rpc_mode=True 的场景）。
+        Override parent's _set_rpc_result, first checking if the message body carries a _memory_call_future (injected by publisher.call method).
+        If present, directly set the FunctionResultStatus back via Future.set_result, without relying on Redis.
+        If absent, fall back to parent's Redis RPC logic (for is_using_rpc_mode=True scenarios).
         """
         future = kw['body']['extra'].pop('_memory_call_future', None)
         if future is not None:

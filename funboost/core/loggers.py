@@ -9,14 +9,14 @@ LOG_FILE_NAME = 'funboost.log'
 
 
 def get_funboost_file_logger(name, *, log_level_int: int = None, **kwargs) -> logging.Logger:
-    """日志自动写入 funboost.log文件中,不需要亲自指定文件名"""
+    """Logs are automatically written to the funboost.log file, no need to manually specify the filename."""
     kwargs['log_filename'] = LOG_FILE_NAME
     kwargs['error_log_filename'] = nb_log.generate_error_file_name(log_filename=LOG_FILE_NAME)
     return nb_log.get_logger(name, log_level_int=log_level_int, **kwargs, )
 
 
 class FunboostFileLoggerMixin(nb_log.LoggerMixin):
-    """给对象添加一个logger树形命名空间是类本身,写入funboost.log"""
+    """Adds a logger to an object with a tree-structured namespace based on the class itself, writing to funboost.log."""
     subclass_logger_dict = {}
 
     @property
@@ -32,7 +32,7 @@ class FunboostFileLoggerMixin(nb_log.LoggerMixin):
 
 class FunboostMetaTypeFileLogger(type):
     """
-    给类添加一个属性.名空间是类本身,写入funboost.log
+    Adds a property to a class. The namespace is the class itself, writing to funboost.log.
     """
 
     def __init__(cls, name, bases, attrs):
@@ -48,12 +48,12 @@ logger_prompt = get_funboost_file_logger('funboost.prompt', log_level_int=_try_g
 
 logger_notify = get_funboost_file_logger('funboost.notify', log_filename='funboost_notify.log')
 
-# 开发时候的调试日志，比print方便通过级别一键屏蔽。
+# Debug logs during development, more convenient than print for silencing by level with one switch.
 develop_logger = get_logger('funboost.develop', log_level_int=logging.WARNING, log_filename='funboost_develop.log')
 
 
 if __name__ == '__main__':
     logger1 = get_funboost_file_logger('name1')
-    logger1.info('啦啦啦啦啦啦啦')
-    logger1.error('错错错')
+    logger1.info('la la la la la la la')
+    logger1.error('error error error')
     

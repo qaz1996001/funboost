@@ -19,11 +19,14 @@ from funboost.publishers.confluent_kafka_publisher import ConfluentKafkaPublishe
 from funboost.funboost_config_deafult import BrokerConnConfig
 
 """
-funboost框架的kafka没有使用账号密码来连接，如果你的kafka有密码，那么扩展成支持有账号密码也是很简单的。
-PLAIN 账号 密码方式的kafka服务端，funboost扩展例子，很简单 把KafkaConsumerManuallyCommit类复制粘贴， 然后只要把连接kafka的代码稍微修改下就可以了。
-不需要继承 AbstractConsumer 重写全部对kafka的操作，继承子类就好了。
+The funboost framework's kafka does not use username/password to connect. If your kafka requires a password,
+extending it to support username/password authentication is very simple.
+PLAIN username/password kafka server extension example for funboost: just copy and paste the
+KafkaConsumerManuallyCommit class and slightly modify the kafka connection code.
+No need to inherit AbstractConsumer and rewrite all kafka operations; just inherit the subclass.
 
-funboost_config.py 文件增加kafka配置如下，KFFKA_CONFIG 变量命名随意，例如可以叫 KFFKACONFAAA 也是可以，只要代码中应用这个变量就可以。
+Add kafka configuration in funboost_config.py as follows. The variable name KFFKA_CONFIG is arbitrary,
+e.g. it can be called KFFKACONFAAA; just reference the variable in your code.
 
 KFFKA_CONFIG = {
     "bootstrap_servers":KAFKA_BOOTSTRAP_SERVERS,
@@ -40,7 +43,7 @@ class SaslPlainKafkaConsumer(KafkaConsumerManuallyCommit):
 
     def _dispatch_task(self):
 
-        # 这个包在win下不好安装，用户用这个中间件的时候自己再想办法安装。win用户需要安装c++ 14.0以上环境。
+        # This package is hard to install on Windows; users need to figure out installation themselves. Windows users need C++ 14.0+ environment.
         from confluent_kafka import Consumer as ConfluentConsumer
         try:
             admin_client = KafkaAdminClient(
@@ -83,18 +86,18 @@ class SaslPlainKafkaConsumer(KafkaConsumerManuallyCommit):
             kw = {'partition': msg.partition(), 'offset': msg.offset(), 'body': json.loads(msg.value())}  # noqa
             if self.consumer_params.is_show_message_get_from_broker:
                 self.logger.debug(
-                    f'从kafka的 [{self._queue_name}] 主题,分区 {msg.partition()} 中 的 offset {msg.offset()} 取出的消息是：  {msg.value()}')  # noqa
+                    f'Message retrieved from kafka topic [{self._queue_name}], partition {msg.partition()}, offset {msg.offset()}: {msg.value()}')  # noqa
             self._submit_task(kw)
 
 
 class SaslPlainKafkaPublisher(ConfluentKafkaPublisher):
     """
-    使用kafka作为中间件，这个confluent_kafka包的性能远强于 kafka-pyhton
+    Using kafka as broker; the confluent_kafka package has far better performance than kafka-python
     """
 
     # noinspection PyAttributeOutsideInit
     def custom_init(self):
-        from confluent_kafka import Producer as ConfluentProducer  # 这个包不好安装，用户用这个中间件的时候自己再想办法安装。win用户需要安装c++ 14.0以上环境。
+        from confluent_kafka import Producer as ConfluentProducer  # This package is hard to install; users must figure out installation themselves. Windows users need C++ 14.0+ environment.
         # self._producer = KafkaProducer(bootstrap_servers=funboost_config_deafult.KAFKA_BOOTSTRAP_SERVERS)
         try:
             admin_client = KafkaAdminClient(**BrokerConnConfig.KFFKA_SASL_CONFIG)
@@ -104,7 +107,7 @@ class SaslPlainKafkaPublisher(ConfluentKafkaPublisher):
             pass
         except BaseException as e:
             self.logger.exception(e)
-        atexit.register(self.close)  # 程序退出前不主动关闭，会报错。
+        atexit.register(self.close)  # If not actively closed before program exit, an error will occur.
         self._confluent_producer = ConfluentProducer({
             'bootstrap.servers': ','.join(BrokerConnConfig.KAFKA_BOOTSTRAP_SERVERS),
             'security.protocol': BrokerConnConfig.KFFKA_SASL_CONFIG['security_protocol'],

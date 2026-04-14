@@ -7,7 +7,7 @@ from funboost.publishers.base_publisher import AbstractPublisher
 # noinspection PyProtectedMember
 class ZeroMqPublisher(AbstractPublisher):
     """
-    zeromq 中间件的发布者，zeromq基于socket代码，不会持久化，且不需要安装软件。
+    ZeroMQ broker publisher. ZeroMQ is based on socket code, does not persist, and requires no software installation.
     """
     def custom_init(self):
         self._port = self.publisher_params.broker_exclusive_config['port']
@@ -18,7 +18,7 @@ class ZeroMqPublisher(AbstractPublisher):
         socket = context.socket(ZmqImporter().zmq.REQ)
         socket.connect(f"tcp://localhost:{int(self._port)}")
         self.socket =socket
-        self.logger.warning('框架使用 zeromq 中间件方式，必须先启动消费者(消费者会顺便启动broker) ,只有启动了服务端才能发布任务')
+        self.logger.warning('When using zeromq as the broker, the consumer must be started first (the consumer will also start the broker). Tasks can only be published after the server is started.')
 
     def _publish_impl(self, msg):
         self.socket.send(msg.encode())

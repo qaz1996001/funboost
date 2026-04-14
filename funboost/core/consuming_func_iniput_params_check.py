@@ -9,18 +9,18 @@ from funboost.core.exceptions import FuncParamsError
 
 class ConsumingFuncInputParamsChecker(FunboostFileLoggerMixin):
     """
-    发布的任务的函数参数检查，使发布的任务在消费时候不会出现低级错误。
+    Function parameter checking for published tasks, to prevent basic errors when consuming published tasks.
     """
 
     def __init__(self, final_func_input_params_list_info: typing.Dict):
         self.update_check_params(final_func_input_params_list_info)
 
-    def update_check_params(self,final_func_input_params_list_info): 
-        """这个是供动态热更新校验参数，funboost.faas 不重启就能动态变更函数修改后的校验规则
-        因为 funboost.faas 完全不需要依赖真正的消费函数对象，
-        是把保存到redis元数据的booster_params的 auto_generate_info.final_func_input_params_info 更新到ConsumingFuncInputParamsChecker实例中
-        
-        redis中的 auto_generate_info 例子如下
+    def update_check_params(self,final_func_input_params_list_info):
+        """This is for dynamic hot-reload of validation parameters. funboost.faas can dynamically update function validation rules without restart.
+        Because funboost.faas does not need to depend on the actual consuming function object,
+        it updates the auto_generate_info.final_func_input_params_info from booster_params stored in redis metadata into the ConsumingFuncInputParamsChecker instance.
+
+        Example of auto_generate_info in redis:
         "auto_generate_info": {
     "where_to_instantiate": "D:\\codes\\funboost\\examples\\example_faas\\task_funs_dir\\sub.py:5",
     "final_func_input_params_info": {
@@ -89,7 +89,7 @@ class ConsumingFuncInputParamsChecker(FunboostFileLoggerMixin):
     @classmethod
     def gen_final_func_input_params_info(cls,consumer_or_publisher_params:typing.Union[BoosterParams,PublisherParams]):
         """
-        生成最终的函数参数信息，包括手动输入的参数和默认参数。
+        Generate final function parameter info, including manually input parameters and default parameters.
         """
         if consumer_or_publisher_params.consuming_function is None:
             return
@@ -116,16 +116,16 @@ class ConsumingFuncInputParamsChecker(FunboostFileLoggerMixin):
 
 class FakeFunGenerator:
     """
-    动态函数生成器：根据参数元数据生成具有正确签名的伪函数
-    用途：funboost.faas 可以从 redis 元数据动态生成函数对象，无需真正的函数定义
+    Dynamic function generator: generates fake functions with correct signatures based on parameter metadata.
+    Purpose: funboost.faas can dynamically generate function objects from redis metadata without actual function definitions.
     """
     
     @staticmethod
     def gen_fake_fun_by_params(final_func_input_params_info:dict):
         """
-        根据必需参数和可选参数列表动态生成函数
-        你可以理解是为了欺骗 inspect 模块，让 inspect 模块返回的函数参数信息和实际的函数参数信息一致。
-        函数名、参数列表、默认值和原函数一模一样
+        Dynamically generate a function based on required and optional parameter lists.
+        This can be understood as tricking the inspect module so that it returns function parameter info consistent with the actual function.
+        Function name, parameter list, default values are identical to the original function.
         """
 
         must_arg_name_list = final_func_input_params_info[ConsumingFuncInputParamsCheckerField.must_arg_name_list]
@@ -133,11 +133,11 @@ class FakeFunGenerator:
         func_name = final_func_input_params_info[ConsumingFuncInputParamsCheckerField.func_name]
         
         
-        # 构建参数字符串
+        # Build parameter string
         must_params = ', '.join(must_arg_name_list)
         optional_params = ', '.join([f'{arg}=None' for arg in optional_arg_name_list])
         
-        # 组合所有参数
+        # Combine all parameters
         if must_params and optional_params:
             all_params = f'{must_params}, {optional_params}'
         elif must_params:
@@ -147,7 +147,7 @@ class FakeFunGenerator:
         else:
             all_params = ''
         
-        # 动态生成函数代码
+        # Dynamically generate function code
         func_code = f'''
 def {func_name}({all_params}):
     """
@@ -158,7 +158,7 @@ def {func_name}({all_params}):
     return locals()
 '''
         
-        # 执行代码生成函数
+        # Execute code to generate the function
         local_namespace = {}
         exec(func_code, {}, local_namespace)
         fake_fun = local_namespace[func_name]
@@ -167,7 +167,7 @@ def {func_name}({all_params}):
     
     @staticmethod
     def gen_fake_fun():
-        """随便生成的假的函数，这种需要 update_check_params去更新"""
+        """Generate a simple fake function, which needs update_check_params to update its validation"""
         def fake_fun():
             pass
         setattr(fake_fun,'is_fake_fun',True)

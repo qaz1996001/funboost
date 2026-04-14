@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-启动 WebSocket 测试服务器
+Start the WebSocket test server
 
-直接运行此脚本即可启动服务器
+Run this script directly to start the server
 """
 
 from websocket_broker import start_simple_ws_server
 
 if __name__ == '__main__':
     print("=" * 50)
-    print("WebSocket 测试服务器")
+    print("WebSocket Test Server")
     print("=" * 50)
-    print("监听地址: ws://localhost:8765")
-    print("按 Ctrl+C 停止")
+    print("Listening at: ws://localhost:8765")
+    print("Press Ctrl+C to stop")
     print("=" * 50)
     
     start_simple_ws_server(host='localhost', port=8765)

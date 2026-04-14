@@ -1,23 +1,30 @@
 """
-史上最强的python线程池。
+The most powerful Python thread pool.
 
-最智能的可自动实时调节线程数量的线程池。此线程池和官方concurrent.futures的线程池 是鸭子类关系，所以可以一键替换类名 或者 import as来替换类名。
-对比官方线程池，有4个创新功能或改进。
+The most intelligent thread pool that can automatically adjust thread count in real-time. This thread pool has a
+duck-type relationship with the official concurrent.futures thread pool, so you can replace it by simply changing
+the class name or using import-as.
+Compared to the official thread pool, it has 4 innovative features or improvements:
 
-1、主要是不仅能扩大，还可自动缩小(官方内置的ThreadpoolExecutor不具备此功能，此概念是什么意思和目的，可以百度java ThreadpoolExecutor的KeepAliveTime参数的介绍)，
-   例如实例化一个1000线程的线程池，上一分钟疯狂高频率的对线程池submit任务，线程池会扩张到最大线程数量火力全开运行，
-   但之后的七八个小时平均每分钟只submit一两个任务，官方线程池会一直维持在1000线程，而此线程池会自动缩小，靠什么来识别预测啥时机可以自动缩小呢，就是KeepAliveTime。
+1. It can not only scale up but also automatically scale down (the official built-in ThreadPoolExecutor lacks this
+   feature. This concept is similar to Java's ThreadPoolExecutor KeepAliveTime parameter).
+   For example, with a 1000-thread pool, if you submit tasks at high frequency for one minute, the pool scales up to
+   max threads. But if for the next 7-8 hours only 1-2 tasks are submitted per minute, the official pool maintains
+   1000 threads, while this pool automatically scales down. It uses KeepAliveTime to determine when to scale down.
 
-2、非常节制的开启多线程，例如实例化一个最大100线程数目的pool，每隔2秒submit一个函数任务，而函数每次只需要1秒就能完成，实际上只需要调节增加到1个线程就可以，不需要慢慢增加到100个线程
-官方的线程池不够智能，会一直增加到最大线程数目，此线程池则不会。
+2. Very conservative in creating new threads. For example, with a max 100-thread pool, if a task is submitted every
+   2 seconds and each function only takes 1 second, only 1 thread is needed. The official pool would keep increasing
+   to the max thread count, but this pool does not.
 
-3、线程池任务的queue队列，修改为有界队列
+3. The task queue is changed to a bounded queue.
 
-4、此线程池运行函数出错时候，直接显示线程错误，官方的线程池则不会显示错误，例如函数中写1/0,任然不现实错误。
+4. When a function error occurs in this pool, it directly displays the error. The official pool would not show errors;
+   e.g., writing 1/0 in a function would still not display the error.
 
-此实现了submit，还实现future相关的内容，真正的和内置的ThreadpoolExecutor 完全替代。
+This implements submit and also future-related functionality, making it a true drop-in replacement for the built-in
+ThreadPoolExecutor.
 
-可以在各种地方加入 time.sleep 来验证 第1条和第2条的自动智能缩放功能。
+You can add time.sleep in various places to verify the auto-scaling functionality from points 1 and 2.
 """
 import logging
 
@@ -44,9 +51,9 @@ def check_not_monkey():
     from funboost.concurrent_pool.custom_evenlet_pool_executor import check_evenlet_monkey_patch
     from funboost.concurrent_pool.custom_gevent_pool_executor import check_gevent_monkey_patch
     if check_gevent_monkey_patch(raise_exc=False):
-        raise Exception('指定使用多线程模式时候，请不要打gevent包的补丁')
+        raise Exception('When using multi-thread mode, please do not apply gevent monkey patch')
     if check_evenlet_monkey_patch(raise_exc=False):
-        raise Exception('指定使用多线程模式时候，请不要打evenlet包的补丁')
+        raise Exception('When using multi-thread mode, please do not apply eventlet monkey patch')
 
 
 def _python_exit():
@@ -76,7 +83,7 @@ class _WorkItem(FunboostFileLoggerMixin):
         try:
             result = self.fn(*self.args, **self.kwargs)
         except BaseException as exc:
-            self.logger.exception(f'函数 {self.fn} 中发生错误，错误原因是 {type(exc)} {exc} ')
+            self.logger.exception(f'Error occurred in function {self.fn}, reason: {type(exc)} {exc} ')
             self.future.set_exception(exc)
             # Break a reference cycle with the exception 'exc'
             self = None  # noqa
@@ -93,10 +100,10 @@ def set_threadpool_executor_shrinkable(min_works=1, keep_alive_time=5):
 
 
 class ThreadPoolExecutorShrinkAble(Executor, FunboostFileLoggerMixin, LoggerLevelSetterMixin,FunboostBaseConcurrentPool):
-    # 为了和官方自带的THredpoolexecutor保持完全一致的鸭子类，参数设置成死的，不让用户传参了。
-    # 建议用猴子补丁修改这两个参数，为了保持入参api和内置的concurrent.futures 相同。
-    # MIN_WORKERS = 5   # 最小值可以设置为0，代表线程池无论多久没有任务最少要保持多少个线程待命。
-    # KEEP_ALIVE_TIME = 60  # 这个参数表名，当前线程从queue.get(block=True, timeout=KEEP_ALIVE_TIME)多久没任务，就线程结束。
+    # To maintain full duck-type compatibility with the official ThreadPoolExecutor, parameters are hardcoded.
+    # It's recommended to use monkey patching to modify these two parameters, to keep the API consistent with built-in concurrent.futures.
+    # MIN_WORKERS = 5   # Minimum can be set to 0, representing the minimum number of threads to keep on standby regardless of idle time.
+    # KEEP_ALIVE_TIME = 60  # This parameter means: how long a thread waits via queue.get(block=True, timeout=KEEP_ALIVE_TIME) before terminating if no task arrives.
 
     MIN_WORKERS = 1
     KEEP_ALIVE_TIME = 60
@@ -104,7 +111,8 @@ class ThreadPoolExecutorShrinkAble(Executor, FunboostFileLoggerMixin, LoggerLeve
 
     def __init__(self, max_workers: int = None, thread_name_prefix='',work_queue_maxsize=10):
         """
-        最好需要兼容官方concurren.futures.ThreadPoolExecutor 和改版的BoundedThreadPoolExecutor，入参名字和个数保持了一致。
+        Maintains compatibility with the official concurrent.futures.ThreadPoolExecutor and the modified
+        BoundedThreadPoolExecutor, keeping parameter names and count consistent.
         :param max_workers:
         :param thread_name_prefix:
         """
@@ -129,7 +137,7 @@ class ThreadPoolExecutorShrinkAble(Executor, FunboostFileLoggerMixin, LoggerLeve
     def submit(self, func, *args, **kwargs):
         with self._shutdown_lock:
             if self._shutdown:
-                raise RuntimeError('不能添加新的任务到线程池')
+                raise RuntimeError('Cannot add new tasks to the thread pool')
             f = Future()
             w = _WorkItem(f, func, args, kwargs)
             self.work_queue.put(w)
@@ -156,18 +164,19 @@ class ThreadPoolExecutorShrinkAble(Executor, FunboostFileLoggerMixin, LoggerLeve
 
 
 
-# 两个名字都可以，兼容以前的老名字（中文意思是 自定义线程池），但新名字更能表达意思（可缩小线程池）。
+# Both names are valid, maintaining backward compatibility with the old name (CustomThreadpoolExecutor), but the new name (ThreadPoolExecutorShrinkAble) better expresses its meaning.
 CustomThreadpoolExecutor = CustomThreadPoolExecutor = ThreadPoolExecutorShrinkAble
 
 
 class ThreadPoolExecutorShrinkAbleNonDaemon(ThreadPoolExecutorShrinkAble):
-    """这个给 apscheduler 的 ThreadPoolExecutorForAps 使用很好，这个线程池里面的线程不是守护线程，
+    """This is ideal for apscheduler's ThreadPoolExecutorForAps. The threads in this pool are non-daemon threads.
 
-    防止代码里面有子线程在运行但是主线程结束，导致这个报错 
+    This prevents the error that occurs when child threads are still running but the main thread exits:
     raise RuntimeError('cannot schedule new futures after ' RuntimeError: cannot schedule new futures after interpreter shutdown
 
-    之前backgroud scheduler使用得是线程池里面是守护线程，为了避免cannot schedule new futures after ，
-    用户需要手动在主线程加个 ctrl_c_recv() 或者 while 1::time.sleep(10) 来阻止主线程结束，这样会麻烦用户。
+    Previously, background scheduler used daemon threads in the thread pool. To avoid 'cannot schedule new futures after',
+    users had to manually add ctrl_c_recv() or while 1: time.sleep(10) in the main thread to prevent it from exiting,
+    which was inconvenient for users.
     """
     MIN_WORKERS = 0
     THREAD_USE_DAEMON = False
@@ -184,7 +193,7 @@ class _CustomThread(threading.Thread, FunboostFileLoggerMixin, LoggerLevelSetter
 
     def _remove_thread(self, stop_resson=''):
         # noinspection PyUnresolvedReferences
-        self.logger.debug(f'停止线程 {self._ident}, 触发条件是 {stop_resson} ')
+        self.logger.debug(f'Stopping thread {self._ident}, trigger condition: {stop_resson} ')
         self._executorx._change_threads_free_count(-1)
         self._executorx._threads.remove(self)
         _threads_queues.pop(self)
@@ -195,7 +204,7 @@ class _CustomThread(threading.Thread, FunboostFileLoggerMixin, LoggerLevelSetter
         # print(logging.getLogger(None).level,logging.getLogger(None).handlers)
         # print(self.logger.level)
         # print(self.logger.handlers)
-        self.logger.debug(f'新启动线程 {self._ident} ')
+        self.logger.debug(f'New thread started {self._ident} ')
         self._executorx._change_threads_free_count(1)
         while True:
             try:
@@ -206,9 +215,9 @@ class _CustomThread(threading.Thread, FunboostFileLoggerMixin, LoggerLevelSetter
                 with self._lock_for_judge_threads_free_count:
                     if self._executorx.threads_free_count > self._executorx.MIN_WORKERS:
                         self._remove_thread(
-                            f'{self._executorx.pool_ident} 线程池中的 {self.ident} 线程 超过 {self._executorx.KEEP_ALIVE_TIME} 秒没有任务，线程池中不在工作状态中的线程数量是 '
-                            f'{self._executorx.threads_free_count}，超过了指定的最小核心数量 {self._executorx.MIN_WORKERS}')
-                        break  # 退出while 1，即是结束。这里才是决定线程结束销毁，_remove_thread只是个名字而已，不是由那个来销毁线程。
+                            f'Thread {self.ident} in pool {self._executorx.pool_ident} has had no tasks for {self._executorx.KEEP_ALIVE_TIME} seconds. '
+                            f'Number of idle threads in pool: {self._executorx.threads_free_count}, exceeds minimum core count {self._executorx.MIN_WORKERS}')
+                        break  # Exit while loop, i.e., terminate. This is where the thread actually ends; _remove_thread is just a name, it doesn't destroy the thread.
                     else:
                         continue
 
@@ -228,15 +237,15 @@ logger_show_current_threads_num = get_funboost_file_logger('show_current_threads
 
 
 def show_current_threads_num(sleep_time=600, process_name='', block=False, daemon=True):
-    """另起一个线程每隔多少秒打印有多少线程，这个和可缩小线程池的实现没有关系"""
+    """Start a separate thread to print the thread count every N seconds. This is unrelated to the shrinkable thread pool implementation."""
     process_name = sys.argv[0] if process_name == '' else process_name
 
     def _show_current_threads_num():
         while True:
-            # logger_show_current_threads_num.info(f'{process_name} 进程 的 并发数量是 -->  {threading.active_count()}')
-            # nb_print(f'  {process_name} {os.getpid()} 进程 的 线程数量是 -->  {threading.active_count()}')
+            # logger_show_current_threads_num.info(f'{process_name} process concurrency count -->  {threading.active_count()}')
+            # nb_print(f'  {process_name} {os.getpid()} process thread count -->  {threading.active_count()}')
             logger_show_current_threads_num.info(
-                f'  {process_name} {os.getpid()} 进程 的 总线程数量是 -->  {threading.active_count()}')
+                f'  {process_name} {os.getpid()} process total thread count -->  {threading.active_count()}')
             time.sleep(sleep_time)
 
     if process_name not in process_name_set:
@@ -257,21 +266,21 @@ if __name__ == '__main__':
 
 
     def f1(a):
-        time.sleep(0.2)  # 可修改这个数字测试多线程数量调节功能。
-        print(f'{a} 。。。。。。。')
+        time.sleep(0.2)  # Modify this number to test the thread count adjustment feature.
+        print(f'{a} .......')
         return a * 10
-        # raise Exception('抛个错误测试')  # 官方的不会显示函数出错你，你还以为你写的代码没毛病呢。
+        # raise Exception('Throw an error for testing')  # The official pool won't show function errors, making you think your code is fine.
 
 
     pool = ThreadPoolExecutorShrinkAble(1)
-    # pool = ThreadPoolExecutor(200)  # 测试对比官方自带
+    # pool = ThreadPoolExecutor(200)  # For comparison testing with the official built-in pool
 
     for i in range(30):
-        time.sleep(0.1)  # 这里的间隔时间模拟，当任务来临不密集，只需要少量线程就能搞定f1了，因为f1的消耗时间短，
-        # 不需要开那么多线程，CustomThreadPoolExecutor比ThreadPoolExecutor 优势之一。
+        time.sleep(0.1)  # This interval simulates infrequent task arrival; only a few threads are needed since f1 runs quickly.
+        # No need to create so many threads - this is one advantage of CustomThreadPoolExecutor over ThreadPoolExecutor.
         futurex = pool.submit(f1, i)
         # print(futurex.result())
 
-    # 1/下面测试阻塞主线程退出的情况。注释掉可以测主线程退出的情况。
-    # 2/此代码可以证明，在一段时间后，连续长时间没任务，官方线程池的线程数目还是保持在最大数量了。而此线程池会自动缩小，实现了java线程池的keppalivetime功能。
+    # 1/ Below tests blocking the main thread from exiting. Comment out to test main thread exit behavior.
+    # 2/ This code proves that after a long period without tasks, the official pool maintains max thread count, while this pool auto-shrinks, implementing Java's ThreadPoolExecutor keepAliveTime feature.
     time.sleep(1000000)

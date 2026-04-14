@@ -2,21 +2,21 @@
 # @Author  : AI Assistant
 # @Time    : 2026/3/16
 """
-基于 MongoDB 轮询的分布式告警监控 (Mongo Alert Monitor)
+MongoDB-polling-based Distributed Alert Monitor (Mongo Alert Monitor)
 
-原理：用户通过 BoosterParams 配置 is_save_status=True 将函数执行状态保存到 MongoDB，
-本模块定期轮询 MongoDB 中近 N 秒内的执行记录，统计成功/失败情况，
-达到告警条件时发送告警，恢复后发送恢复通知。
+Principle: Users configure is_save_status=True in BoosterParams to save function execution status to MongoDB.
+This module periodically polls MongoDB for execution records within the last N seconds, tallies success/failure,
+sends an alert when the alert condition is met, and sends a recovery notification when it recovers.
 
-优势：
-- 天然分布式汇总：所有进程/机器的消费者都往同一个 MongoDB 集合写状态，
-  只需一个监控实例即可汇总全局执行情况
-- 零侵入：不需要修改消费者代码，不需要 mixin，只需开启 is_save_status
-- 支持同时监控多个队列
+Advantages:
+- Naturally distributed aggregation: all process/machine consumers write their status to the same MongoDB collection,
+  and a single monitoring instance can aggregate global execution status.
+- Zero intrusion: no need to modify consumer code, no mixin needed, just enable is_save_status.
+- Supports monitoring multiple queues simultaneously.
 
-=== 前置条件 ===
+=== Prerequisites ===
 
-消费者需开启状态持久化：
+Consumers must enable status persistence:
 
     @boost(BoosterParams(
         queue_name='my_task',
@@ -28,37 +28,37 @@
     def my_task(x):
         ...
 
-=== 两种告警策略 ===
+=== Two Alert Strategies ===
 
-1. count（报错次数）：
-   window_seconds 秒内，报错次数 >= failure_count 时告警。
+1. count (error count):
+   Alert when errors >= failure_count within window_seconds seconds.
 
-2. rate（报错比例）：
-   window_seconds 秒内，调用次数 >= min_calls 且失败率 >= errors_rate 时告警。
+2. rate (error rate):
+   Alert when total calls >= min_calls and failure rate >= errors_rate within window_seconds seconds.
 
-两种策略可以同时设置，任一条件满足即触发告警。
+Both strategies can be set simultaneously; either condition being met triggers an alert.
 
-=== MongoAlertMonitor 参数说明 ===
+=== MongoAlertMonitor Parameter Description ===
 
-    boosters:           被 @boost 装饰的函数（Booster 对象），支持单个或列表，自动提取 queue_name 和 table_name
-    alert_app:          告警通道: 'dingtalk', 'wechat', 'feishu', 'webhook', 'custom'，默认 'wechat'
-                        设为 'custom' 时，需继承 MongoAlertMonitor 并重写 custom_send_notification 方法
-    webhook_url:        告警通道的 Webhook 地址（alert_app 为 'webhook' 时使用）
+    boosters:           Functions decorated with @boost (Booster objects), supports single or list, auto-extracts queue_name and table_name
+    alert_app:          Alert channel: 'dingtalk', 'wechat', 'feishu', 'webhook', 'custom', default 'wechat'
+                        When set to 'custom', inherit MongoAlertMonitor and override the custom_send_notification method.
+    webhook_url:        Webhook URL for the alert channel (used when alert_app is 'webhook')
 
-    window_seconds:     统计窗口秒数，查询最近 N 秒的执行记录，默认 60
+    window_seconds:     Statistics window in seconds, queries execution records within the last N seconds, default 60
 
-    failure_count:      窗口内报错次数阈值，达到即告警，None 表示不按次数告警，默认 None，按次数告警时候无视min_calls参数。
-    errors_rate:        窗口内失败率阈值 0.0~1.0，None 表示不按比例告警，默认 None
-    min_calls:          按比例告警时，窗口内最少调用数才评估，默认 5
+    failure_count:      Error count threshold within the window; alert when reached. None means no count-based alert. Default None. When alerting by count, min_calls is ignored.
+    errors_rate:        Failure rate threshold within the window, 0.0~1.0. None means no rate-based alert. Default None.
+    min_calls:          Minimum call count in the window before rate-based evaluation, default 5
 
-    poll_interval:      轮询间隔秒数，默认 10
-    alert_interval:     告警去重间隔秒数，默认 300
+    poll_interval:      Polling interval in seconds, default 10
+    alert_interval:     Alert deduplication interval in seconds, default 300
 
-=== 用法示例 ===
+=== Usage Examples ===
 
     from funboost.core.mongo_alert_monitor import MongoAlertMonitor
 
-    # 示例1：监控单个队列，窗口内报错次数 >= 10 就告警
+    # Example 1: Monitor a single queue, alert when errors >= 10 in the window
     MongoAlertMonitor(
         boosters=my_task,
         alert_app='wechat',
@@ -67,7 +67,7 @@
         failure_count=10,
     ).start()
 
-    # 示例2：一次监控多个队列，失败率 >= 50% 就告警
+    # Example 2: Monitor multiple queues at once, alert when failure rate >= 50%
     MongoAlertMonitor(
         boosters=[task_a, task_b, task_c],
         alert_app='dingtalk',
@@ -77,24 +77,24 @@
         min_calls=10,
     ).start()
 
-    # 示例3：两种策略同时生效（任一满足即告警）
+    # Example 3: Both strategies active at once (either condition triggers alert)
     MongoAlertMonitor(
-        boosters=[my_task, other_task], #  如果你要监控所有boosters，可以写 boosters=BoostersManager.get_all_boosters()
+        boosters=[my_task, other_task], #  To monitor all boosters, use boosters=BoostersManager.get_all_boosters()
         alert_app='feishu',
         webhook_url='https://open.feishu.cn/open-apis/bot/v2/hook/xxx',
         window_seconds=60,
-        failure_count=10,     # 报错 >= 10 次
-        errors_rate=0.3,      # 或 失败率 >= 30%
+        failure_count=10,     # errors >= 10
+        errors_rate=0.3,      # or failure rate >= 30%
         min_calls=5,
     ).start()
 
-    # 示例4：自定义告警通道（发邮件等），继承重写 custom_send_notification
+    # Example 4: Custom alert channel (e.g. email), inherit and override custom_send_notification
     class EmailAlertMonitor(MongoAlertMonitor):
         def custom_send_notification(self, message: str):
             import smtplib
             from email.mime.text import MIMEText
             msg = MIMEText(message)
-            msg['Subject'] = '任务告警'
+            msg['Subject'] = 'Task Alert'
             msg['From'] = 'bot@example.com'
             msg['To'] = 'ops@example.com'
             with smtplib.SMTP('smtp.example.com') as s:
@@ -123,7 +123,7 @@ logger = logger_notify
 
 
 class _QueueAlertState:
-    """单个队列的告警状态跟踪"""
+    """Alert state tracking for a single queue."""
 
     def __init__(self, queue_name: str, table_name: str):
         self.queue_name = queue_name
@@ -135,11 +135,11 @@ class _QueueAlertState:
 
 class MongoAlertMonitor(MongoMixin):
     """
-    基于 MongoDB 轮询的分布式告警监控
+    MongoDB-polling-based distributed alert monitor.
 
-    定期查询 MongoDB 中近 window_seconds 秒内的函数执行记录，
-    按报错次数或报错比例判断是否告警，恢复后发送恢复通知。
-    支持一次监控多个 booster 队列，每个队列告警状态独立。
+    Periodically queries MongoDB for function execution records within the last window_seconds seconds,
+    determines whether to alert based on error count or error rate, and sends a recovery notification when recovered.
+    Supports monitoring multiple booster queues simultaneously, with independent alert state per queue.
     """
 
     def __init__(self,
@@ -154,9 +154,9 @@ class MongoAlertMonitor(MongoMixin):
                  alert_interval: float = 300,
                  ):
         if failure_count is None and errors_rate is None:
-            raise ValueError("failure_count 和 errors_rate 至少设置一个，否则无法触发告警")
+            raise ValueError("At least one of failure_count or errors_rate must be set, otherwise alerts cannot be triggered.")
 
-        # 支持单个 booster 或列表
+        # Support a single booster or a list
         if not isinstance(boosters, (list, tuple)):
             boosters = [boosters]
 
@@ -186,7 +186,7 @@ class MongoAlertMonitor(MongoMixin):
         self._notifier = Notifier(**notifier_kwargs)
 
     def _query_stats(self, queue_state: _QueueAlertState) -> dict:
-        """查询最近 window_seconds 秒内、指定 queue_name 的执行统计"""
+        """Query execution statistics for the specified queue_name within the last window_seconds seconds."""
         col = self.get_mongo_collection(MongoDbName.TASK_STATUS_DB, queue_state.table_name)
         cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=self.window_seconds)
 
@@ -213,7 +213,7 @@ class MongoAlertMonitor(MongoMixin):
         }
 
     def _is_alert_condition_met(self, stats: dict) -> bool:
-        """判断是否满足告警条件（任一策略满足即触发）"""
+        """Determine whether the alert condition is met (triggered if either strategy is satisfied)."""
         if self.failure_count is not None:
             if stats['failures'] >= self.failure_count:
                 return True
@@ -239,43 +239,43 @@ class MongoAlertMonitor(MongoMixin):
     def _format_alert_message(self, queue_name: str, stats: dict) -> str:
         now_str = FunboostTime().get_str()
         lines = [
-            "🚨 [告警] 队列任务异常",
-            f"队列名: {queue_name}",
-            f"统计窗口: 最近 {self.window_seconds} 秒",
-            f"失败次数: {stats['failures']}/{stats['total']}",
-            f"失败率: {stats['rate']:.2%}",
+            "🚨 [ALERT] Queue task abnormality",
+            f"Queue name: {queue_name}",
+            f"Statistics window: last {self.window_seconds} seconds",
+            f"Failures: {stats['failures']}/{stats['total']}",
+            f"Failure rate: {stats['rate']:.2%}",
         ]
         triggers = []
         if self.failure_count is not None and stats['failures'] >= self.failure_count:
-            triggers.append(f"报错次数 {stats['failures']} >= {self.failure_count}")
+            triggers.append(f"Error count {stats['failures']} >= {self.failure_count}")
         if self.errors_rate is not None and stats['total'] >= self.min_calls and stats['rate'] >= self.errors_rate:
-            triggers.append(f"失败率 {stats['rate']:.2%} >= {self.errors_rate:.0%}")
-        lines.append(f"触发条件: {'; '.join(triggers)}")
-        lines.append(f"告警时间: {now_str}")
+            triggers.append(f"Failure rate {stats['rate']:.2%} >= {self.errors_rate:.0%}")
+        lines.append(f"Trigger condition: {'; '.join(triggers)}")
+        lines.append(f"Alert time: {now_str}")
         return '\n'.join(lines)
 
     def _format_recovery_message(self, queue_name: str, stats: dict) -> str:
         now_str = FunboostTime().get_str()
         return '\n'.join([
-            "✅ [恢复] 队列任务已恢复正常",
-            f"队列名: {queue_name}",
-            f"统计窗口: 最近 {self.window_seconds} 秒",
-            f"当前失败: {stats['failures']}/{stats['total']} ({stats['rate']:.2%})",
-            f"恢复时间: {now_str}",
+            "✅ [RECOVERED] Queue task has returned to normal",
+            f"Queue name: {queue_name}",
+            f"Statistics window: last {self.window_seconds} seconds",
+            f"Current failures: {stats['failures']}/{stats['total']} ({stats['rate']:.2%})",
+            f"Recovery time: {now_str}",
         ])
 
     def custom_send_notification(self, message: str):
         """
-        用户自定义告警发送钩子，当 alert_app='custom' 时自动调用。
-        子类继承 MongoAlertMonitor 并重写此方法，可实现任意告警方式（邮件、短信、企业内部系统等）。
+        User-defined alert sending hook, automatically called when alert_app='custom'.
+        Subclass MongoAlertMonitor and override this method to implement any alert method (email, SMS, internal systems, etc.).
 
-        示例：
+        Example:
             class MyMonitor(MongoAlertMonitor):
                 def custom_send_notification(self, message: str):
-                    send_email(to='ops@example.com', subject='任务告警', body=message)
+                    send_email(to='ops@example.com', subject='Task Alert', body=message)
         """
         raise NotImplementedError(
-            "alert_app='custom' 时需要继承 MongoAlertMonitor 并重写 custom_send_notification 方法"
+            "When alert_app='custom', you must subclass MongoAlertMonitor and override the custom_send_notification method."
         )
 
     def _send_notification(self, message: str):
@@ -302,7 +302,7 @@ class MongoAlertMonitor(MongoMixin):
             logger.error(f"Failed to send alert via {self._alert_app}: {type(e).__name__} {e}")
 
     def _check_queue(self, queue_state: _QueueAlertState):
-        """检查单个队列，更新其告警状态"""
+        """Check a single queue and update its alert state."""
         stats = self._query_stats(queue_state)
         alert_triggered = self._is_alert_condition_met(stats)
 
@@ -328,7 +328,7 @@ class MongoAlertMonitor(MongoMixin):
         return stats
 
     def check_once_all(self):
-        """对所有监控队列各执行一次检查，由 scheduler 定时调用。"""
+        """Run one check for each monitored queue, called periodically by the scheduler."""
         for queue_state in self._queue_states:
             try:
                 self._check_queue(queue_state)
@@ -337,8 +337,8 @@ class MongoAlertMonitor(MongoMixin):
 
     def start(self):
         """
-        向 funboost_aps_scheduler 注册 interval 定时任务，每隔 poll_interval 秒对所有队列执行一次检查。
-        若 scheduler 尚未启动则自动启动；同一个 MongoAlertMonitor 实例重复调用 start() 只注册一次。
+        Register an interval scheduled task with funboost_aps_scheduler to check all queues every poll_interval seconds.
+        If the scheduler has not been started, it will be auto-started. Calling start() multiple times on the same MongoAlertMonitor instance only registers the job once.
         """
         from funboost.timing_job.timing_job_base import funboost_aps_scheduler
 

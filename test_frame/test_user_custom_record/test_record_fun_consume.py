@@ -2,7 +2,7 @@ from funboost import boost, BrokerEnum, BoosterParams
 
 
 def my_record(result_status):
-    print('自定义记录消费：', result_status)
+    print('Custom consumption record:', result_status)
 
 
 @boost(BoosterParams(queue_name='test_queue77e', log_level=10, broker_kind=BrokerEnum.MEMORY_QUEUE, qps=5,

@@ -8,11 +8,11 @@ from funboost import boost, LogManager,BrokerEnum
 
 
 
-@boost('queue_test2', qps=30, broker_kind=BrokerEnum.REDIS, function_result_status_persistance_conf=)  # 通过设置broker_kind，一键切换中间件为mq或redis等13种中间件或包。
+@boost('queue_test2', qps=30, broker_kind=BrokerEnum.REDIS, function_result_status_persistance_conf=)  # By setting broker_kind, you can switch middleware to mq, redis, or 13 other middlewares/packages with one click.
 def f2(a, b):
-    print(f'消费此消息 {a} + {b} 中。。。。。')
-    time.sleep(random.randint(1,1000)/100.0)  # 模拟做某事需要随机消耗一段时间的，精确控频
-    print(f'计算 {a} + {b} 得到的结果是  {a + b}')
+    print(f'Consuming message {a} + {b}.....')
+    time.sleep(random.randint(1,1000)/100.0)  # Simulate randomly consuming time doing something; precise frequency control
+    print(f'Result of computing {a} + {b} is  {a + b}')
 
 
 if __name__ == '__main__':

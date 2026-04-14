@@ -15,7 +15,7 @@ def dict_to_un_strict_json(dictx: dict, indent=4):
 
 
 class _CustomEncoder(json.JSONEncoder):
-    """自定义的json解析器，mongodb返回的字典中的时间格式是datatime，json直接解析出错"""
+    """Custom JSON encoder. MongoDB returns datetime objects in dicts, which cause errors with default JSON serialization."""
 
     def default(self, obj):
         if isinstance(obj, _datetime):
@@ -29,7 +29,7 @@ class _CustomEncoder(json.JSONEncoder):
 # noinspection PyProtectedMember,PyPep8,PyRedundantParentheses
 def _dumps(obj, skipkeys=False, ensure_ascii=True, check_circular=True, allow_nan=True, cls=_CustomEncoder, indent=None, separators=None,
            default=None, sort_keys=False, **kw):
-    # 全局patch ensure_ascii = False 会引起极少数库不兼容。
+    # Globally patching ensure_ascii = False may cause incompatibility with very few libraries.
     if (not skipkeys and ensure_ascii and check_circular and allow_nan and cls is None and indent is None and separators is None and default is None and not sort_keys and not kw):
         return json._default_encoder.encode(obj)
     if cls is None:

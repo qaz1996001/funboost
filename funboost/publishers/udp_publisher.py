@@ -7,7 +7,7 @@ from funboost.publishers.base_publisher import AbstractPublisher
 
 class UDPPublisher(AbstractPublisher, ):
     """
-    使用udp作为中间件,不支持持久化，支持分布式
+    Uses UDP as the broker. Does not support persistence, supports distributed mode.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -27,11 +27,11 @@ class UDPPublisher(AbstractPublisher, ):
         self.__udp_client.recv(self._bufsize)
 
     def clear(self):
-        pass  # udp没有保存消息
+        pass  # UDP does not persist messages
 
     def get_message_count(self):
         # nb_print(self.redis_db7,self._queue_name)
-        return -1  # udp没有保存消息
+        return -1  # UDP does not persist messages
 
     def close(self):
         # self.redis_db7.connection_pool.disconnect()

@@ -7,35 +7,35 @@ import time
 def my_job():
     print("Job executed!")
 
-# 创建调度器
+# Create scheduler
 scheduler = BackgroundScheduler()
 
 
 
-# 添加任务
+# Add task
 scheduler.add_job(my_job, 'interval', seconds=1)
-# 启动调度器
+# Start scheduler
 scheduler.start(paused=True)
 
 while 1:
     try:
         print("Scheduler is running. Pausing for 10 seconds...")
-        time.sleep(10)  # 运行 10 秒
+        time.sleep(10)  # Run for 10 seconds
 
-        # 恢复调度器
+        # Resume scheduler
         scheduler.resume()
         print("Scheduler resumed.")
 
-        time.sleep(10)  # 暂停 10 秒
+        time.sleep(10)  # Pause for 10 seconds
 
-        # 暂停调度器
+        # Pause scheduler
         scheduler.pause()
         print("Scheduler paused.")
 
 
 
     except (KeyboardInterrupt, SystemExit):
-        # 停止调度器
+        # Stop scheduler
         scheduler.shutdown()
         print("Scheduler shutdown.")
 

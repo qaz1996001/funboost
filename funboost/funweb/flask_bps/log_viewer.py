@@ -28,7 +28,7 @@ def _folders_key():
     return f'funweb:{LOCAL_IP}:log_folders'
 
 
-# ======================== 安全校验 ========================
+# ======================== Security validation ========================
 
 _SENSITIVE_LINUX = {'/etc', '/root', '/proc', '/sys', '/dev', '/boot', '/sbin', '/bin'}
 _SENSITIVE_WIN = set()
@@ -73,7 +73,7 @@ def _validate_folder_access(folder_path):
     return False
 
 
-# ======================== 工具函数 ========================
+# ======================== Utility functions ========================
 
 def _decode_line(raw):
     try:
@@ -204,9 +204,10 @@ _ANSI_RE_B = re.compile(rb'\x1b\[[0-9;]*m')
 
 
 def _grep_fast(filepath, keyword, max_lines=200, start_offset=0, end_offset=None):
-    """多行日志感知的关键字搜索。
-    将连续行按日志条目分组（以时间戳开头的行为新条目起点，无时间戳的续行归属上一条目），
-    关键字命中条目中任一行则返回整个条目的所有行。
+    """Multi-line log-aware keyword search.
+    Groups consecutive lines by log entry (lines starting with a timestamp begin a new entry,
+    lines without a timestamp are continuation lines belonging to the previous entry).
+    If the keyword matches any line in an entry, all lines of that entry are returned.
     """
     try:
         file_size = os.path.getsize(filepath)
@@ -273,7 +274,7 @@ def _format_size(size):
     return f'{size / (1024 * 1024 * 1024):.2f} GB'
 
 
-# ======================== API 路由 ========================
+# ======================== API routes ========================
 
 @log_bp.route('/logview/folders', methods=['GET'])
 @login_required
@@ -296,15 +297,15 @@ def add_folder():
     data = request.get_json(force=True)
     path = data.get('path', '').strip()
     if not path:
-        return jsonify({'succ': False, 'msg': '路径不能为空'})
+        return jsonify({'succ': False, 'msg': 'Path cannot be empty'})
     if not os.path.isabs(path):
-        return jsonify({'succ': False, 'msg': '请输入绝对路径'})
+        return jsonify({'succ': False, 'msg': 'Please enter an absolute path'})
     if _is_sensitive(path):
-        return jsonify({'succ': False, 'msg': '不允许添加系统敏感目录'})
+        return jsonify({'succ': False, 'msg': 'Adding sensitive system directories is not allowed'})
     if not os.path.isdir(path):
-        return jsonify({'succ': False, 'msg': f'目录不存在: {path}'})
+        return jsonify({'succ': False, 'msg': f'Directory does not exist: {path}'})
     _redis.sadd(_folders_key(), path)
-    return jsonify({'succ': True, 'msg': '添加成功'})
+    return jsonify({'succ': True, 'msg': 'Added successfully'})
 
 
 @log_bp.route('/logview/folders/remove', methods=['POST'])
@@ -313,7 +314,7 @@ def remove_folder():
     data = request.get_json(force=True)
     path = data.get('path', '').strip()
     _redis.srem(_folders_key(), path)
-    return jsonify({'succ': True, 'msg': '已移除'})
+    return jsonify({'succ': True, 'msg': 'Removed'})
 
 
 @log_bp.route('/logview/files', methods=['GET'])
@@ -327,16 +328,16 @@ def list_files():
     limit = int(request.args.get('limit', 100))
 
     if not folder:
-        return jsonify({'succ': False, 'msg': '请指定文件夹路径'})
+        return jsonify({'succ': False, 'msg': 'Please specify a folder path'})
     if not os.path.isabs(folder):
-        return jsonify({'succ': False, 'msg': '请使用绝对路径'})
+        return jsonify({'succ': False, 'msg': 'Please use an absolute path'})
 
     if not _validate_folder_access(folder):
-        return jsonify({'succ': False, 'msg': '无权访问该目录'})
+        return jsonify({'succ': False, 'msg': 'No permission to access this directory'})
 
     real_folder = os.path.realpath(folder)
     if not os.path.isdir(real_folder):
-        return jsonify({'succ': False, 'msg': '目录不存在'})
+        return jsonify({'succ': False, 'msg': 'Directory does not exist'})
 
     search_lower = search.lower() if search else ''
     entries = []
@@ -364,7 +365,7 @@ def list_files():
             except OSError:
                 continue
     except PermissionError:
-        return jsonify({'succ': False, 'msg': '无权限读取该目录'})
+        return jsonify({'succ': False, 'msg': 'No permission to read this directory'})
 
     reverse = sort_order == 'desc'
     if sort_by == 'size':
@@ -394,18 +395,18 @@ def read_content():
     max_lines = int(request.args.get('lines', 200))
 
     if not filepath:
-        return jsonify({'succ': False, 'msg': '请指定文件路径'})
+        return jsonify({'succ': False, 'msg': 'Please specify a file path'})
     if not _validate_file(filepath):
-        return jsonify({'succ': False, 'msg': '无权访问该文件'})
+        return jsonify({'succ': False, 'msg': 'No permission to access this file'})
     if not os.path.isfile(filepath):
-        return jsonify({'succ': False, 'msg': '文件不存在'})
+        return jsonify({'succ': False, 'msg': 'File does not exist'})
 
     try:
         file_stat = os.stat(filepath)
         file_size = file_stat.st_size
         file_mtime = datetime.datetime.fromtimestamp(file_stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
     except OSError:
-        return jsonify({'succ': False, 'msg': '无法读取文件信息'})
+        return jsonify({'succ': False, 'msg': 'Unable to read file information'})
 
     dt_start = _parse_dt(time_start)
     dt_end = _parse_dt(time_end)
@@ -482,14 +483,14 @@ def read_content():
 @log_bp.route('/logview/stream', methods=['GET'])
 @login_required
 def log_stream():
-    """SSE 端点：实时推送日志新增内容（类似 tail -f）"""
+    """SSE endpoint: push new log content in real-time (similar to tail -f)"""
     filepath = request.args.get('file', '').strip()
 
     if not filepath or not _validate_file(filepath):
-        return Response('data: {"error": "无权访问"}\n\n',
+        return Response('data: {"error": "Access denied"}\n\n',
                         mimetype='text/event-stream', status=403)
     if not os.path.isfile(filepath):
-        return Response('data: {"error": "文件不存在"}\n\n',
+        return Response('data: {"error": "File does not exist"}\n\n',
                         mimetype='text/event-stream', status=404)
 
     def generate():
@@ -533,7 +534,7 @@ def log_stream():
                 'data: '
                 + json.dumps({
                     'event': 'timeout',
-                    'msg': f'已持续实时推送 {_m} 分钟，已自动停止。需要请再次开启实时。',
+                    'msg': f'Real-time streaming has been active for {_m} minute(s) and has been automatically stopped. Please re-enable if needed.',
                 }, ensure_ascii=False)
                 + '\n\n'
             )
@@ -559,9 +560,9 @@ def log_stream():
 def file_info():
     filepath = request.args.get('file', '').strip()
     if not filepath or not _validate_file(filepath):
-        return jsonify({'succ': False, 'msg': '无权访问'})
+        return jsonify({'succ': False, 'msg': 'Access denied'})
     if not os.path.isfile(filepath):
-        return jsonify({'succ': False, 'msg': '文件不存在'})
+        return jsonify({'succ': False, 'msg': 'File does not exist'})
     try:
         stat = os.stat(filepath)
         return jsonify({

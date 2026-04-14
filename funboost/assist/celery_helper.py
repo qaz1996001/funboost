@@ -30,38 +30,38 @@ logger = get_funboost_file_logger('funboost.CeleryHelper')
 
 class CeleryHelper:
     celery_app = celery_app
-    to_be_start_work_celery_queue_name_set = set()  # start_consuming_message时候，添加需要worker运行的queue name。
+    to_be_start_work_celery_queue_name_set = set()  # When start_consuming_message is called, add queue names that need to be run by the worker.
 
     concurrent_mode = None
 
     @staticmethod
     def update_celery_app_conf(celery_app_conf: dict):
         """
-        更新celery app的配置，celery app配置大全见 https://docs.celeryq.dev/en/stable/userguide/configuration.html
-        :param celery_app_conf: celery app 配置，字典
+        Update celery app configuration. Full celery app configuration reference: https://docs.celeryq.dev/en/stable/userguide/configuration.html
+        :param celery_app_conf: celery app configuration, dictionary
         :return:
         """
         celery_app.conf.update(celery_app_conf)
-        # 例如  celery_app.conf.update({'broker_transport_options':{'visibility_timeout': 18000,'max_retries':5}})
+        # Example: celery_app.conf.update({'broker_transport_options':{'visibility_timeout': 18000,'max_retries':5}})
 
     @staticmethod
     def show_celery_app_conf():
-        logger.debug('展示celery app的配置')
+        logger.debug('Displaying celery app configuration')
         conf_dict_json_able = {}
         for k, v in celery_app.conf.items():
             conf_dict_json_able[k] = str(v)
             # print(k, ' : ', v)
-        print('celery app 的配置是：', json.dumps(conf_dict_json_able, ensure_ascii=False, indent=4))
+        print('celery app configuration:', json.dumps(conf_dict_json_able, ensure_ascii=False, indent=4))
 
     @staticmethod
     def celery_start_beat(beat_schedule: dict):
-        celery_app.conf.beat_schedule = beat_schedule  # 配置celery定时任务
+        celery_app.conf.beat_schedule = beat_schedule  # Configure celery periodic tasks
 
         def _f():
             beat = partial(celery_app.Beat, loglevel='INFO', )
             beat().run()
 
-        threading.Thread(target=_f).start()  # 使得可以很方便启动定时任务，继续启动函数消费
+        threading.Thread(target=_f).start()  # Makes it easy to start periodic tasks and continue starting function consumption
 
     @staticmethod
     def start_flower(port=5555):
@@ -71,7 +71,7 @@ class CeleryHelper:
             # cmd = f'''{python_executable} -m celery -A  funboost.assist.celery_helper  --broker={funboost_config_deafult.CELERY_BROKER_URL}  --result-backend={funboost_config_deafult.CELERY_RESULT_BACKEND}   flower --address=0.0.0.0 --port={port}  --auto_refresh=True '''
             cmd = f'''{python_executable} -m celery   --broker={BrokerConnConfig.CELERY_BROKER_URL}  --result-backend={BrokerConnConfig.CELERY_RESULT_BACKEND}   flower --address=0.0.0.0 --port={port}  --auto_refresh=True '''
 
-            logger.info(f'启动flower命令:   {cmd}')
+            logger.info(f'Starting flower command:   {cmd}')
             os.system(cmd)
 
         threading.Thread(target=_f).start()
@@ -92,9 +92,9 @@ class CeleryHelper:
             to_be_start_work_celery_queue_name_set_new = set(BoostersManager.get_all_queues())
         queue_names_str = ','.join(list(to_be_start_work_celery_queue_name_set_new))
         if not to_be_start_work_celery_queue_name_set_new:
-            raise Exception('celery worker 没有需要运行的queue')
+            raise Exception('celery worker has no queues to run')
         # '--concurrency=200',
-        # '--autoscale=5,500' threads 并发模式不支持自动扩大缩小并发数量,
+        # '--autoscale=5,500' threads concurrency mode does not support auto-scaling concurrency,
         worker_name = worker_name or f'pid_{os.getpid()}'
         pool_name = 'threads'
         if cls.concurrent_mode == ConcurrentModeEnum.GEVENT:
@@ -102,26 +102,26 @@ class CeleryHelper:
         if cls.concurrent_mode == ConcurrentModeEnum.EVENTLET:
             pool_name = 'eventlet'
         '''
-        并发数量在app配置中已经制定了。自己用 update_celery_app_conf 方法更新就好了。
+        The concurrency count is already specified in the app configuration. Just use the update_celery_app_conf method to update it.
         celery_app.conf.update({
              # 'worker_redirect_stdouts': False,
              'worker_concurrency': 200
          }
-         或
+         or
          CeleryHelper.update_celery_app_conf({ 'worker_concurrency': 500})
         '''
         cls.update_celery_app_conf({'worker_concurrency':worker_concurrency})
         argv = ['worker', f'--pool={pool_name}',
                 '-n', f'worker_funboost_{worker_name}@%h', f'--loglevel={loglevel}',
-                f'--queues={queue_names_str}',  # 并发数量是 在app配置中已经制定了。自己用 update_celery_app_conf 方法更新就好了。
+                f'--queues={queue_names_str}',  # The concurrency count is already specified in the app configuration. Just use the update_celery_app_conf method to update it.
                 ]
-        logger.info(f'celery 启动work参数 {argv}')
+        logger.info(f'celery worker startup parameters {argv}')
         celery_app.worker_main(argv)
 
     @staticmethod
     def use_nb_log_instead_celery_log(log_level: int = logging.INFO, log_filename='celery.log', formatter_template=7):
         """
-        使用nb_log的日志来取代celery的日志
+        Use nb_log logging to replace celery's logging
         """
         celery_app.conf.worker_hijack_root_logger = False
         # logging.getLogger('celery').handlers=[]

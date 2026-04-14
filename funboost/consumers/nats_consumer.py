@@ -8,7 +8,7 @@ from funboost.funboost_config_deafult import BrokerConnConfig
 
 class NatsConsumer(AbstractConsumer):
     """
-    nats作为中间件实现的。
+    Consumer implemented using NATS as middleware.
     """
 
 
@@ -28,7 +28,7 @@ class NatsConsumer(AbstractConsumer):
         nats_client.wait()
 
     def _confirm_consume(self, kw):
-        pass   # 没有确认消费
+        pass   # No consumption confirmation
 
     def _requeue(self, kw):
         self.publisher_of_same_queue.publish(kw['body'])

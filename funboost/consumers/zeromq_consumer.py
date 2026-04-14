@@ -20,8 +20,8 @@ def check_port_is_used(ip, port):
     try:
         s.connect((ip, int(port)))
         s.shutdown(2)
-        # 利用shutdown()函数使socket双向数据传输变为单向数据传输。shutdown()需要一个单独的参数，
-        # 该参数表示了如何关闭socket。具体为：0表示禁止将来读；1表示禁止将来写；2表示禁止将来读和写。
+        # Use the shutdown() function to change socket bidirectional data transfer to unidirectional. shutdown() requires a single parameter
+        # that indicates how to close the socket: 0 = disable future reads; 1 = disable future writes; 2 = disable future reads and writes.
         return True
     except BaseException:
         return False
@@ -44,12 +44,12 @@ def start_broker(port_router: int, port_dealer: int):
         poller = ZmqImporter().zmq.Poller()
         poller.register(frontend, ZmqImporter().zmq.POLLIN)
         poller.register(backend, ZmqImporter().zmq.POLLIN)
-        logger_zeromq_broker.info(f'broker 绑定端口  {port_router}   {port_dealer}  成功')
+        logger_zeromq_broker.info(f'broker bound to ports {port_router} and {port_dealer} successfully')
 
         # Switch messages between sockets
         # noinspection DuplicatedCode
         while True:
-            socks = dict(poller.poll())  # 轮询器 循环接收
+            socks = dict(poller.poll())  # Poller loop to receive
 
             if socks.get(frontend) == ZmqImporter().zmq.POLLIN:
                 message = frontend.recv_multipart()
@@ -64,7 +64,7 @@ def start_broker(port_router: int, port_dealer: int):
 
 class ZeroMqConsumer(AbstractConsumer):
     """
-    zeromq 中间件的消费者，zeromq基于socket代码，不会持久化，且不需要安装软件。
+    Consumer using ZeroMQ middleware. ZeroMQ is socket-based code, does not persist, and requires no software installation.
     """
 
 
@@ -79,16 +79,16 @@ class ZeroMqConsumer(AbstractConsumer):
         # noinspection PyBroadException
         try:
             if not (10000 < int(self._port) < 65535):
-                raise ValueError("请设置port是一个 10000到65535的之间的一个端口数字")
+                raise ValueError("Please set port to a number between 10000 and 65535")
         except BaseException:
-            self.logger.critical(f" 请设置port是一个 10000到65535的之间的一个端口数字")
+            self.logger.critical(f" Please set port to a number between 10000 and 65535")
             # noinspection PyProtectedMember
             os._exit(444)
         if check_port_is_used('127.0.0.1', int(self._port)):
-            self.logger.debug(f"""{int(self._port)} router端口已经启动(或占用) """)
+            self.logger.debug(f"""{int(self._port)} router port already started (or occupied) """)
             return
         if check_port_is_used('127.0.0.1', int(self._port) + 1):
-            self.logger.debug(f"""{int(self._port) + 1} dealer 端口已经启动(或占用) """)
+            self.logger.debug(f"""{int(self._port) + 1} dealer port already started (or occupied) """)
             return
         multiprocessing.Process(target=start_broker, args=(int(self._port), int(self._port) + 1)).start()
 
@@ -102,12 +102,12 @@ class ZeroMqConsumer(AbstractConsumer):
 
         while True:
             message = zsocket.recv()
-            # self.logger.debug(f""" 从 zeromq 取出的消息是 {message}""")
+            # self.logger.debug(f""" Message fetched from zeromq: {message}""")
             self._submit_task({'body': message})
             zsocket.send('recv ok'.encode())
 
     def _confirm_consume(self, kw):
-        pass  #
+        pass  # No consumption confirmation functionality.
 
     def _requeue(self, kw):
         self.publisher_of_same_queue.publish(kw['body'])

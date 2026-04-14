@@ -1,6 +1,6 @@
-# funboost 项目代码文件大全 
+# funboost Project Complete Code File Collection 
 
-### 代码文件: funboost\.editorconfig
+### Code file: funboost\.editorconfig
 ```python
 root = true
 
@@ -8,7 +8,7 @@ root = true
 max_line_length = 400
 ```
 
-### 代码文件: funboost\constant.py
+### Code file: funboost\constant.py
 ```python
 # coding= utf-8
 
@@ -203,7 +203,7 @@ class RedisKeys:
 
 ```
 
-### 代码文件: funboost\funboost_config_deafult.py
+### Code file: funboost\funboost_config_deafult.py
 ```python
 # -*- coding: utf-8 -*-
 import logging
@@ -319,12 +319,12 @@ class FunboostCommonConfig(DataClassBase):
 
 ```
 
-### 代码文件: funboost\README.md
+### Code file: funboost\README.md
 ```python
 用法见README.md和test_frame的例子。
 ```
 
-### 代码文件: funboost\set_frame_config.py
+### Code file: funboost\set_frame_config.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -518,7 +518,7 @@ use_config_form_funboost_config_module()
 
 ```
 
-### 代码文件: funboost\__init__.py
+### Code file: funboost\__init__.py
 ```python
 # noinspection PyUnresolvedReferences
 import atexit
@@ -593,7 +593,7 @@ from funboost.core.current_task import funboost_current_task,fct,get_current_tas
 
 ```
 
-### 代码文件: funboost\__init__old.py
+### Code file: funboost\__init__old.py
 ```python
 # noinspection PyUnresolvedReferences
 import types
@@ -925,7 +925,7 @@ task_deco = boost  # 两个装饰器名字都可以。task_deco是原来名字�
 
 ```
 
-### 代码文件: funboost\__main__.py
+### Code file: funboost\__main__.py
 ```python
 import sys
 
@@ -966,7 +966,7 @@ python -m funboost  --project_root_path=/codes/funboost  start_web
 
 ```
 
-### 代码文件: funboost\assist\celery_helper.py
+### Code file: funboost\assist\celery_helper.py
 ```python
 import copy
 
@@ -1108,7 +1108,7 @@ class CeleryHelper:
 
 ```
 
-### 代码文件: funboost\assist\dramatiq_helper.py
+### Code file: funboost\assist\dramatiq_helper.py
 ```python
 import argparse
 from funboost.core.loggers import FunboostMetaTypeFileLogger
@@ -1168,7 +1168,7 @@ python -m dramatiq test_dramatiq_raw -p 1
 
 ```
 
-### 代码文件: funboost\assist\faststream_helper.py
+### Code file: funboost\assist\faststream_helper.py
 ```python
 import asyncio
 
@@ -1190,7 +1190,7 @@ def get_broker(max_consumers=None):
     return RabbitBroker(BrokerConnConfig.RABBITMQ_URL, max_consumers=max_consumers)
 ```
 
-### 代码文件: funboost\assist\huey_helper.py
+### Code file: funboost\assist\huey_helper.py
 ```python
 import multiprocessing
 import threading
@@ -1236,12 +1236,12 @@ class HueyHelper:
 
 ```
 
-### 代码文件: funboost\assist\rocketry_helper.py
+### Code file: funboost\assist\rocketry_helper.py
 ```python
 
 ```
 
-### 代码文件: funboost\assist\rq_helper.py
+### Code file: funboost\assist\rq_helper.py
 ```python
 import threading
 import os
@@ -1296,7 +1296,7 @@ class RqHelper:
 
 ```
 
-### 代码文件: funboost\assist\rq_windows_worker.py
+### Code file: funboost\assist\rq_windows_worker.py
 ```python
 import time
 import sys
@@ -1434,18 +1434,18 @@ class WindowsWorker(rq.Worker):
         return True
 ```
 
-### 代码文件: funboost\assist\taskiq_helper.py
+### Code file: funboost\assist\taskiq_helper.py
 ```python
 
 
 ```
 
-### 代码文件: funboost\assist\__init__.py
+### Code file: funboost\assist\__init__.py
 ```python
 
 ```
 
-### 代码文件: funboost\beggar_version_implementation\beggar_redis_consumer.py
+### Code file: funboost\beggar_version_implementation\beggar_redis_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -1538,7 +1538,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\beggar_version_implementation\README.md
+### Code file: funboost\beggar_version_implementation\README.md
 ```python
 # 这是乞丐版代码实现
 
@@ -1553,7 +1553,7 @@ if __name__ == '__main__':
 完整版支持30种消息队列中间件，这里只演示大家喜欢的redis作为中间件。
 ```
 
-### 代码文件: funboost\concurrent_pool\async_helper.py
+### Code file: funboost\concurrent_pool\async_helper.py
 ```python
 from functools import partial
 import asyncio
@@ -1654,7 +1654,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\async_pool_executor.py
+### Code file: funboost\concurrent_pool\async_pool_executor.py
 ```python
 import sys
 
@@ -1852,7 +1852,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\base_pool_type.py
+### Code file: funboost\concurrent_pool\base_pool_type.py
 ```python
 
 
@@ -1865,7 +1865,7 @@ class FunboostBaseConcurrentPool:
         return self
 ```
 
-### 代码文件: funboost\concurrent_pool\bounded_processpoolexcutor_gt_py37.py
+### Code file: funboost\concurrent_pool\bounded_processpoolexcutor_gt_py37.py
 ```python
 import multiprocessing
 import concurrent.futures
@@ -2011,7 +2011,7 @@ class BoundedThreadPoolExecutor(_BoundedPoolExecutor, concurrent.futures.ThreadP
 
 ```
 
-### 代码文件: funboost\concurrent_pool\bounded_processpoolexcutor_py36.py
+### Code file: funboost\concurrent_pool\bounded_processpoolexcutor_py36.py
 ```python
 import multiprocessing
 import concurrent.futures
@@ -2117,7 +2117,7 @@ if __name__ == '__main__':
         pool.submit(test_f, i)
 ```
 
-### 代码文件: funboost\concurrent_pool\bounded_threadpoolexcutor.py
+### Code file: funboost\concurrent_pool\bounded_threadpoolexcutor.py
 ```python
 # coding=utf-8
 """
@@ -2175,7 +2175,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\concurrent_pool_with_multi_process.py
+### Code file: funboost\concurrent_pool\concurrent_pool_with_multi_process.py
 ```python
 import time
 import multiprocessing
@@ -2235,7 +2235,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\custom_evenlet_pool_executor.py
+### Code file: funboost\concurrent_pool\custom_evenlet_pool_executor.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -2327,7 +2327,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\custom_gevent_pool_executor.py
+### Code file: funboost\concurrent_pool\custom_gevent_pool_executor.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -2481,7 +2481,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\custom_threadpool_executor.py
+### Code file: funboost\concurrent_pool\custom_threadpool_executor.py
 ```python
 """
 史上最强的python线程池。
@@ -2748,7 +2748,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\custom_threadpool_executor000.py
+### Code file: funboost\concurrent_pool\custom_threadpool_executor000.py
 ```python
 """
 可自动实时调节线程数量的线程池。
@@ -2978,12 +2978,12 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\fixed_thread_pool.py
+### Code file: funboost\concurrent_pool\fixed_thread_pool.py
 ```python
 """
 flxed_thread_pool.py 固定大小的非智能线程池, 最简单的粗暴实现线程池方式,任何人都可以写得出来.
 弊端是代码不会自动结束,因为线程池的每个线程 while 1是非守护线程,不能自动判断代码是否需要结束.
-如果有的人的代码是长期运行不需要结束的,可以用这种线程池。
+If your code is intended to run indefinitely without needing to stop, this thread pool can be used.。
 """
 
 import threading
@@ -3030,7 +3030,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\flexible_thread_pool.py
+### Code file: funboost\concurrent_pool\flexible_thread_pool.py
 ```python
 """
 比 ThreadPoolExecutorShrinkAble 更简单的的弹性线程池。完全彻底从头手工开发
@@ -3205,7 +3205,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\pool_commons.py
+### Code file: funboost\concurrent_pool\pool_commons.py
 ```python
 import functools
 import threading
@@ -3237,7 +3237,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\readme.md
+### Code file: funboost\concurrent_pool\readme.md
 ```python
 ####  这个里面是实现各种并发池，框架使用不同种类的并发池从而使用不同的并发模式来执行函数任务。
 
@@ -3245,7 +3245,7 @@ if __name__ == '__main__':
 ```python
 
 '''
-各种并发池的api都实现了submit，然后就自动执行函数。类似concurrent.futures包的api
+All concurrent pool APIs implement submit, which then automatically executes the function. Similar to the concurrent.futures package API.
 '''
 
 
@@ -3259,7 +3259,7 @@ pool.submit(fun,1)
 ```
 
 ```text
-实现的池包括
+The implemented pools include:
 
 
 gevent
@@ -3268,16 +3268,16 @@ eventlet
 
 asyncio
 
-custom_threadpool_executor.py 可变有界线程池,可变是指线程池嫩自动扩大，最厉害的是能自动缩小线程数量，官方不具备此功能。
-如果线程池submit任务稀疏，即使设置500并发，但不会开到500线程，官方不具备此功能。 
+custom_threadpool_executor.py - Variable bounded thread pool. "Variable" means the pool can automatically expand; the most impressive feature is the ability to automatically shrink the thread count, which the official implementation does not support.
+If tasks submitted to the thread pool are sparse, even if 500 concurrency is configured, it will not open 500 threads. The official implementation does not support this.
 
 
-flexible_thread_pool.py  从新开始写的，完全没有任何官方半点代码的线程池，和 custom_threadpool_executor.py 功能一样，
-可变有界线程池，可以自动扩大也能自动缩小，增加了支持运行 async def 的函数。
+flexible_thread_pool.py - Written from scratch with no code from the official implementation. Same functionality as custom_threadpool_executor.py.
+Variable bounded thread pool, can automatically expand and shrink, with added support for running async def functions.
 
 
-flxed_thread_pool.py 固定大小的线程池, 最简单的实现线程池方式,任何人都可以写得出来.弊端是代码不会自动结束,因为线程池的每个线程 while 1是非守护线程,不能自动判断代码是否需要结束.
-如果有的人的代码是长期运行不需要结束的,可以用这种线程池
+fixed_thread_pool.py - Fixed-size thread pool. The simplest way to implement a thread pool; anyone can write it. The downside is that the code will not terminate automatically because each thread in the pool runs a while 1 loop as a non-daemon thread and cannot automatically determine whether the code needs to end.
+If your code is intended to run indefinitely without needing to stop, this thread pool can be used.
 ```
 
 
@@ -3288,7 +3288,7 @@ flxed_thread_pool.py 固定大小的线程池, 最简单的实现线程池方式
 
 ```
 
-### 代码文件: funboost\concurrent_pool\single_thread_executor.py
+### Code file: funboost\concurrent_pool\single_thread_executor.py
 ```python
 from typing import Callable
 
@@ -3310,7 +3310,7 @@ class SoloExecutor(FunboostBaseConcurrentPool):
 
 ```
 
-### 代码文件: funboost\concurrent_pool\__init__.py
+### Code file: funboost\concurrent_pool\__init__.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -3332,7 +3332,7 @@ from .flexible_thread_pool import FlexibleThreadPool
 from .pool_commons import ConcurrentPoolBuilder
 ```
 
-### 代码文件: funboost\concurrent_pool\backup\async_pool_executor0223.py
+### Code file: funboost\concurrent_pool\backup\async_pool_executor0223.py
 ```python
 import atexit
 import asyncio
@@ -3605,7 +3605,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\backup\async_pool_executor_back.py
+### Code file: funboost\concurrent_pool\backup\async_pool_executor_back.py
 ```python
 import atexit
 import asyncio
@@ -3880,7 +3880,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\backup\async_pool_executor_janus.py
+### Code file: funboost\concurrent_pool\backup\async_pool_executor_janus.py
 ```python
 import atexit
 import asyncio
@@ -4051,7 +4051,7 @@ if __name__ == '__main__':
 
 ```
 
-### 代码文件: funboost\concurrent_pool\backup\grok_async_pool.py
+### Code file: funboost\concurrent_pool\backup\grok_async_pool.py
 ```python
 import asyncio
 import queue
@@ -4207,12 +4207,12 @@ if __name__ == "__main__":
 
 ```
 
-### 代码文件: funboost\concurrent_pool\backup\__init__.py
+### Code file: funboost\concurrent_pool\backup\__init__.py
 ```python
 
 ```
 
-### 代码文件: funboost\consumers\base_consumer.py
+### Code file: funboost\consumers\base_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -5586,7 +5586,7 @@ class DistributedConsumerStatistics(RedisMixin, FunboostFileLoggerMixin):
 
 ```
 
-### 代码文件: funboost\consumers\celery_consumer.py
+### Code file: funboost\consumers\celery_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -5795,7 +5795,7 @@ class CeleryConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\confirm_mixin.py
+### Code file: funboost\consumers\confirm_mixin.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -5894,7 +5894,7 @@ class ConsumerConfirmMixinWithTheHelpOfRedisByHearbeat(ConsumerConfirmMixinWithT
 
 ```
 
-### 代码文件: funboost\consumers\dramatiq_consumer.py
+### Code file: funboost\consumers\dramatiq_consumer.py
 ```python
 import time
 
@@ -5948,7 +5948,7 @@ class DramatiqConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\empty_consumer.py
+### Code file: funboost\consumers\empty_consumer.py
 ```python
 ﻿# -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -5990,7 +5990,7 @@ class EmptyConsumer(AbstractConsumer, metaclass=abc.ABCMeta):
 
 ```
 
-### 代码文件: funboost\consumers\faststream_consumer.py
+### Code file: funboost\consumers\faststream_consumer.py
 ```python
 import asyncio
 import json
@@ -6048,7 +6048,7 @@ class FastStreamConsumer(EmptyConsumer):
         pass
 ```
 
-### 代码文件: funboost\consumers\httpsqs_consumer.py
+### Code file: funboost\consumers\httpsqs_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -6092,7 +6092,7 @@ class HttpsqsConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\http_consumer.py
+### Code file: funboost\consumers\http_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -6168,7 +6168,7 @@ class HTTPConsumer(AbstractConsumer, ):
 
 ```
 
-### 代码文件: funboost\consumers\http_consumer000.py
+### Code file: funboost\consumers\http_consumer000.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -6304,7 +6304,7 @@ class HTTPConsumer(AbstractConsumer, ):
 
 ```
 
-### 代码文件: funboost\consumers\huey_consumer.py
+### Code file: funboost\consumers\huey_consumer.py
 ```python
 import time
 
@@ -6357,7 +6357,7 @@ class HueyConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\kafka_consumer.py
+### Code file: funboost\consumers\kafka_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -6433,7 +6433,7 @@ class KafkaConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\kafka_consumer_manually_commit.py
+### Code file: funboost\consumers\kafka_consumer_manually_commit.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -6608,7 +6608,7 @@ class SaslPlainKafkaConsumer(KafkaConsumerManuallyCommit):
 
 ```
 
-### 代码文件: funboost\consumers\kombu_consumer.py
+### Code file: funboost\consumers\kombu_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -6781,7 +6781,7 @@ Transport Options
 
 ```
 
-### 代码文件: funboost\consumers\local_python_queue_consumer.py
+### Code file: funboost\consumers\local_python_queue_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -6820,7 +6820,7 @@ class LocalPythonQueueConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\memory_deque_consumer.py
+### Code file: funboost\consumers\memory_deque_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -6857,7 +6857,7 @@ class LocalPythonQueueConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\mongomq_consumer.py
+### Code file: funboost\consumers\mongomq_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -6893,7 +6893,7 @@ class MongoMqConsumer(AbstractConsumer, MongoMixin):
 
 ```
 
-### 代码文件: funboost\consumers\mqtt_consumer.py
+### Code file: funboost\consumers\mqtt_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -6956,7 +6956,7 @@ class MqttConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\nameko_consumer.py
+### Code file: funboost\consumers\nameko_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -7033,7 +7033,7 @@ def batch_start_nameko_service_in_new_process(boost_fun_list: typing.List, proce
 
 ```
 
-### 代码文件: funboost\consumers\nats_consumer.py
+### Code file: funboost\consumers\nats_consumer.py
 ```python
 ﻿import json
 # from pynats import NATSClient, NATSMessage  # noqa
@@ -7072,7 +7072,7 @@ class NatsConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\nsq_consumer.py
+### Code file: funboost\consumers\nsq_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -7118,7 +7118,7 @@ class NsqConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\peewee_conusmer.py
+### Code file: funboost\consumers\peewee_conusmer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -7156,7 +7156,7 @@ class PeeweeConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\persist_queue_consumer.py
+### Code file: funboost\consumers\persist_queue_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -7188,7 +7188,7 @@ class PersistQueueConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\pulsar_consumer.py
+### Code file: funboost\consumers\pulsar_consumer.py
 ```python
 '''
 
@@ -7256,7 +7256,7 @@ class PulsarConsumer(AbstractConsumer, ):
 
 ```
 
-### 代码文件: funboost\consumers\rabbitmq_amqpstorm_consumer.py
+### Code file: funboost\consumers\rabbitmq_amqpstorm_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -7312,7 +7312,7 @@ class RabbitmqConsumerAmqpStorm(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\rabbitmq_pika_consumer.py
+### Code file: funboost\consumers\rabbitmq_pika_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -7431,7 +7431,7 @@ class RabbitmqConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\rabbitmq_pika_consumerv0.py
+### Code file: funboost\consumers\rabbitmq_pika_consumerv0.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -7542,7 +7542,7 @@ class RabbitmqConsumer(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\rabbitmq_rabbitpy_consumer.py
+### Code file: funboost\consumers\rabbitmq_rabbitpy_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -7580,7 +7580,7 @@ class RabbitmqConsumerRabbitpy(AbstractConsumer):
 
 ```
 
-### 代码文件: funboost\consumers\redis_brpoplpush_consumer.py
+### Code file: funboost\consumers\redis_brpoplpush_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -7639,7 +7639,7 @@ class RedisBrpopLpushConsumer(AbstractConsumer, RedisMixin):
 
 ```
 
-### 代码文件: funboost\consumers\redis_consumer.py
+### Code file: funboost\consumers\redis_consumer.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -7704,7 +7704,7 @@ class RedisConsumer(AbstractConsumer, RedisMixin):
 
 ```
 
-### 代码文件: funboost\consumers\redis_consumer_ack_able.py
+### Code file: funboost\consumers\redis_consumer_ack_able.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -7868,7 +7868,7 @@ class RedisConsumerAckAble(ConsumerConfirmMixinWithTheHelpOfRedisByHearbeat, Abs
 
 ```
 
-### 代码文件: funboost\consumers\redis_consumer_ack_using_timeout.py
+### Code file: funboost\consumers\redis_consumer_ack_using_timeout.py
 ```python
 ﻿# -*- coding: utf-8 -*-
 # @Author  : ydf
@@ -7950,7 +7950,7 @@ class RedisConsumerAckUsingTimeout(AbstractConsumer, RedisMixin):
 
 ```
 
-### 代码文件: funboost\consumers\redis_consumer_priority.py
+### Code file: funboost\consumers\redis_consumer_priority.py
 ```python
 # -*- coding: utf-8 -*-
 # @Author  : ydf

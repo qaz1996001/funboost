@@ -5,19 +5,19 @@ import grpc
 from concurrent import futures
 import time
 
-# 导入生成的 protobuf 文件
+# Import generated protobuf files
 import hello_pb2
 import hello_pb2_grpc
 
 
 class HelloServicer(hello_pb2_grpc.HelloServiceServicer):
     """
-    HelloService 的实现类
+    Implementation class for HelloService
     """
-    
+
     def SayHello(self, request, context):
         """
-        实现 SayHello 方法
+        Implement SayHello method
         """
         message = f"Hello, {request.name}!"
         return hello_pb2.HelloResponse(message=message)
@@ -25,27 +25,27 @@ class HelloServicer(hello_pb2_grpc.HelloServiceServicer):
 
 def serve():
     """
-    启动 gRPC 服务器
+    Start gRPC server
     """
-    # 创建服务器
+    # Create server
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    
-    # 添加服务
+
+    # Add service
     hello_pb2_grpc.add_HelloServiceServicer_to_server(HelloServicer(), server)
-    
-    # 绑定端口
+
+    # Bind port
     listen_addr = '[::]:50051'
     server.add_insecure_port(listen_addr)
-    
-    # 启动服务器
+
+    # Start server
     server.start()
-    print(f"gRPC 服务器已启动，监听地址: {listen_addr}")
-    
+    print(f"gRPC server started, listening at: {listen_addr}")
+
     try:
         while True:
-            time.sleep(86400)  # 保持服务器运行
+            time.sleep(86400)  # Keep server running
     except KeyboardInterrupt:
-        print("正在关闭服务器...")
+        print("Shutting down server...")
         server.stop(0)
 
 

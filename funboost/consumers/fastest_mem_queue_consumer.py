@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-高性能内存队列消费者
+High-performance in-memory queue consumer
 
-支持两种模式：
-1. 标准模式（默认）：完整的 funboost 功能支持
-2. 极速模式（ultra_fast_mode=True）：跳过大部分框架开销，直接调用函数
-   - 极速模式下不支持：重试、过滤、延时任务、RPC、结果持久化等功能
-   - 适用于对性能要求极高且不需要这些功能的场景
+Supports two modes:
+1. Standard mode (default): Full funboost feature support
+2. Ultra-fast mode (ultra_fast_mode=True): Skips most framework overhead and calls functions directly
+   - Ultra-fast mode does not support: retry, filtering, delayed tasks, RPC, result persistence, etc.
+   - Suitable for scenarios requiring extremely high performance without needing these features
 """
 import time
 from funboost.consumers.base_consumer import AbstractConsumer
@@ -16,12 +16,12 @@ from funboost.core.helper_funs import get_func_only_params
 
 class FastestMemQueueConsumer(AbstractConsumer):
     """
-    高性能内存队列消费者。
-    
-    broker_exclusive_config 配置项：
-    - pull_msg_batch_size: 每次批量拉取的消息数量，默认 1
-    - ultra_fast_mode: 是否启用极速模式，默认 False
-      极速模式跳过大部分框架开销，性能可提升 3-10 倍，但失去重试/过滤/延时等功能
+    High-performance in-memory queue consumer.
+
+    broker_exclusive_config options:
+    - pull_msg_batch_size: Number of messages to pull in batch, default 1
+    - ultra_fast_mode: Whether to enable ultra-fast mode, default False
+      Ultra-fast mode skips most framework overhead, improving performance 3-10x, but loses retry/filtering/delay features
     """
 
     @property
@@ -40,14 +40,14 @@ class FastestMemQueueConsumer(AbstractConsumer):
             self._dispatch_task_batch(batch_size)
 
     def _dispatch_task_single(self):
-        """单条拉取模式"""
+        """Single message pull mode"""
         while True:
             task = self._mem_queue.get()
             kw = {'body': task}
             self._submit_task(kw)
 
     def _dispatch_task_batch(self, batch_size: int):
-        """批量拉取模式"""
+        """Batch pull mode"""
         while True:
             tasks = self._mem_queue.get_batch_block(max_count=batch_size)
             for task in tasks:
@@ -56,41 +56,41 @@ class FastestMemQueueConsumer(AbstractConsumer):
 
     def _dispatch_task_ultra_fast(self, batch_size: int):
         """
-        极速模式：跳过大部分框架开销，直接调用函数
-        
-        不支持的功能：重试、过滤、延时任务、RPC、结果持久化、指标统计等
+        Ultra-fast mode: Skips most framework overhead and calls functions directly
+
+        Unsupported features: retry, filtering, delayed tasks, RPC, result persistence, metric statistics, etc.
         """
         func = self.consuming_function
         queue = self._mem_queue
         
-        # 缓存常用变量，避免属性访问开销
+        # Cache frequently used variables to avoid attribute access overhead
         count = 0
         last_log_time = time.time()
         
         if batch_size <= 1:
-            # 单条极速模式
+            # Single message ultra-fast mode
             while True:
                 task = queue.get()
-                # 直接提取函数参数并调用
+                # Directly extract function parameters and call
                 if isinstance(task, dict):
                     params = get_func_only_params(task)
                     func(**params)
                 else:
-                    # 如果是字符串，需要转换
+                    # If it's a string, conversion is needed
                     from funboost.core.serialization import Serialization
                     task_dict = Serialization.to_dict(task)
                     params = get_func_only_params(task_dict)
                     func(**params)
                 
                 count += 1
-                # 每10秒输出一次统计
+                # Output statistics every 10 seconds
                 current_time = time.time()
                 if current_time - last_log_time > 10:
-                    self.logger.info(f'[极速模式] 10秒内执行了 {count} 次函数 [{func.__name__}]')
+                    self.logger.info(f'[Ultra-fast mode] Executed function [{func.__name__}] {count} times in 10 seconds')
                     count = 0
                     last_log_time = current_time
         else:
-            # 批量极速模式
+            # Batch ultra-fast mode
             while True:
                 tasks = queue.get_batch_block(max_count=batch_size)
                 for task in tasks:
@@ -106,7 +106,7 @@ class FastestMemQueueConsumer(AbstractConsumer):
                 
                 current_time = time.time()
                 if current_time - last_log_time > 10:
-                    self.logger.info(f'[极速模式] 10秒内执行了 {count} 次函数 [{func.__name__}]')
+                    self.logger.info(f'[Ultra-fast mode] Executed function [{func.__name__}] {count} times in 10 seconds')
                     count = 0
                     last_log_time = current_time
 

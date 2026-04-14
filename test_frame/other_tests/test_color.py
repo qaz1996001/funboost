@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 # @Author  : ydf
 # @Time    : 2022/1/13 0013 9:15
-print('测试没有没有导入框架之前，print应该是白颜色,并且在控制台不知道是从哪个文件哪一行print出来的')
+print('Test that before importing the framework, print should be white, and in the console it is unclear which file/line the print comes from')
 
-# 只要任意地方导入一次框架后，项目任意模块里面的print自动发生变化，只要是在此后发生的print一律变色＆可跳转。print变色和日志变色是独立的,可以按需选择。
+# Once the framework is imported anywhere, print in any module of the project automatically changes. All subsequent prints will have color & clickable links. Print color change and log color change are independent and can be selected as needed.
 from funboost import LogManager
 
-print('导入utils_ydf后,自动打了print猴子补丁，此行颜色i你该发生变化，和pycharm下可点击跳转')
+print('After importing utils_ydf, a monkey patch is automatically applied to print. This line color should have changed, and it is clickable/jumpable in PyCharm')
 
 logger = LogManager('lalala').get_logger_and_add_handlers()
 
 for i in range(3):
-    logger.debug(f'在console里面设置为monokai主题下测试debug颜色{i}')
-    logger.info(f'在console里面设置为monokai主题下测试info颜色{i}')
-    logger.warning(f'在console里面设置为monokai主题下测试warning颜色{i}')
-    logger.error(f'在console里面设置为monokai主题下测试error颜色{i}')
-    logger.critical(f'在console里面设置为monokai主题下测试 严重错误 颜色{i}')
-    print(f'直接print也会变色和可自动跳转，因为打了猴子补丁{i}')
+    logger.debug(f'Testing debug color with monokai theme in console {i}')
+    logger.info(f'Testing info color with monokai theme in console {i}')
+    logger.warning(f'Testing warning color with monokai theme in console {i}')
+    logger.error(f'Testing error color with monokai theme in console {i}')
+    logger.critical(f'Testing critical error color with monokai theme in console {i}')
+    print(f'Direct print will also have color and auto-jump because of the monkey patch {i}')
 
 
 

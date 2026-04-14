@@ -9,7 +9,7 @@ from funboost.core.func_params_model import PublisherParams
 
 class MongoMqConsumer(AbstractConsumer, MongoMixin):
     """
-    Mongo queue包实现的基于mongo的消息队列，支持消费确认。
+    Mongo-based message queue implemented using the Mongo queue package, supports consumption confirmation.
     """
 
 
@@ -18,7 +18,7 @@ class MongoMqConsumer(AbstractConsumer, MongoMixin):
         while True:
             job = mp.queue.next()
             if job is not None:
-                # self.logger.debug(f'从mongo的 [{self._queue_name}] 队列中 取出的消息是：   消息是：  {job.payload}  ')
+                # self.logger.debug(f'Message fetched from mongo queue [{self._queue_name}]:   {job.payload}  ')
                 kw = {'body': job.payload, 'job': job}
                 self._submit_task(kw)
             else:

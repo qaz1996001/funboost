@@ -3,7 +3,7 @@
 # @Time    : 2022/4/11 0011 0:56
 """
 
-使用覆盖的方式，做配置。
+Use an override approach for configuration.
 """
 import sys
 import time
@@ -63,7 +63,7 @@ def show_funboost_flag():
 
     logger_prompt.debug('\033[0m' + funboost_flag_str2 + '\033[0m')
 
-    logger_prompt.debug(f'''分布式函数调度框架funboost文档地址：  \033[0m https://funboost.readthedocs.io/zh-cn/latest/ \033[0m ''')
+    logger_prompt.debug(f'''Distributed function scheduling framework funboost documentation:  \033[0m https://funboost.readthedocs.io/zh-cn/latest/ \033[0m ''')
 
 
 show_funboost_flag()
@@ -82,7 +82,7 @@ def dict2json(dictx: dict, indent=4):
 
 def show_frame_config():
     if is_main_process():
-        logger_prompt.debug('显示当前的项目中间件配置参数')
+        logger_prompt.debug('Displaying current project middleware configuration parameters')
         # for var_name in dir(funboost_config_deafult):
         #     if var_name.isupper():
         #         var_value = getattr(funboost_config_deafult, var_name)
@@ -94,32 +94,32 @@ def show_frame_config():
         #                 var_value_encryption = re.sub(r':(\w+)@', f':{mongo_pass_encryption}@', var_value)
         #                 only_print_on_main_process(f'{var_name}:             {var_value_encryption}')
         #                 continue
-        #         if 'PASS' in var_name and var_value is not None and len(var_value) > 3:  # 对密码打*
+        #         if 'PASS' in var_name and var_value is not None and len(var_value) > 3:  # mask the password with asterisks
         #             only_print_on_main_process(f'{var_name}:                {var_value[0]}{"*" * (len(var_value) - 2)}{var_value[-1]}')
         #         else:
         #             only_print_on_main_process(f'{var_name}:                {var_value}')
-        logger_prompt.debug(f'''读取的 BrokerConnConfig 配置是:\n {funboost_config_deafult.BrokerConnConfig().get_pwd_enc_json(indent=4)} ''')
+        logger_prompt.debug(f'''The BrokerConnConfig configuration read is:\n {funboost_config_deafult.BrokerConnConfig().get_pwd_enc_json(indent=4)} ''')
 
-        logger_prompt.debug(f'''读取的 FunboostCommonConfig 配置是:\n  {funboost_config_deafult.FunboostCommonConfig().get_json(indent=4)} ''')
+        logger_prompt.debug(f'''The FunboostCommonConfig configuration read is:\n  {funboost_config_deafult.FunboostCommonConfig().get_json(indent=4)} ''')
 
-    # only_print_on_main_process(f'读取的 BoostDecoratorDefaultParams 默认 @boost 装饰器入参的默认全局配置是： \n  '
+    # only_print_on_main_process(f'The default global configuration of the BoostDecoratorDefaultParams @boost decorator input parameters is: \n  '
     #                            f'{funboost_config_deafult.BoostDecoratorDefaultParams().get_json()}')
 
 
 def use_config_form_funboost_config_module():
     """
-    自动读取配置。会优先读取启动脚本的目录的funboost_config.py文件。没有则读取项目根目录下的funboost_config.py
+    Automatically reads configuration. It will preferentially read the funboost_config.py file in the directory of the startup script. If not found, it reads the funboost_config.py in the project root directory.
     :return:
     """
     current_script_path = sys.path[0].replace('\\', '/')
     project_root_path = sys.path[1].replace('\\', '/')
     inspect_msg = f"""
-    分布式函数调度框架会自动导入funboost_config模块
-    当第一次运行脚本时候，函数调度框架会在你的python当前项目的根目录下 {project_root_path} 下，创建一个名为 funboost_config.py 的文件。
-    自动读取配置，会优先读取启动脚本的所在目录 {current_script_path} 的funboost_config.py文件，
-    如果没有 {current_script_path}/funboost_config.py 文件，则读取项目根目录 {project_root_path} 下的funboost_config.py做配置。
-    只要 funboost_config.py 在任意 PYTHONPATH 的文件夹下，就能自动读取到。
-    在 "{project_root_path}/funboost_config.py:1" 文件中，需要按需重新设置要使用到的中间件的键和值，例如没有使用rabbitmq而是使用redis做中间件，则不需要配置rabbitmq。
+    The distributed function scheduling framework will automatically import the funboost_config module.
+    When the script is run for the first time, the framework will create a file named funboost_config.py in the root directory {project_root_path} of your current Python project.
+    Configuration is read automatically, preferring the funboost_config.py file in the startup script's directory {current_script_path}.
+    If there is no {current_script_path}/funboost_config.py file, it will read the funboost_config.py in the project root directory {project_root_path} for configuration.
+    As long as funboost_config.py is in any folder on the PYTHONPATH, it will be automatically detected.
+    In the file "{project_root_path}/funboost_config.py:1", you need to set the keys and values for the middleware you intend to use. For example, if you use Redis instead of RabbitMQ as the middleware, you do not need to configure RabbitMQ.
     """
     # sys.stdout.write(f'\033[0;33m{time.strftime("%H:%M:%S")}\033[0m  "{__file__}:{sys._getframe().f_lineno}"   \033[0;30;43m{inspect_msg}\033[0m\n')
     # noinspection PyProtectedMember
@@ -129,23 +129,23 @@ def use_config_form_funboost_config_module():
         # noinspection PyUnresolvedReferences
         # import funboost_config
         m = importlib.import_module('funboost_config')
-        importlib.reload(m)  # 这行是防止用户在导入框架之前，写了 from funboost_config import REDIS_HOST 这种，导致 m.__dict__.items() 不包括所有配置变量了。
+        importlib.reload(m)  # This line prevents the case where the user wrote something like `from funboost_config import REDIS_HOST` before importing the framework, which would cause m.__dict__.items() to not include all configuration variables.
         # print(dir(m))
         # nb_print(m.__dict__.items())
         if is_main_process():
-            logger_prompt.debug(f'分布式函数调度框架 读取到\n "{m.__file__}:1" 文件里面的变量作为优先配置了\n')
+            logger_prompt.debug(f'The distributed function scheduling framework has read the variables in\n "{m.__file__}:1" as the priority configuration.\n')
         if not hasattr(m, 'BrokerConnConfig'):
-            raise EnvironmentError(f'funboost 30.0版本升级了配置文件，中间件配置写成了类，请删除原来老的funboost_config.py配置文件:\n "{m.__file__}:1"')
+            raise EnvironmentError(f'funboost version 30.0 upgraded the configuration file; middleware configuration is now written as a class. Please delete the old funboost_config.py configuration file:\n "{m.__file__}:1"')
         funboost_config_deafult.BrokerConnConfig.update_cls_attribute(**m.BrokerConnConfig().get_dict())
         funboost_config_deafult.FunboostCommonConfig.update_cls_attribute(**m.FunboostCommonConfig().get_dict())
         # funboost_config_deafult.BoostDecoratorDefaultParams.update_cls_attribute(**m.BoostDecoratorDefaultParams().get_dict())
         if hasattr(m, 'BoostDecoratorDefaultParams'):
-            raise ValueError('funboost 40.0版本之后，采用 pydantic model BoostParams类或子类入参，不支持 funboost_config.py的 BoostDecoratorDefaultParams 配置,请删除掉 BoostDecoratorDefaultParams 这个配置')
+            raise ValueError('After funboost version 40.0, BoostParams class or subclass (pydantic model) is used for input parameters; the BoostDecoratorDefaultParams configuration in funboost_config.py is no longer supported. Please remove the BoostDecoratorDefaultParams configuration.')
 
 
     except ModuleNotFoundError:
         nb_print(
-            f'''分布式函数调度框架检测到 你的项目根目录 {project_root_path} 和当前文件夹 {current_script_path}  下没有 funboost_config.py 文件，\n''')
+            f'''The distributed function scheduling framework detected that there is no funboost_config.py file in your project root directory {project_root_path} or current folder {current_script_path}.\n''')
         _auto_creat_config_file_to_project_root_path()
     else:
         show_frame_config()
@@ -154,32 +154,32 @@ def use_config_form_funboost_config_module():
 
 def _auto_creat_config_file_to_project_root_path():
     """
-    在没有使用pycahrm运行代码时候，如果实在cmd 或者 linux 运行， python xx.py，
-    请在临时会话窗口设置linux export PYTHONPATH=你的项目根目录 ，winwdos set PYTHONPATH=你的项目根目录
+    When not running code via PyCharm (i.e., running via cmd or Linux shell with `python xx.py`),
+    please set the PYTHONPATH in a temporary session window: on Linux use `export PYTHONPATH=your_project_root`, on Windows use `set PYTHONPATH=your_project_root`.
     :return:
     """
     # print(Path(sys.path[1]).as_posix())
     # print((Path(__file__).parent.parent).absolute().as_posix())
     # if Path(sys.path[1]).as_posix() in Path(__file__).parent.parent.absolute().as_posix():
-    #     nb_print('不希望在本项目里面创建')
+    #     nb_print('Do not want to create inside this project')
     #     return
     if '/lib/python' in sys.path[1] or r'\lib\python' in sys.path[1] or '.zip' in sys.path[1]:
-        raise EnvironmentError(f'''如果是cmd 或者shell启动而不是pycharm 这种ide启动脚本，请先在会话窗口设置临时PYTHONPATH为你的项目路径，
-                               windwos cmd 使用 set PYTHONNPATH=你的当前python项目根目录,
-                               windows powershell 使用 $env:PYTHONPATH=你的当前python项目根目录,
-                               linux 使用 export PYTHONPATH=你的当前你python项目根目录,
-                               PYTHONPATH 作用是python的基本常识，请百度一下。
-                               需要在会话窗口命令行设置临时的环境变量，而不是修改linux配置文件的方式设置永久环境变量，每个python项目的PYTHONPATH都要不一样，不要在配置文件写死
-                               
-                               懂PYTHONPATH 的重要性和妙用见： https://github.com/ydf0509/pythonpathdemo
+        raise EnvironmentError(f'''If you are starting the script via cmd or shell rather than an IDE like PyCharm, please first set a temporary PYTHONPATH in the session window to your project path.
+                               Windows cmd: use `set PYTHONPATH=your_current_python_project_root`,
+                               Windows PowerShell: use `$env:PYTHONPATH=your_current_python_project_root`,
+                               Linux: use `export PYTHONPATH=your_current_python_project_root`.
+                               The role of PYTHONPATH is basic Python knowledge; please search online if unfamiliar.
+                               You need to set a temporary environment variable in the session window command line, not by modifying Linux config files to set a permanent environment variable. Each Python project's PYTHONPATH should be different; do not hard-code it in config files.
+
+                               To understand the importance and utility of PYTHONPATH, see: https://github.com/ydf0509/pythonpathdemo
                                ''')
-        return  # 当没设置pythonpath时候，也不要在 /lib/python36.zip这样的地方创建配置文件。
+        return  # When PYTHONPATH is not set, do not create a config file in places like /lib/python36.zip.
 
     file_name = Path(sys.path[1]) / Path('funboost_config.py')
     copyfile(Path(__file__).absolute().parent / Path('funboost_config_deafult.py'), file_name)
-    nb_print(f'在  {Path(sys.path[1])} 目录下自动生成了一个文件， 请刷新文件夹查看或修改 \n "{file_name}:1" 文件')
+    nb_print(f'A file has been automatically generated in the {Path(sys.path[1])} directory. Please refresh the folder to view or modify \n "{file_name}:1"')
     # with (file_name).open(mode='w', encoding='utf8') as f:
-    #     nb_print(f'在 {file_name} 目录下自动生成了一个文件， 请查看或修改 \n "{file_name}:1" 文件')
+    #     nb_print(f'A file has been automatically generated in the {file_name} directory. Please view or modify \n "{file_name}:1"')
     #     f.write(config_file_content)
 
     file_name = Path(sys.path[1]) / Path('funboost_cli_user.py')

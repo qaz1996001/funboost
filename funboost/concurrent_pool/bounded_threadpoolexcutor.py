@@ -1,7 +1,7 @@
 # coding=utf-8
 """
-一个有界任务队列的thradpoolexcutor
-直接捕获错误日志
+A ThreadPoolExecutor with a bounded task queue
+that directly captures and logs errors.
 """
 from functools import wraps
 import queue
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     def fun():
         print(1 / 0.2)
 
-    # 如果是官方线程池，这样不报错你还以为代码没毛病呢。
+    # With the official thread pool, no error would be shown, making you think the code has no issues.
     with BoundedThreadPoolExecutor(10) as pool:
         for i in range(20):
             pool.submit(fun)

@@ -27,7 +27,7 @@ def flaky_task(url):
 
 @huey.periodic_task(crontab(minute='0', hour='3'))
 def nightly_backup():
-    print('定时任务')
+    print('scheduled task')
 
 
 if __name__ == '__main__':

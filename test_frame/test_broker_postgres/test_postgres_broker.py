@@ -2,36 +2,36 @@
 # @Author  : AI Assistant
 # @Time    : 2026/1/18
 """
-PostgreSQL 原生消息队列 Broker 测试
+PostgreSQL native message queue Broker test.
 
-PostgreSQL 相比 MySQL 的独特优势：
-1. FOR UPDATE SKIP LOCKED - 高并发无锁竞争，多消费者不阻塞
-2. LISTEN/NOTIFY - 原生发布订阅机制，实时推送无需轮询
-3. RETURNING - 插入/更新后直接返回数据，减少查询
-4. 更强的事务隔离性和并发控制
+Unique advantages of PostgreSQL over MySQL:
+1. FOR UPDATE SKIP LOCKED - High-concurrency lock-free competition, multiple consumers do not block each other
+2. LISTEN/NOTIFY - Native publish-subscribe mechanism, real-time push without polling
+3. RETURNING - Returns data directly after insert/update, reducing queries
+4. Stronger transaction isolation and concurrency control
 
-使用前请确保：
-1. 安装 psycopg2: pip install psycopg2-binary
-2. 配置 funboost_config.py 中的 POSTGRES_DSN
+Before using, make sure:
+1. Install psycopg2: pip install psycopg2-binary
+2. Configure POSTGRES_DSN in funboost_config.py
 """
 import time
 
 from funboost import boost, BrokerEnum, BoosterParams
 
-print('可跳转')
+print('Clickable jump')
 
 @boost(BoosterParams(
     queue_name='test_postgres_broker',
     broker_kind=BrokerEnum.POSTGRES,
-    qps=50,  # 每秒50次
+    qps=50,  # 50 times per second
     broker_exclusive_config={
-        'use_listen_notify': True,  # 使用 LISTEN/NOTIFY 实时推送
-        'poll_interval': 30,  # 轮询超时时间
-        'timeout_minutes': 10,  # 超时任务自动重回队列
+        'use_listen_notify': True,  # Use LISTEN/NOTIFY for real-time push
+        'poll_interval': 30,  # Polling timeout
+        'timeout_minutes': 10,  # Timed-out tasks automatically requeued
     }
 ))
 def my_postgres_task(x, y):
-    """PostgreSQL 消息队列测试任务"""
+    """PostgreSQL message queue test task"""
     time.sleep(2)
     result = x + y
     print(f"PostgreSQL Task: {x} + {y} = {result}")
@@ -42,70 +42,69 @@ def my_postgres_task(x, y):
     queue_name='test_postgres_priority',
     broker_kind=BrokerEnum.POSTGRES,
     qps=20,
-    # 测试优先级功能
+    # Test priority feature
 ))
 def priority_task(value, priority_level):
-    """优先级任务测试"""
+    """Priority task test"""
     print(f"Priority Task: value={value}, priority={priority_level}")
     return {'value': value, 'priority': priority_level}
 
 
 def test_basic_publish_consume():
-    """测试基本发布和消费"""
+    """Test basic publish and consume"""
     print("=" * 50)
-    print("测试 PostgreSQL Broker 基本功能")
+    print("Test PostgreSQL Broker basic functionality")
     print("=" * 50)
 
-    # 发布消息
+    # Publish messages
     for i in range(10):
         my_postgres_task.push(i, i * 2)
         print(f"Published: x={i}, y={i * 2}")
 
-    # 启动消费
+    # Start consuming
     my_postgres_task.consume()
 
 
 def test_priority():
-    """测试优先级功能"""
+    """Test priority feature"""
     print("=" * 50)
-    print("测试 PostgreSQL Broker 优先级功能")
+    print("Test PostgreSQL Broker priority feature")
     print("=" * 50)
 
-    # 发布不同优先级的消息
+    # Publish messages with different priorities
     for i in range(10):
-        # 使用 task_options 设置优先级
+        # Use task_options to set priority
         from funboost import TaskOptions
-        priority = i % 3  # 0, 1, 2 三种优先级
+        priority = i % 3  # 3 priority levels: 0, 1, 2
         priority_task.publish(
             {'value': i, 'priority_level': priority},
             task_options=TaskOptions(other_extra_params={'priority': priority})
         )
         print(f"Published priority task: value={i}, priority={priority}")
 
-    # 启动消费（高优先级的会先被消费）
+    # Start consuming (higher priority messages will be consumed first)
     priority_task.consume()
 
 
 def test_concurrent_consumers():
-    """测试多消费者并发（FOR UPDATE SKIP LOCKED 特性）"""
+    """Test multi-consumer concurrency (FOR UPDATE SKIP LOCKED feature)"""
     print("=" * 50)
-    print("测试 PostgreSQL Broker 多消费者并发")
+    print("Test PostgreSQL Broker multi-consumer concurrency")
     print("=" * 50)
-    print("使用 FOR UPDATE SKIP LOCKED，多个消费者可以无锁并发获取任务")
+    print("Using FOR UPDATE SKIP LOCKED, multiple consumers can acquire tasks concurrently without locking")
 
-    # 发布大量消息
+    # Publish a large number of messages
     for i in range(100):
         my_postgres_task.push(i, i * 2)
 
-    # 多进程消费
+    # Multi-process consumption
     my_postgres_task.multi_process_consume(4)
 
 
 if __name__ == '__main__':
-    # 直接运行基本测试 demo
+    # Run the basic test demo directly
     # test_basic_publish_consume()
-    
-    # 如需测试其他功能，取消注释相应行：
-    # test_priority()           # 测试优先级功能
-    test_concurrent_consumers()  # 测试多消费者并发
-    
+
+    # To test other features, uncomment the corresponding line:
+    # test_priority()           # Test priority feature
+    test_concurrent_consumers()  # Test multi-consumer concurrency

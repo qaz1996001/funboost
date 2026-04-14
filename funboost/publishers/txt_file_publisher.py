@@ -14,7 +14,7 @@ from funboost.publishers.base_publisher import AbstractPublisher
 
 class TxtFilePublisher(AbstractPublisher, ):
     """
-    使用txt文件作为中间件
+    Uses txt files as the broker.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -31,7 +31,7 @@ class TxtFilePublisher(AbstractPublisher, ):
 
     def clear(self):
         shutil.rmtree(self._file_queue_path, ignore_errors=True)
-        self.logger.warning(f'清除 {Path(self._file_queue_path).absolute()} 文件夹成功')
+        self.logger.warning(f'Successfully cleared folder {Path(self._file_queue_path).absolute()}')
 
     def get_message_count(self):
         return self.file_queue.qsize()

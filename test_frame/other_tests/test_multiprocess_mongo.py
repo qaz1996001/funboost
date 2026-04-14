@@ -6,7 +6,7 @@ import pymongo
 
 mongo_url = 'mongodb://admin:123456@192.168.70.128:27017/admin'
 
-c = pymongo.MongoClient(mongo_url, connect=False) # 即使为false，如果在主进程中操作了 collection，那么fork也会报错不安全。
+c = pymongo.MongoClient(mongo_url, connect=False) # Even if False, if collection is operated in the main process, fork will also report an unsafe error.
 
 col = c.get_database('db3').get_collection('clo1')
 col.insert_one({'a':4})

@@ -3,8 +3,9 @@ from pathlib import Path
 from funboost.contrib.api_publish_msg import app, BoosterDiscovery
 
 '''
-# 如果用户不使用 BoosterDiscovery,那么需要导入一下boost相关的函数所在的模块,不然无法根据队列名找到队列相关的函数定义.
-需要
+# If the user does not use BoosterDiscovery, they need to import the modules containing boost-related functions,
+# otherwise the queue-related function definitions cannot be found by queue name.
+Need to:
 import test_frame.test_api_publish_msg.tasks.boost1
 import test_frame.test_api_publish_msg.tasks.boost2
 '''

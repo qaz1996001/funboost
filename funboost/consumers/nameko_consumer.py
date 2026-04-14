@@ -21,7 +21,7 @@ all_queue_name__nameko_service_cls_map = {}
 
 class NamekoConsumer(AbstractConsumer, ):
     """
-    nameko作为中间件实现的。
+    Consumer implemented using nameko as middleware.
     """
 
 
@@ -30,7 +30,7 @@ class NamekoConsumer(AbstractConsumer, ):
             from funboost.concurrent_pool.custom_evenlet_pool_executor import check_evenlet_monkey_patch
             check_evenlet_monkey_patch()
         except Exception as e:
-            self.logger.critical('nameko 必须使用eventlet 并发，并且eventlet包打猴子补丁')
+            self.logger.critical('nameko must use eventlet concurrency, and eventlet must have monkey-patching applied')
             raise e
 
         class MyService:

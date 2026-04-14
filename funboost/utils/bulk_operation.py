@@ -4,7 +4,7 @@
 @file: bulk_operation.py
 @time: 2018/08/27
 
-三大数据库的更简单的批次操作，自动聚合一定时间内的离散任务为批次任务。免除手工数组切片的烦恼。
+Simpler batch operations for major databases. Automatically aggregates discrete tasks within a time interval into batch tasks, eliminating the hassle of manual array slicing.
 """
 import atexit
 import re
@@ -27,13 +27,13 @@ from funboost.utils import LoggerMixin, decorators
 
 
 class RedisOperation:
-    """redis的操作，此类作用主要是规范下格式而已"""
+    """Redis operation. This class mainly serves to standardize the format."""
 
     def __init__(self, operation_name: str, key: str, value: str):
         """
-        :param operation_name: redis操作名字，例如 sadd lpush等
-        :param key: redis的键
-        :param value: reids键的值
+        :param operation_name: Redis operation name, e.g. sadd, lpush, etc.
+        :param key: Redis key
+        :param value: Redis key's value
         """
         self.operation_name = operation_name
         self.key = key
@@ -41,12 +41,12 @@ class RedisOperation:
 
 
 class BaseBulkHelper(LoggerMixin, metaclass=abc.ABCMeta):
-    """批量操纵抽象基类"""
+    """Abstract base class for bulk operations"""
     bulk_helper_map = {}
 
     def __new__(cls, base_object, *args, **kwargs):
         cls_key = f'{str(base_object)}-{os.getpid()}'
-        if cls_key not in cls.bulk_helper_map:  # 加str是由于有一些类型的实例不能被hash作为字典的键
+        if cls_key not in cls.bulk_helper_map:  # Using str because some type instances cannot be hashed as dict keys
             self = super().__new__(cls)
             return self
         else:
@@ -66,21 +66,21 @@ class BaseBulkHelper(LoggerMixin, metaclass=abc.ABCMeta):
         self._to_be_request_queue = Queue(threshold * 2)
         self._current_time = time.time()
         self._last_has_task_time = time.time()
-        atexit.register(self.__do_something_before_exit)  # 程序自动结束前执行注册的函数
+        atexit.register(self.__do_something_before_exit)  # Execute registered function before program exits
         self._main_thread_has_exit = False
         # Thread(target=self.__excute_bulk_operation_in_other_thread).start()
         # Thread(target=self.__check_queue_size).start()
         self.__excute_bulk_operation_in_other_thread()
         self.__check_queue_size()
-        self.logger.debug(f'{self.__class__}被实例化')
+        self.logger.debug(f'{self.__class__} has been instantiated')
 
     def add_task(self, base_operation: Union[UpdateOne, InsertOne, RedisOperation, tuple, dict]):
-        """添加单个需要执行的操作，程序自动聚合陈批次操作"""
+        """Add a single operation to be executed; the program automatically aggregates them into batch operations"""
         self._to_be_request_queue.put(base_operation)
         # self.logger.debug(base_operation)
 
     # @decorators.tomorrow_threads(100)
-    @decorators.keep_circulating(1, block=False, daemon=True)  # redis异常或网络异常，使其自动恢复。
+    @decorators.keep_circulating(1, block=False, daemon=True)  # Automatically recover from redis or network exceptions.
     def __excute_bulk_operation_in_other_thread(self):
         while True:
             if self._to_be_request_queue.qsize() >= self._threshold or time.time() > self._current_time + self._max_time_interval:
@@ -95,7 +95,7 @@ class BaseBulkHelper(LoggerMixin, metaclass=abc.ABCMeta):
         if self._to_be_request_queue.qsize() > 0:
             self._last_has_task_time = time.time()
         if time.time() - self._last_has_task_time > 60:
-            self.logger.info(f'{self.base_object} 最近一次有任务的时间是 ： {DatetimeConverter(self._last_has_task_time)}')
+            self.logger.info(f'{self.base_object} last had tasks at: {DatetimeConverter(self._last_has_task_time)}')
 
     @abc.abstractmethod
     def _do_bulk_operation(self):
@@ -103,12 +103,12 @@ class BaseBulkHelper(LoggerMixin, metaclass=abc.ABCMeta):
 
     def __do_something_before_exit(self):
         self._main_thread_has_exit = True
-        self.logger.critical(f'程序自动结束前执行  [{str(self.base_object)}]  执行剩余的任务')
+        self.logger.critical(f'Executing remaining tasks for [{str(self.base_object)}] before program exits')
 
 
 class MongoBulkWriteHelper(BaseBulkHelper):
     """
-    一个更简单的批量插入,可以直接提交一个操作，自动聚合多个操作为一个批次再插入，速度快了n倍。
+    A simpler bulk insert helper. You can submit operations one by one, and they are automatically aggregated into batches before insertion, improving speed by N times.
     """
 
     def _do_bulk_operation(self):
@@ -130,13 +130,13 @@ class MongoBulkWriteHelper(BaseBulkHelper):
                 self.base_object.bulk_write(request_list, ordered=False)
             if self._is_print_log:
                 mongo_col_str = re.sub(r"document_class=dict, tz_aware=False, connect=True\),", "", str(self.base_object))
-                self.logger.info(f'【{mongo_col_str}】  批量插入的任务数量是 {count} 消耗的时间是 {round(time.time() - t_start, 6)}')
+                self.logger.info(f'[{mongo_col_str}]  Bulk insert task count: {count}, time consumed: {round(time.time() - t_start, 6)}')
             self._current_time = time.time()
 
 
 class ElasticBulkHelper(BaseBulkHelper):
     """
-    elastic批量插入。
+    Elasticsearch bulk insert helper.
     """
 
     def _do_bulk_operation(self):
@@ -156,12 +156,12 @@ class ElasticBulkHelper(BaseBulkHelper):
                 # self.base_object.bulk_write(request_list, ordered=False)
                 ElasticsearchImporter().helpers.bulk(self.base_object, request_list)
             if self._is_print_log:
-                self.logger.info(f'【{self.base_object}】  批量插入的任务数量是 {count} 消耗的时间是 {round(time.time() - t_start, 6)}')
+                self.logger.info(f'[{self.base_object}]  Bulk insert task count: {count}, time consumed: {round(time.time() - t_start, 6)}')
             self._current_time = time.time()
 
 
 class RedisBulkWriteHelper(BaseBulkHelper):
-    """redis批量插入，比自带的更方便操作非整除批次"""
+    """Redis bulk insert helper, more convenient than the built-in pipeline for non-evenly-divisible batches"""
 
     def _do_bulk_operation(self):
         if self._to_be_request_queue.qsize() > 0:
@@ -180,7 +180,7 @@ class RedisBulkWriteHelper(BaseBulkHelper):
             pipeline.execute()
             pipeline.reset()
             if self._is_print_log:
-                self.logger.info(f'[{str(self.base_object)}]  批量插入的任务数量是 {count} 消耗的时间是 {round(time.time() - t_start, 6)}')
+                self.logger.info(f'[{str(self.base_object)}]  Bulk insert task count: {count}, time consumed: {round(time.time() - t_start, 6)}')
             self._current_time = time.time()
 
     def _do_bulk_operation2(self):
@@ -198,7 +198,7 @@ class RedisBulkWriteHelper(BaseBulkHelper):
                         getattr(pipeline, request.operation_name)(request.key, request.value)
                 pipeline.execute()
             if self._is_print_log:
-                self.logger.info(f'[{str(self.base_object)}]  批量插入的任务数量是 {count} 消耗的时间是 {round(time.time() - t_start, 6)}')
+                self.logger.info(f'[{str(self.base_object)}]  Bulk insert task count: {count}, time consumed: {round(time.time() - t_start, 6)}')
             self._current_time = time.time()
 
 
@@ -223,10 +223,10 @@ class _Test(unittest.TestCase, LoggerMixin):
             # r = redis.Redis(password='123456')
             r = RedisMixin().redis_db0
             redis_helper = RedisBulkWriteHelper(r, 200)
-            # redis_helper = RedisBulkWriteHelper(r, 100)  # 放在外面可以
+            # redis_helper = RedisBulkWriteHelper(r, 100)  # Can also be placed outside
             for i in range(1003):
                 # time.sleep(0.2)
-                # 也可以在这里无限实例化
+                # Can also instantiate infinitely here
                 redis_helper.add_task(RedisOperation('sadd', 'key1', str(i)))
 
 

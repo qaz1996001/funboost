@@ -12,10 +12,10 @@ import logging
    
 ))
 def process_message(x, y):
-    """处理 WebSocket 消息"""
+    """Process WebSocket message"""
     result = x + y
     if x % 100 == 0:
-        print(f"处理消息: {x} + {y} = {result}")
+        print(f"Processing message: {x} + {y} = {result}")
     return result
 
 

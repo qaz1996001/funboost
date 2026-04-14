@@ -37,13 +37,13 @@ from funboost.core.msg_result_getter import AsyncResult, AioAsyncResult
 
 class Booster:
     """
-    funboost极其重视代码能在pycharm下自动补全。元编程经常造成在pycharm下代码无法自动补全提示，主要是实现代码补全难。
-    这种__call__写法在pycahrm下 不仅能补全消费函数的 push consume等方法，也能补全函数本身的入参，一举两得。代码能自动补全很重要。
-    一个函数fun被 boost装饰器装饰后， isinstance(fun,Booster) 为True.
+    funboost places great emphasis on code auto-completion in PyCharm. Metaprogramming often makes auto-completion difficult in PyCharm.
+    This __call__ approach enables auto-completion for both the consuming function's push/consume methods and the function's own parameters in PyCharm - a two-in-one benefit. Auto-completion is very important.
+    After a function `fun` is decorated with the `boost` decorator, isinstance(fun, Booster) returns True.
 
-    pydatinc pycharm编程代码补全,请安装 pydantic插件, 在pycharm的  file -> settings -> Plugins -> 输入 pydantic 搜索,点击安装 pydantic 插件.
+    For pydantic PyCharm code auto-completion, install the pydantic plugin: PyCharm -> File -> Settings -> Plugins -> search for "pydantic" and install it.
 
-    Booster 是把Consumer 和 Publisher的方法集为一体。
+    Booster combines Consumer and Publisher methods into a single entity.
     """
 
 
@@ -55,20 +55,20 @@ class Booster:
         **kwargs,
     ):
         """
-        @boost 这是funboost框架最重要的一个函数，必须看懂BoosterParams里面的入参有哪些。
-        建议永远使用 @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, )) 这种传参方式。
+        @boost is the most important function in the funboost framework. You must understand the parameters in BoosterParams.
+        It is recommended to always use @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, )) style parameter passing.
 
 
-        pydatinc pycharm编程代码补全,请安装 pydantic插件, 在pycharm的  file -> settings -> Plugins -> 输入 pydantic 搜索,点击安装 pydantic 插件.
-        (高版本的pycharm pydantic是内置支持代码补全的,由此可见,pydantic太好了,pycharm官方都来支持)
+        For pydantic PyCharm code auto-completion, install the pydantic plugin: PyCharm -> File -> Settings -> Plugins -> search for "pydantic" and install it.
+        (Newer versions of PyCharm have built-in pydantic support for auto-completion, showing how excellent pydantic is.)
 
-        强烈建议所有入参放在 BoosterParams() 中,不要直接在BoosterParams之外传参.现在是兼容老的直接在@boost中传参方式.
-        建议不要给第一个入参queue_name传递字符串，而是永远传递BoosterParams类型， 例如 @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, ))
+        It is strongly recommended to put all parameters in BoosterParams(), not pass them directly outside BoosterParams. The old direct parameter passing in @boost is still supported for backward compatibility.
+        It is recommended to always pass a BoosterParams type instead of a string for the first parameter queue_name, e.g. @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, ))
 
 
         ```python
-        # @boost('queue_test_f01', qps=0.2, ) # 老的入参方式
-        @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, )) # 新的入参方式,所有入参放在 最流行的三方包 pydantic model BoosterParams 里面.
+        # @boost('queue_test_f01', qps=0.2, ) # old parameter style
+        @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, )) # new parameter style, all params in the popular pydantic model BoosterParams.
         def f(a, b):
             print(a + b)
 
@@ -76,7 +76,7 @@ class Booster:
             f.pub(dict(a=i, b=i * 2))
             f.push(i, i * 2)
         f.consume()
-        # f.multi_process_conusme(8)             # # 这个是新加的方法，细粒度 线程 协程并发 同时叠加8个进程，速度炸裂。
+        # f.multi_process_conusme(8)             # This is a newly added method, fine-grained thread/coroutine concurrency combined with 8 processes, blazing fast.
         ```
 
 
@@ -84,20 +84,20 @@ class Booster:
         @boost(BoosterParams(queue_name='queue_test_f01', qps=0.2, ))
         @Booster(BoosterParams(queue_name='queue_test_f01', qps=0.2, ))
         @BoosterParams(queue_name='queue_test_f01', qps=0.2, )
-        以上4种写法等效。
+        The above 4 forms are equivalent.
         """
 
-        # 以下代码很复杂，主要是兼容老的在@boost直接传参的方式,强烈建议使用新的入参方式,所有入参放在一个 BoosterParams 中，那就不需要理会下面这段逻辑.
+        # The following code is complex, mainly for backward compatibility with the old direct parameter passing in @boost. It is strongly recommended to use the new parameter style with all params in a single BoosterParams, then you don't need to worry about the logic below.
         if isinstance(queue_name, str):
             if boost_params is None:
                 boost_params = BoosterParams(queue_name=queue_name)
         elif queue_name is None and boost_params is None:
-            raise ValueError("boost 入参错误")
+            raise ValueError("Invalid boost parameters")
         elif isinstance(queue_name, BoosterParams):
             boost_params = queue_name
         if isinstance(queue_name, str) or kwargs:
             flogger.warning(
-                f"""你的 {queue_name} 队列， funboost 40.0版本以后： {BoostDecoParamsIsOldVersion.default_message}"""
+                f"""Your queue {queue_name}, since funboost version 40.0: {BoostDecoParamsIsOldVersion.default_message}"""
             )
         boost_params_merge = boost_params.copy()
         boost_params_merge.update_from_dict(kwargs)
@@ -105,7 +105,7 @@ class Booster:
         self.queue_name = boost_params_merge.queue_name
 
     def __str__(self):
-        return f"{type(self)}  队列为 {self.queue_name} 函数为 {self.consuming_function} 的 booster"
+        return f"{type(self)}  queue: {self.queue_name} function: {self.consuming_function} booster"
 
     def __get__(self, instance, cls):
         """https://python3-cookbook.readthedocs.io/zh_CN/latest/c09/p09_define_decorators_as_classes.html"""
@@ -116,10 +116,10 @@ class Booster:
 
     def __call__(self, *args, **kwargs) -> Booster:
         """
-        # 第一次调用__call__，是装饰函数,返回了Booster对象,从此之后,被消费函数就变成了Booster类型对象.
-        # Booster类型对象,怎么支持函数原来本身的直接运行功能? 那就是要让他走到 else 分支,直接用 self.consuming_function 函数本身去运行入参
-        # 这里非常巧妙
-        # 如果用户之后不打算使用funboost 的分布式函数调度功能,那么直接运行函数和原来一模一样,用户不需要删除 @boost装饰器 也能直接运行函数本身
+        # The first call to __call__ decorates the function and returns a Booster object. From then on, the consuming function becomes a Booster type object.
+        # How does a Booster type object support the original direct function execution? By going to the else branch, directly using self.consuming_function to run with the parameters.
+        # This is a very clever design.
+        # If the user later decides not to use funboost's distributed function scheduling, they can run the function directly as before without removing the @boost decorator.
         """
         if (
             len(kwargs) == 0
@@ -144,7 +144,7 @@ class Booster:
             #     if self.boost_params.consuming_function_class_name is None:
             #         self.boost_params.consuming_function_class_name = consuming_function.__qualname__.split('.')[0]
             logger_prompt.debug(
-                f""" {self.boost_params.queue_name} booster 配置是 {self.boost_params.json_str_value()}"""
+                f""" {self.boost_params.queue_name} booster configuration is {self.boost_params.json_str_value()}"""
             )
             self.consuming_function = consuming_function
             self.is_decorated_as_consume_function = True
@@ -167,7 +167,7 @@ class Booster:
 
             self.start_consuming_message = self.consume = self.start = (
                 consumer.start_consuming_message
-            ) # consume 是前台线程，非阻塞
+            ) # consume runs in a foreground thread, non-blocking
             self.clear_filter_tasks = consumer.clear_filter_tasks
             self.wait_for_possible_has_finish_all_tasks = (
                 consumer.wait_for_possible_has_finish_all_tasks
@@ -186,7 +186,7 @@ class Booster:
 
     # noinspection PyMethodMayBeStatic
     def multi_process_consume(self, process_num=1):
-        """超高速多进程消费"""
+        """Ultra-fast multi-process consuming"""
         from funboost.core.muliti_process_enhance import run_consumer_with_multi_process
 
         run_consumer_with_multi_process(self, process_num)
@@ -196,12 +196,12 @@ class Booster:
 
     # noinspection PyMethodMayBeStatic
     def multi_process_pub_params_list(self, params_list, process_num=16):
-        """超高速多进程发布，例如先快速发布1000万个任务到中间件，以后慢慢消费"""
+        """Ultra-fast multi-process publishing, e.g. quickly publish 10 million tasks to the broker, then consume them later"""
         """
-        用法例如，快速20进程发布1000万任务，充分利用多核加大cpu使用率。
+        Usage example: quickly publish 10 million tasks using 20 processes, fully utilizing multi-core CPUs.
         @boost('test_queue66c', qps=1/30,broker_kind=BrokerEnum.KAFKA_CONFLUENT)
         def f(x, y):
-            print(f'函数开始执行时间 {time.strftime("%H:%M:%S")}')
+            print(f'Function execution start time {time.strftime("%H:%M:%S")}')
         if __name__ == '__main__':
             f.multi_process_pub_params_list([{'x':i,'y':i*3}  for i in range(10000000)],process_num=20)
             f.consume()
@@ -230,7 +230,7 @@ class Booster:
         pkey_file_path=None,
     ):
         """
-        入参见 fabric_deploy 函数。这里重复入参是为了代码在pycharm补全提示。
+        See fabric_deploy function for parameter details. Parameters are repeated here for PyCharm auto-completion.
         """
         params = copy.copy(locals())
         params.pop("self")
@@ -245,11 +245,11 @@ class Booster:
         return state
 
     def __setstate__(self, state):
-        """非常高级的骚操作,支持booster对象pickle序列化和反序列化,设计非常巧妙，堪称神来之笔
-        这样当使用redis作为apscheduler的 jobstores时候,aps_obj.add_job(booster.push,...) 可以正常工作,
-        使不报错 booster对象无法pickle序列化.
+        """Advanced technique supporting pickle serialization and deserialization of booster objects, a very clever design.
+        This allows aps_obj.add_job(booster.push,...) to work properly when using redis as apscheduler's jobstores,
+        avoiding errors about booster objects being unable to be pickled.
 
-        这个反序列化,没有执着于对 socket threding.Lock 怎么反序列化,而是偷换概念，绕过难题,基于标识的代理反序列化
+        This deserialization doesn't try to serialize socket/threading.Lock directly, but bypasses the problem using identity-based proxy deserialization.
         """
         cur_boosters_manager = BoosterRegistry(
             state["booster_registry_name"]
@@ -260,8 +260,8 @@ class Booster:
         self.__dict__.update(_booster.__dict__)
 
 
-boost = Booster  # @boost 后消费函数.  不能自动补全方法就用 Booster就可以。 2024版本的 pycharm抽风了，@boost的消费函数不能自动补全提示 .consume  .push 这些方法。
-task_deco = boost  # 两个装饰器名字都可以。task_deco是原来名字，兼容一下。
+boost = Booster  # @boost for consuming functions. If auto-completion doesn't work, use Booster directly. Some PyCharm 2024 versions have issues with auto-completing .consume .push methods on @boost decorated functions.
+task_deco = boost  # Both decorator names work. task_deco is the original name, kept for backward compatibility.
 
 
 def gen_pid_queue_name_key(queue_name: str,) -> typing.Tuple[int, str]:
@@ -270,19 +270,19 @@ def gen_pid_queue_name_key(queue_name: str,) -> typing.Tuple[int, str]:
 
 class BoosterRegistry:
     """
-    管理boosters，可以一键启动多个消费函数或者启动一组消费函数。
+    Manages boosters, allowing one-click startup of multiple consuming functions or a group of consuming functions.
 
-    BoosterRegistry 是后加的， 原来的 BoostersManager 类是一个包含多个classmethod的类，和现在的方法名和入参一样。
-    为了兼容老的 BoostersManager 这个用法，现在的 BoostersManager 是 BoosterRegistry 的其中一个实例。
-    
-    使用 __new__ 实现享元模式，每个 booster_registry_name 对应一个唯一实例。
+    BoosterRegistry was added later. The original BoostersManager class contained multiple classmethods with the same method names and parameters.
+    For backward compatibility with BoostersManager usage, the current BoostersManager is an instance of BoosterRegistry.
+
+    Uses __new__ to implement the flyweight pattern, each booster_registry_name corresponds to a unique instance.
     """
 
     _lock = threading.Lock()
-    _instances: typing.Dict[str, 'BoosterRegistry'] = {}  # 享元模式缓存
+    _instances: typing.Dict[str, 'BoosterRegistry'] = {}  # Flyweight pattern cache
 
     def __new__(cls, booster_registry_name: str):
-        # 先检查缓存（无锁，高性能）
+        # Check cache first (no lock, high performance)
         if booster_registry_name not in cls._instances:
             with cls._lock:
                 # Double-Checked Locking
@@ -293,19 +293,19 @@ class BoosterRegistry:
         return cls._instances[booster_registry_name]
 
     def __init__(self, booster_registry_name: str):
-        # __new__ 已经处理了所有初始化逻辑，这里保持空实现
+        # __new__ has already handled all initialization logic, keep this empty
         pass
 
     def _initialize(self, booster_registry_name: str):
-        """真正的初始化逻辑，只在 __new__ 中调用一次"""
+        """Actual initialization logic, called only once in __new__"""
         self.booster_registry_name = booster_registry_name
-        
-        # pid_queue_name__booster_map字典存放 {(进程id,queue_name):Booster对象}
+
+        # pid_queue_name__booster_map stores {(process_id, queue_name): Booster object}
         self.pid_queue_name__booster_map: typing.Dict[
             typing.Tuple[int, str], Booster
         ] = {}
 
-        # queue_name__boost_params_consuming_function_map 字典存放  {queue_name,(@boost的入参字典,@boost装饰的消费函数)}
+        # queue_name__boost_params_map stores {queue_name: BoosterParams}
         self.queue_name__boost_params_map: typing.Dict[str, BoosterParams] = {}
 
         self.pid_queue_name__has_start_consume_set = set()
@@ -313,7 +313,7 @@ class BoosterRegistry:
       
 
     def regist_booster(self, booster: Booster):
-        """这个是框架在@boost时候自动调用的,无需用户亲自调用"""
+        """This is automatically called by the framework during @boost decoration, no need for users to call it manually"""
         # if booster.boost_params.is_fake_booster is True:
         #     return
         self.pid_queue_name__booster_map[
@@ -337,10 +337,10 @@ class BoosterRegistry:
 
     def get_all_queue_name__boost_params_unstrict_dict(self):
         """
-        主要用来给前端或可视化观看的。
+        Mainly used for frontend or visualization display.
 
-        返回一个字典,键是队列名,值是@boost的 BoosterParams 入参字典,
-        因为 BoosterParams 有的入参是复杂对象类型,不能json序列化
+        Returns a dict where keys are queue names and values are @boost BoosterParams parameter dicts.
+        Some BoosterParams parameters are complex object types that cannot be JSON serialized.
         """
         return {
             k: v.get_str_dict() for k, v in self.queue_name__boost_params_map.items()
@@ -348,7 +348,7 @@ class BoosterRegistry:
 
     def get_booster(self, queue_name: str) -> Booster:
         """
-        当前进程获得booster对象。注意和下面的get_or_create_booster_by_queue_name方法的区别,主要是开了多进程时候有区别.
+        Get booster object in current process. Note the difference from get_or_create_booster_by_queue_name below, mainly relevant when using multi-process.
         :param queue_name:
         :return:
         """
@@ -357,7 +357,7 @@ class BoosterRegistry:
         if key in self.pid_queue_name__booster_map:
             return self.pid_queue_name__booster_map[key]
         else:
-            err_msg = f"进程 {os.getpid()} ，没有 {queue_name} 对应的 booster   , pid_queue_name__booster_map: {self.pid_queue_name__booster_map}"
+            err_msg = f"Process {os.getpid()} has no booster for {queue_name}, pid_queue_name__booster_map: {self.pid_queue_name__booster_map}"
             raise ValueError(err_msg)
 
     def get_or_create_booster_by_queue_name(
@@ -365,8 +365,8 @@ class BoosterRegistry:
         queue_name,
     ) -> Booster:
         """
-        当前进程获得booster对象，如果是多进程,会在新的进程内部创建一个新的booster对象,因为多进程操作有些中间件的同一个conn不行.
-        :param queue_name: 就是 @boost的入参。
+        Get booster object in current process. In multi-process mode, a new booster object is created in the new process, because some brokers don't support sharing the same connection across processes.
+        :param queue_name: The parameter of @boost.
         :return:
         """
 
@@ -383,16 +383,16 @@ class BoosterRegistry:
 
     def get_boost_params(self, queue_name: str) -> (dict, typing.Callable):
         """
-        这个函数是为了在别的进程实例化 booster，consumer和publisher,获取queue_name队列对应的booster的当时的入参。
-        有些中间件python包的对中间件连接对象不是多进程安全的，不要在进程2中去操作进程1中生成的booster consumer publisher等对象。
+        This function is for instantiating booster, consumer and publisher in other processes, getting the original parameters of the booster for the given queue_name.
+        Some broker Python packages' connection objects are not multi-process safe, so don't use booster/consumer/publisher objects created in process 1 from process 2.
         """
         return self.queue_name__boost_params_map[queue_name]
 
     def build_booster(self, boost_params: BoosterParams) -> Booster:
         """
-        当前进程获得或者创建booster对象。方便有的人需要在函数内部临时动态根据队列名创建booster,不会无数次临时生成消费者、生产者、创建消息队列连接。
-        :param boost_params: 就是 @boost的入参。
-        :param consuming_function: 消费函数
+        Get or create a booster object in the current process. Convenient for dynamically creating boosters by queue name inside functions, without repeatedly creating consumers, publishers, and broker connections.
+        :param boost_params: The parameters for @boost.
+        :param consuming_function: The consuming function
         :return:
         """
 
@@ -402,10 +402,10 @@ class BoosterRegistry:
         else:
             if boost_params.consuming_function is None:
                 raise ValueError(
-                    f" build_booster 方法的 consuming_function 字段不能为None,必须指定一个函数"
+                    f"The consuming_function field in build_booster method cannot be None, a function must be specified"
                 )
             flogger.info(
-                f"创建booster {boost_params} {boost_params.consuming_function}"
+                f"Creating booster {boost_params} {boost_params.consuming_function}"
             )
             booster = Booster(boost_params)(boost_params.consuming_function)
         return booster
@@ -416,30 +416,30 @@ class BoosterRegistry:
         self, publisher_params: PublisherParams
     ) -> AbstractPublisher:
         """
-        跨不同的项目，发布消息。例如proj1中定义有fun1消费函数，但proj2无法直接到proj1的函数，无法直接 fun1.push 来发布消息
-        可以使用这个方法，获取一个publisher。
+        Publish messages across different projects. For example, proj1 has fun1 consuming function, but proj2 cannot directly access proj1's function and cannot use fun1.push to publish.
+        Use this method to get a publisher.
 
         publisher = BoostersManager.get_cross_project_publisher(PublisherParams(queue_name='proj1_queue', broker_kind=publisher_params.broker_kind))
         publisher.publish({'x': aaa})
         """
-        # 确保使用当前 registry 的命名空间，实现隔离
+        # Ensure using current registry's namespace for isolation
         if publisher_params.booster_registry_name != self.booster_registry_name:
             raise ValueError(f"publisher_params.booster_registry_name != self.booster_registry_name, {publisher_params.booster_registry_name} != {self.booster_registry_name}")
             
         return PublisherCacheProxy(publisher_params).publisher
 
     def push(self, queue_name, *args, **kwargs):
-        """push发布消息到消息队列 ;"""
+        """Push a message to the message queue;"""
         self.get_or_create_booster_by_queue_name(queue_name).push(*args, **kwargs)
 
     def publish(self, queue_name, msg):
-        """publish发布消息到消息队列;"""
+        """Publish a message to the message queue;"""
         self.get_or_create_booster_by_queue_name(queue_name).publish(msg)
 
     def consume_queues(self, *queue_names):
         """
-        启动多个消息队列名的消费,多个函数队列在当前同一个进程内启动消费.
-        这种方式节约总的内存,但无法利用多核cpu
+        Start consuming from multiple queue names, all function queues start consuming within the same process.
+        This approach saves total memory, but cannot utilize multi-core CPUs.
         """
         for queue_name in queue_names:
             self.get_booster(queue_name).consume()
@@ -449,8 +449,8 @@ class BoosterRegistry:
 
     def consume_all_queues(self, block=True):
         """
-        启动所有消息队列名的消费,无需一个一个函数亲自 funxx.consume()来启动,多个函数队列在当前同一个进程内启动消费.
-        这种方式节约总的内存,但无法利用多核cpu
+        Start consuming from all queue names without manually calling funxx.consume() for each function, all function queues start consuming within the same process.
+        This approach saves total memory, but cannot utilize multi-core CPUs.
         """
         for queue_name in self.get_all_queues():
             self.get_booster(queue_name).consume()
@@ -461,9 +461,9 @@ class BoosterRegistry:
 
     def multi_process_consume_queues(self, **queue_name__process_num):
         """
-        启动多个消息队列名的消费,传递队列名和进程数,每个队列启动n个单独的消费进程;
-        这种方式总的内存使用高,但充分利用多核cpu
-        例如 multi_process_consume_queues(queue1=2,queue2=3) 表示启动2个进程消费queue1,启动3个进程消费queue2
+        Start consuming from multiple queue names, passing queue names and process counts, each queue starts n separate consuming processes;
+        This approach uses more total memory, but fully utilizes multi-core CPUs.
+        E.g. multi_process_consume_queues(queue1=2,queue2=3) means start 2 processes for queue1, 3 processes for queue2.
         """
         for queue_name, process_num in queue_name__process_num.items():
             self.get_booster(queue_name).multi_process_consume(process_num)
@@ -473,10 +473,10 @@ class BoosterRegistry:
 
     def consume_group(self, booster_group: str, block=False):
         """
-        根据@boost装饰器的 booster_group消费分组名字,启动多个消费函数;
+        Start multiple consuming functions based on the booster_group name in the @boost decorator;
         """
         if booster_group is None:
-            raise ValueError("booster_group 不能为None")
+            raise ValueError("booster_group cannot be None")
         need_consume_queue_names = []
         for queue_name in self.get_all_queues():
             booster = self.get_or_create_booster_by_queue_name(queue_name)
@@ -492,7 +492,7 @@ class BoosterRegistry:
 
     def multi_process_consume_group(self, booster_group: str, process_num=1):
         """
-        根据@boost装饰器的 booster_group消费分组名字,启动多个消费函数;
+        Start multiple consuming functions based on the booster_group name in the @boost decorator using multi-process;
         """
         for _ in range(process_num):
             Process(target=self.consume_group, args=(booster_group, True)).start()
@@ -501,8 +501,8 @@ class BoosterRegistry:
 
     def multi_process_consume_all_queues(self, process_num=1):
         """
-        启动所有消息队列名的消费,无需指定队列名,每个队列启动n个单独的消费进程;
-        这种方式总的内存使用高,但充分利用多核cpu
+        Start consuming from all queue names without specifying queue names, each queue starts n separate consuming processes;
+        This approach uses more total memory, but fully utilizes multi-core CPUs.
         """
         for queue_name in self.get_all_queues():
             self.get_booster(queue_name).multi_process_consume(process_num)
@@ -514,7 +514,7 @@ class BoosterRegistry:
 booster_registry_default = BoosterRegistry(
     booster_registry_name=StrConst.BOOSTER_REGISTRY_NAME_DEFAULT,
 )
-# 这个 BoostersManager 是兼容原来名字,老的BoostersManager原来是一个包含一组classmethod方法的类，
-# 现在 BoostersManager 是 BoosterRegistry 的一个实例，是一个对象。
-# 因为引入了 booster_registry_name 概念，为了多实例隔离更方便，开发成带实例方法的类，老的 BoostersManager 则全是calssmethod方法。
+# BoostersManager is kept for backward compatibility. The original BoostersManager was a class with a set of classmethod methods.
+# Now BoostersManager is an instance of BoosterRegistry, it is an object.
+# With the introduction of booster_registry_name concept, it was developed as a class with instance methods for easier multi-instance isolation. The old BoostersManager only had classmethods.
 BoostersManager = booster_registry_default

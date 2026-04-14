@@ -8,7 +8,8 @@ queue_name__list_map = defaultdict(list)
 list_lock = threading.Lock()
 
 '''
-使用 list 列表作为 消息队列的中间件 实现, 通过指定 consumer_override_cls 和 publisher_override_cls 为用户自定义的类来实现新增消息队列种类。
+Uses a Python list as the message queue middleware implementation.
+By specifying consumer_override_cls and publisher_override_cls as user-defined classes, you can add new message queue types.
 '''
 
 
@@ -26,7 +27,7 @@ class MyListConsumer(EmptyConsumer):
                 time.sleep(1)
 
     def _confirm_consume(self, kw):
-        """ 这里是演示,所以搞简单一点,不实现确认消费 """
+        """ For demonstration purposes, kept simple; does not implement consumption acknowledgment. """
         pass
 
     def _requeue(self, kw):
@@ -55,12 +56,12 @@ class MyListPublisher(EmptyPublisher):
 
 
 '''
-完全重新自定义增加中间件时候,broker_kind 建议指定为 BrokerEnum.EMPTY
+When completely customizing and adding new middleware, it is recommended to set broker_kind to BrokerEnum.EMPTY.
 '''
 
 
 @boost(BoosterParams(queue_name='test_define_list_queue',
-                     broker_kind=BrokerEnum.EMPTY,  # 完全重新自定义新增中间件时候,broker_kind 请指定 BrokerEnum.EMPTY
+                     broker_kind=BrokerEnum.EMPTY,  # When completely customizing new middleware, set broker_kind to BrokerEnum.EMPTY.
                      concurrent_num=1, consumer_override_cls=MyListConsumer, publisher_override_cls=MyListPublisher,
                      is_show_message_get_from_broker=True))
 def cost_long_time_fun(x):

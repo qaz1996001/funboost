@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-高性能内存队列实现
+High-performance in-memory queue implementation
 
-相比 queue.Queue 的优化：
-1. 使用 collections.deque（底层是 C 实现，append/popleft 是原子操作且 O(1)）
-2. 去除 task_done/join 等不必要的功能
-3. 空队列时使用极短暂 sleep 轮询，比 Condition 更轻量
-4. 支持批量获取消息，减少循环开销
+Optimizations compared to queue.Queue:
+1. Uses collections.deque (C implementation under the hood, append/popleft are atomic and O(1))
+2. Removes unnecessary features like task_done/join
+3. Uses very brief sleep polling when queue is empty, lighter than Condition
+4. Supports batch message retrieval to reduce loop overhead
 
-性能对比：
-- queue.Queue: ~20-25万 ops/sec
-- FastestMemQueue: ~180万 ops/sec (get)，批量可达 600万+ ops/sec
+Performance comparison:
+- queue.Queue: ~200-250K ops/sec
+- FastestMemQueue: ~1.8M ops/sec (get), batch can reach 6M+ ops/sec
 """
 
 import time
@@ -21,43 +21,43 @@ from typing import Any, List, Optional
 
 class FastestMemQueue:
     """
-    高性能内存队列，专为 funboost 优化。
-    
-    特点：
-    - 线程安全（deque 的 append/popleft 是原子操作）
-    - 无 task_done/join 开销
-    - 支持批量 get
-    - 最小化同步开销
+    High-performance in-memory queue, optimized for funboost.
+
+    Features:
+    - Thread-safe (deque's append/popleft are atomic operations)
+    - No task_done/join overhead
+    - Supports batch get
+    - Minimized synchronization overhead
     """
     
     __slots__ = ('_queue', '_lock')
     
     def __init__(self):
         self._queue: deque = deque()
-        self._lock = threading.Lock()  # 仅用于 clear 等需要原子性的操作
+        self._lock = threading.Lock()  # Only used for operations requiring atomicity like clear
     
     def put(self, item: Any) -> None:
-        """放入单个消息，无锁操作（deque.append 是原子的）"""
+        """Put a single message, lock-free operation (deque.append is atomic)"""
         self._queue.append(item)
-        # 注意：不在每次 put 时都 set()，因为 get 使用轮询机制
+        # Note: not calling set() on every put, because get uses a polling mechanism
     
     def put_nowait(self, item: Any) -> None:
-        """同 put，保持接口兼容"""
+        """Same as put, for interface compatibility"""
         self._queue.append(item)
     
     def get(self, block: bool = True, timeout: Optional[float] = None) -> Any:
         """
-        获取单个消息
-        
+        Get a single message
+
         Args:
-            block: 是否阻塞等待
-            timeout: 超时时间（秒），None 表示永久等待
-        
+            block: Whether to block and wait
+            timeout: Timeout in seconds, None means wait forever
+
         Returns:
-            队列中的消息
-            
+            Message from the queue
+
         Raises:
-            IndexError: 非阻塞模式下队列为空时抛出
+            IndexError: Raised when queue is empty in non-blocking mode
         """
         while True:
             try:
@@ -65,22 +65,22 @@ class FastestMemQueue:
             except IndexError:
                 if not block:
                     raise
-                # 使用 time.sleep 进行短暂等待，比 Event.wait 更轻量
-                time.sleep(0.0001)  # 0.1ms 轮询
+                # Use time.sleep for brief waiting, lighter than Event.wait
+                time.sleep(0.0001)  # 0.1ms polling
     
     def get_nowait(self) -> Any:
-        """非阻塞获取，队列为空时抛出 IndexError"""
+        """Non-blocking get, raises IndexError when queue is empty"""
         return self._queue.popleft()
     
     def get_batch(self, max_count: int = 100) -> List[Any]:
         """
-        批量获取消息，减少锁竞争开销
-        
+        Batch get messages, reducing lock contention overhead
+
         Args:
-            max_count: 最多获取多少条消息
-            
+            max_count: Maximum number of messages to retrieve
+
         Returns:
-            消息列表（可能为空）
+            List of messages (may be empty)
         """
         result = []
         for _ in range(max_count):
@@ -92,24 +92,24 @@ class FastestMemQueue:
     
     def get_batch_block(self, max_count: int = 100, timeout: float = 0.01) -> List[Any]:
         """
-        批量获取消息，阻塞直到至少有一条消息
-        
+        Batch get messages, blocking until at least one message is available
+
         Args:
-            max_count: 最多获取多少条消息
-            timeout: 等待第一条消息的超时时间
-            
+            max_count: Maximum number of messages to retrieve
+            timeout: Timeout for waiting for the first message
+
         Returns:
-            消息列表（至少一条）
+            List of messages (at least one)
         """
-        # 等待至少有一条消息
+        # Wait until at least one message is available
         while True:
             try:
                 first = self._queue.popleft()
                 break
             except IndexError:
-                time.sleep(0.0001)  # 0.1ms 轮询
-        
-        # 快速获取剩余消息
+                time.sleep(0.0001)  # 0.1ms polling
+
+        # Quickly get remaining messages
         result = [first]
         for _ in range(max_count - 1):
             try:
@@ -119,27 +119,27 @@ class FastestMemQueue:
         return result
     
     def qsize(self) -> int:
-        """返回队列大小（近似值）"""
+        """Return queue size (approximate)"""
         return len(self._queue)
     
     def empty(self) -> bool:
-        """检查队列是否为空"""
+        """Check if the queue is empty"""
         return len(self._queue) == 0
     
     def clear(self) -> None:
-        """清空队列"""
+        """Clear the queue"""
         self._queue.clear()
 
 
 class FastestMemQueues:
-    """高性能内存队列管理器"""
+    """High-performance in-memory queue manager"""
     
     _queues: dict = {}
     _lock = threading.Lock()
     
     @classmethod
     def get_queue(cls, queue_name: str) -> FastestMemQueue:
-        """获取或创建指定名称的队列"""
+        """Get or create a queue with the specified name"""
         if queue_name not in cls._queues:
             with cls._lock:
                 if queue_name not in cls._queues:
@@ -148,7 +148,7 @@ class FastestMemQueues:
     
     @classmethod
     def clear_all(cls) -> None:
-        """清空所有队列"""
+        """Clear all queues"""
         for q in cls._queues.values():
             q.clear()
         cls._queues.clear()
@@ -158,30 +158,30 @@ if __name__ == '__main__':
     import time
     
     print("=" * 60)
-    print("FastestMemQueue 性能测试")
+    print("FastestMemQueue Performance Test")
     print("=" * 60)
     
-    # 测试 FastestMemQueue
+    # Test FastestMemQueue
     q = FastestMemQueue()
     n = 200000
     
-    # 测试 put 性能
+    # Test put performance
     t0 = time.time()
     for i in range(n):
         q.put({'x': i, 'extra': {'task_id': f'test_{i}', 'publish_time': time.time()}})
     t_put = time.time() - t0
-    print(f"FastestMemQueue put {n} 条: {t_put:.4f} 秒, {n/t_put:,.0f} ops/sec")
+    print(f"FastestMemQueue put {n} messages: {t_put:.4f} sec, {n/t_put:,.0f} ops/sec")
     
-    # 测试 get 性能
+    # Test get performance
     t0 = time.time()
     for i in range(n):
         q.get()
     t_get = time.time() - t0
-    print(f"FastestMemQueue get {n} 条: {t_get:.4f} 秒, {n/t_get:,.0f} ops/sec")
+    print(f"FastestMemQueue get {n} messages: {t_get:.4f} sec, {n/t_get:,.0f} ops/sec")
     
     print()
     
-    # 对比 queue.Queue
+    # Compare with queue.Queue
     import queue
     qq = queue.Queue()
     
@@ -189,17 +189,17 @@ if __name__ == '__main__':
     for i in range(n):
         qq.put({'x': i, 'extra': {'task_id': f'test_{i}', 'publish_time': time.time()}})
     t_put = time.time() - t0
-    print(f"queue.Queue put {n} 条: {t_put:.4f} 秒, {n/t_put:,.0f} ops/sec")
+    print(f"queue.Queue put {n} messages: {t_put:.4f} sec, {n/t_put:,.0f} ops/sec")
     
     t0 = time.time()
     for i in range(n):
         qq.get()
     t_get = time.time() - t0
-    print(f"queue.Queue get {n} 条: {t_get:.4f} 秒, {n/t_get:,.0f} ops/sec")
+    print(f"queue.Queue get {n} messages: {t_get:.4f} sec, {n/t_get:,.0f} ops/sec")
     
     print()
     
-    # 测试批量获取
+    # Test batch retrieval
     q2 = FastestMemQueue()
     for i in range(n):
         q2.put(i)
@@ -210,4 +210,4 @@ if __name__ == '__main__':
         batch = q2.get_batch(1000)
         total += len(batch)
     t_batch = time.time() - t0
-    print(f"FastestMemQueue get_batch {n} 条: {t_batch:.4f} 秒, {n/t_batch:,.0f} ops/sec")
+    print(f"FastestMemQueue get_batch {n} messages: {t_batch:.4f} sec, {n/t_batch:,.0f} ops/sec")

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-funboost 所有用法的使用， demo 例子 演示
-这个文件集中演示了 funboost 的 90% 主要功能用法。
+All usage examples for funboost — demo showcase.
+This file demonstrates 90% of funboost's main features.
 """
 
 import time
@@ -10,90 +10,90 @@ import random
 import asyncio
 import datetime
 from funboost import (
-    boost,                  # 核心装饰器
-    BoosterParams,          # 参数配置类
-    BrokerEnum,             # 中间件枚举
-    ConcurrentModeEnum,     # 并发模式枚举
-    TaskOptions, # 优先级/延时配置
-    ApsJobAdder,            # 定时任务添加器
-    ctrl_c_recv,            # 阻塞主线程工具
-    fct,                    # 上下文对象 (Funboost Current Task)
-    BoostersManager,        # 消费者管理器 (用于分组启动)
-    AsyncResult,            # 同步编程生态的异步结果对象
-    AioAsyncResult,          # asyncio生态的异步结果对象
+    boost,                  # Core decorator
+    BoosterParams,          # Parameter configuration class
+    BrokerEnum,             # Broker enum
+    ConcurrentModeEnum,     # Concurrent mode enum
+    TaskOptions, # Priority/delay configuration
+    ApsJobAdder,            # Scheduled job adder
+    ctrl_c_recv,            # Main-thread blocking utility
+    fct,                    # Context object (Funboost Current Task)
+    BoostersManager,        # Consumer manager (for group startup)
+    AsyncResult,            # Async result object for synchronous code
+    AioAsyncResult,          # Async result object for asyncio ecosystem
 )
 
 # ==========================================
-# 1. 基础任务 (使用 SQLite 本地文件作为队列，无需安装 Redis/RabbitMQ 即可测试)
+# 1. Basic Task (uses SQLite local file as queue; no Redis/RabbitMQ needed for testing)
 # ==========================================
 @boost(BoosterParams(
     queue_name="demo_queue_basic",
-    broker_kind=BrokerEnum.SQLITE_QUEUE,  # 使用本地 SQLite 文件作为队列
-    concurrent_num=2,                     # 线程并发数量
+    broker_kind=BrokerEnum.SQLITE_QUEUE,  # Use local SQLite file as queue
+    concurrent_num=2,                     # Thread concurrency count
 ))
 def task_basic(x, y):
-    print(f"[基础任务] 正在处理: {x} + {y} = {x + y}")
+    print(f"[Basic Task] Processing: {x} + {y} = {x + y}")
     time.sleep(0.5)
     return x + y
 
 
 # ==========================================
-# 2. 错误重试任务 (演示自动重试机制)
-# 2.b 获取taskid和消息发布时间 (演示fct上下文的使用)
+# 2. Retry Task (demonstrates automatic retry mechanism)
+# 2.b Get task_id and message publish time (demonstrates fct context usage)
 # ==========================================
 @boost(BoosterParams(
     queue_name="demo_queue_retry",
-    broker_kind=BrokerEnum.MEMORY_QUEUE,  # 使用内存队列
-    max_retry_times=3,                    # 最大重试 3 次
+    broker_kind=BrokerEnum.MEMORY_QUEUE,  # Use in-memory queue
+    max_retry_times=3,                    # Max 3 retries
 
-    is_print_detail_exception=False       # 不打印详细堆栈，保持控制台整洁
+    is_print_detail_exception=False       # Do not print detailed stack trace; keep console clean
 ))
 def task_retry(n):
-    # 模拟：只有 n > 8 才会成功，否则报错触发重试
+    # Simulation: only succeeds when n > 8, otherwise raises an error to trigger retry
     if n <= 8:
-        print(f"[重试任务] 输入 {n} 模拟失败，当前是第 {fct.function_result_status.run_times} 次运行...")
-        raise ValueError("模拟出错啦")
-    print(f"[重试任务] 输入 {n} 成功处理！,任务id是：{fct.task_id} ,发布时间是：{fct.function_result_status.publish_time_format}")
+        print(f"[Retry Task] Input {n} simulates failure, current run count: {fct.function_result_status.run_times}...")
+        raise ValueError("Simulated error")
+    print(f"[Retry Task] Input {n} processed successfully! Task ID: {fct.task_id}, Publish time: {fct.function_result_status.publish_time_format}")
 
 
 # ==========================================
-# 3. QPS 控频任务 (精准控制每秒执行次数)
+# 3. QPS Rate-Limited Task (precisely control executions per second)
 # ==========================================
 @boost(BoosterParams(
     queue_name="demo_queue_qps",
     broker_kind=BrokerEnum.MEMORY_QUEUE,
-    qps=2,  # 限制每秒只执行 2 次，无论并发开多大
+    qps=2,  # Limit to 2 executions per second regardless of concurrency
 ))
 def task_qps(idx):
-    print(f"[QPS任务] {idx} 正在运行 (每秒约2次)... {datetime.datetime.now()}")
+    print(f"[QPS Task] {idx} running (approx. 2/sec)... {datetime.datetime.now()}")
 
 
 # ==========================================
-# 4. Asyncio 协程任务 (高性能 IO 密集型)
+# 4. Asyncio Coroutine Task (high-performance IO-intensive)
 # ==========================================
 @boost(BoosterParams(
     queue_name="demo_queue_async",
     broker_kind=BrokerEnum.MEMORY_QUEUE,
-    concurrent_mode=ConcurrentModeEnum.ASYNC, # 开启 Asyncio 模式
-    concurrent_num=100,  # 协程并发数可以设置很大
+    concurrent_mode=ConcurrentModeEnum.ASYNC, # Enable asyncio mode
+    concurrent_num=100,  # Coroutine concurrency can be set very high
     is_using_rpc_mode = True,
 ))
 async def task_async(url):
-    print(f"[Async任务] 开始请求: {url}")
-    await asyncio.sleep(1) # 模拟 IO 等待
-    print(f"[Async任务] 请求结束: {url}")
+    print(f"[Async Task] Starting request: {url}")
+    await asyncio.sleep(1) # Simulate IO wait
+    print(f"[Async Task] Request finished: {url}")
     return f'url:{url} ,resp: mock_resp'
 
 
 # ==========================================
-# 5. RPC 任务 (发布端获取消费端结果)
-# 注意：RPC模式通常需要 Redis 支持，这里使用 MEMORY_QUEUE 模拟演示(Funboost支持内存模拟)
-# 但生产环境强烈建议配置 funboost_config.py 使用 Redis
+# 5. RPC Task (publisher retrieves result from consumer)
+# Note: RPC mode typically requires Redis; here we use MEMORY_QUEUE for demo (Funboost supports in-memory simulation)
+# For production, it is strongly recommended to configure funboost_config.py to use Redis
 # ==========================================
 @boost(BoosterParams(
     queue_name="demo_queue_rpc",
-    broker_kind=BrokerEnum.MEMORY_QUEUE, 
-    is_using_rpc_mode=True,  # 开启 RPC 模式
+    broker_kind=BrokerEnum.MEMORY_QUEUE,
+    is_using_rpc_mode=True,  # Enable RPC mode
     rpc_result_expire_seconds=10
 ))
 def task_rpc(a, b):
@@ -102,61 +102,61 @@ def task_rpc(a, b):
 
 
 # ==========================================
-# 6. 任务过滤 (去重)
+# 6. Task Filtering (deduplication)
 # ==========================================
 @boost(BoosterParams(
     queue_name="demo_queue_filter",
     broker_kind=BrokerEnum.MEMORY_QUEUE,
-    do_task_filtering=True,           # 开启过滤
-    task_filtering_expire_seconds=60  # 60秒内参数相同的任务只执行一次
+    do_task_filtering=True,           # Enable filtering
+    task_filtering_expire_seconds=60  # Tasks with identical parameters within 60 seconds are executed only once
 ))
 def task_filter(user_id, user_sex, user_name):
-    print(f"[过滤任务] 正在执行: user_id={user_id} name={user_name} sex={user_sex}")
+    print(f"[Filter Task] Executing: user_id={user_id} name={user_name} sex={user_sex}")
 
 
 # ==========================================
-# 7. 延时任务 (消费者取出后，延迟执行)
+# 7. Delayed Task (executed with a delay after consumer picks it up)
 # ==========================================
 @boost(BoosterParams(queue_name="demo_queue_delay", broker_kind=BrokerEnum.MEMORY_QUEUE))
 def task_delay(msg):
-    print(f"[延时任务] 终于执行了: {msg} - 当前时间: {datetime.datetime.now()}")
+    print(f"[Delay Task] Finally executed: {msg} - Current time: {datetime.datetime.now()}")
 
 
 # ==========================================
-# 10. Booster Group (分组启动演示)
-# 场景：假设你有100个消费函数，只想启动其中属于 'my_group_a' 业务组的函数
+# 10. Booster Group (group startup demo)
+# Scenario: Suppose you have 100 consumer functions and only want to start those belonging to 'my_group_a'
 # ==========================================
 @boost(BoosterParams(
-    queue_name="demo_group_task_1", 
+    queue_name="demo_group_task_1",
     broker_kind=BrokerEnum.MEMORY_QUEUE,
-    booster_group="my_group_a"  # 指定分组名称
+    booster_group="my_group_a"  # Specify group name
 ))
 def task_group_a_1(x):
-    print(f"[分组任务A-1] 处理: {x}")
+    print(f"[Group Task A-1] Processing: {x}")
 
 @boost(BoosterParams(
-    queue_name="demo_group_task_2", 
+    queue_name="demo_group_task_2",
     broker_kind=BrokerEnum.MEMORY_QUEUE,
-    booster_group="my_group_a"  # 指定相同的分组名称
+    booster_group="my_group_a"  # Specify the same group name
 ))
 def task_group_a_2(x):
-    print(f"[分组任务A-2] 处理: {x}")
+    print(f"[Group Task A-2] Processing: {x}")
 
 @boost(BoosterParams(
-    queue_name="demo_group_task_3", 
+    queue_name="demo_group_task_3",
     broker_kind=BrokerEnum.MEMORY_QUEUE,
-    booster_group="my_group_b"  # 不同的分组，不会被 my_group_a 启动
+    booster_group="my_group_b"  # Different group; will not be started by my_group_a
 ))
 def task_group_b_1(x):
-    print(f"[分组任务B-1] (这个不应该运行，因为没有启动my_group_b分组，也没有启动task_group_b_1消费函数): {x}")
+    print(f"[Group Task B-1] (This should not run because my_group_b was not started and task_group_b_1 consumer was not started): {x}")
 
 
 # ==========================================
-# 主程序入口
+# Main entry point
 # ==========================================
 if __name__ == '__main__':
-    # --- 1. 启动常规消费者 ---
-    # 启动方式 A: 单个启动
+    # --- 1. Start regular consumers ---
+    # Startup method A: start individually
     task_basic.consume()
     task_retry.consume()
     task_qps.consume()
@@ -164,100 +164,101 @@ if __name__ == '__main__':
     task_rpc.consume()
     task_filter.consume()
     task_delay.consume()
-    
-    # 启动方式 B: 多进程启动 (用于 CPU 密集型任务，这里仅做演示)
-    # task_basic.multi_process_consume(process_num=2)   # 或者 task_basic.mp_consume(process_num=2) ,mp_consume是multi_process_consume的别名简写
 
-    # 启动方式 C: 分组启动 (新增演示)
-    print(">>> 正在启动属于 'my_group_a' 分组的所有消费者...")
+    # Startup method B: multi-process startup (for CPU-intensive tasks; shown here for demo only)
+    # task_basic.multi_process_consume(process_num=2)   # or task_basic.mp_consume(process_num=2), mp_consume is an alias for multi_process_consume
+
+    # Startup method C: group startup (new demo)
+    print(">>> Starting all consumers belonging to group 'my_group_a'...")
     BoostersManager.consume_group("my_group_a")
-    # 注意：这里没有启动 task_group_b_1，因为它属于 my_group_b
+    # Note: task_group_b_1 is not started here because it belongs to my_group_b
 
-    print("=== 消费者已启动，开始发布任务 ===")
+    print("=== Consumers started, beginning to publish tasks ===")
     time.sleep(1)
 
-    # --- 2. 发布基础任务 ---
+    # --- 2. Publish basic tasks ---
     for i in range(5):
         task_basic.push(i, i+1)
 
-    # --- 3. 发布重试任务 ---
-    task_retry.push(5) # 这个会失败并重试3次
-    task_retry.push(6666) # 这个会成功无需重试
+    # --- 3. Publish retry tasks ---
+    task_retry.push(5) # This will fail and retry 3 times
+    task_retry.push(6666) # This will succeed without retrying
 
-    # --- 4. 发布 QPS 任务 ---
+    # --- 4. Publish QPS tasks ---
     for i in range(6):
         task_qps.push(i)
-    
-    # --- 5. 发布 Async 任务 ---
+
+    # --- 5. Publish async tasks ---
     for i in range(3):
-        # 支持异步 push: await task_async.aio_push(...)
+        # Supports async push: await task_async.aio_push(...)
         task_async.push(f"http://site-{i}.com")
 
-    # --- 6. RPC 获取结果演示 ---
-    print("\n--- RPC 演示 ---")
-    # push 返回的是 AsyncResult 对象
-    async_result:AsyncResult = task_rpc.push(10, 20) 
-    print("RPC 任务已发布，正在等待结果...")
-    # result 属性会阻塞当前线程直到获取结果
-    print(f"RPC 结果: {async_result.result}") 
-    
+    # --- 6. RPC result demo ---
+    print("\n--- RPC Demo ---")
+    # push returns an AsyncResult object
+    async_result:AsyncResult = task_rpc.push(10, 20)
+    print("RPC task published, waiting for result...")
+    # The result property blocks the current thread until the result is available
+    print(f"RPC Result: {async_result.result}")
 
-    # --- 7. 任务过滤演示 ---
-    print("\n--- 过滤演示 ---")
-    print("如果不指定filter_str， 默认使用函数的所有入参包括 user_id user_sex user_name 来做过滤")
+
+    # --- 7. Task filtering demo ---
+    print("\n--- Filter Demo ---")
+    print("If filter_str is not specified, all function arguments including user_id, user_sex, and user_name are used for filtering by default")
     task_filter.push(1001,"man",user_name="xiaomin")
 
-    # 演示: 指定字符串过滤 (publish 方式 + task_options)
-    # 场景：只根据 user_id 过滤，即使其他参数不同，只要 user_id 相同就被过滤
-    print("发布 user_id=1001 (第1次)")
+    # Demo: specify a string filter (publish method + task_options)
+    # Scenario: filter only by user_id; tasks with the same user_id are filtered even if other params differ
+    print("Publishing user_id=1001 (1st time)")
     task_filter.publish(
         msg={"user_id": 1001, "user_sex": "man", "user_name": "Tom"},
         task_options=TaskOptions(filter_str="1001")
     )
-    
-    print("发布 user_id=1001 (第2次, name不同, 但filter_str相同, 应该被过滤)")
+
+    print("Publishing user_id=1001 (2nd time, different name, but same filter_str — should be filtered)")
     task_filter.publish(
         msg={"user_id": 1001, "user_sex": "man", "user_name": "Jerry"},
         task_options=TaskOptions(filter_str="1001")
     )
 
 
-    # --- 8. 延时任务演示 ---
-    print("\n--- 延时演示 ---")
-    print(f"发布延时任务时间: {datetime.datetime.now()}")
-    # 使用 publish 方法发布，并携带 task_options
+    # --- 8. Delayed task demo ---
+    print("\n--- Delay Demo ---")
+    print(f"Publish time for delayed task: {datetime.datetime.now()}")
+    # Publish using the publish method with task_options
     task_delay.publish(
-        msg={"msg": "我是延迟5秒的消息"}, 
+        msg={"msg": "I am a message delayed by 5 seconds"},
         task_options=TaskOptions(countdown=5)
     )
 
-    # --- 9. 定时任务演示 (APScheduler) ---
-    print("\n--- 定时演示 (每隔5秒触发一次) ---")
-    # 注意：这里是定时“发布”任务到队列，而不是直接运行函数
+    # --- 9. Scheduled task demo (APScheduler) ---
+    print("\n--- Schedule Demo (triggers every 5 seconds) ---")
+    # Note: this schedules a "publish" of the task to the queue, not a direct function call
     ApsJobAdder(task_basic, job_store_kind='memory').add_push_job(
         trigger='interval',
         seconds=5,
-        args=(100, 200), # 定时执行 task_basic(100, 200)
+        args=(100, 200), # Scheduled to execute task_basic(100, 200)
         id='my_schedule_job'
     )
 
-    # --- 10. 分组任务发布演示 ---
-    print("\n--- 分组任务演示 ---")
+    # --- 10. Group task publish demo ---
+    print("\n--- Group Task Demo ---")
     task_group_a_1.push("A1 data")
     task_group_a_2.push("A2 data")
-    task_group_b_1.push("B1 data (这条消息不会被消费，因为没启动B组)")
+    task_group_b_1.push("B1 data (this message will not be consumed because group B was not started)")
 
-    # --- 11. funboost的asyncio 全链路生态的演示,包括asyncio发布 asyncio消费 asyncio获取结果
+    # --- 11. Demo of funboost's full asyncio ecosystem: asyncio publish, asyncio consume, asyncio get result
     async def rpc_asyncio():
-        aio_async_result:AioAsyncResult = await task_async.aio_push("http://site-1.com") # aio_push 返回 AioAsyncResult 对象
-        print("RPC 任务已发布，正在asyncio生态等待结果...")
-        print(f"aio_async_result RPC 结果: {await aio_async_result.result}") 
-    
+        aio_async_result:AioAsyncResult = await task_async.aio_push("http://site-1.com") # aio_push returns an AioAsyncResult object
+        print("RPC task published, waiting for result in asyncio ecosystem...")
+        print(f"aio_async_result RPC Result: {await aio_async_result.result}")
+
     loop = asyncio.get_event_loop()
     loop.run_until_complete(rpc_asyncio())
 
 
-    print("\n=== 所有演示任务已发布，ctrl_c_recv使主线程进入监听状态 (按3次 Ctrl+C 退出) ===\n")
-    # ctrl_c_recv 阻塞主线程，防止主线程结束了，最好是加上，因为这可以阻止由于主线程结束了导致守护线程结束。 
-    # 因为booster.consume() 是在子线程启动的，所以可以连续多个消费函数.consume()而不阻塞主线程
+    print("\n=== All demo tasks published; ctrl_c_recv puts the main thread into listening state (press Ctrl+C 3 times to exit) ===\n")
+    # ctrl_c_recv blocks the main thread to prevent it from exiting, which is recommended because
+    # daemon threads would also exit if the main thread ends.
+    # Since booster.consume() starts in a child thread, multiple consume() calls can be chained without blocking the main thread.
     ctrl_c_recv()

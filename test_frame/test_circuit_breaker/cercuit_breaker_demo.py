@@ -5,12 +5,12 @@ from funboost.contrib.override_publisher_consumer_cls.circuit_breaker_mixin impo
 
 class CircuitBreakerConsumerWithAlertMixin(CircuitBreakerConsumerMixin):
     def _on_circuit_open(self, info_dict):
-        # 熔断开启时调用
-        print('模拟发个钉钉告警',f'队列 {info_dict["queue_name"]} 开启熔断，熔断信息： {info_dict}')
-    
+        # Called when circuit breaker opens
+        print('Simulating sending a DingTalk alert',f'Queue {info_dict["queue_name"]} circuit breaker opened, info: {info_dict}')
+
     def _on_circuit_close(self, info_dict):
-        # 熔断恢复时调用
-        print('模拟发个微信告警',f'队列 {info_dict["queue_name"]} 已恢复正常，恢复信息： {info_dict}')
+        # Called when circuit breaker closes (recovers)
+        print('Simulating sending a WeChat alert',f'Queue {info_dict["queue_name"]} has recovered, info: {info_dict}')
 
 @boost(BoosterParams(
         queue_name='test_cb_block_v5',

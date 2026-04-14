@@ -12,14 +12,14 @@ from funboost.core.func_params_model import PublisherParams
 from funboost.utils import system_util
 
 if system_util.is_windows():
-    raise ImportError('rocketmq包 只支持linux和mac')
+    raise ImportError('The rocketmq package only supports Linux and macOS')
 
 from rocketmq.client import PushConsumer
 
 
 class RocketmqConsumer(AbstractConsumer):
     """
-    安装
+    Installation required
     """
 
     GROUP_ID = 'g_funboost'
@@ -33,7 +33,7 @@ class RocketmqConsumer(AbstractConsumer):
         self._publisher = RocketmqPublisher(publisher_params=PublisherParams(queue_name=self._queue_name,))
 
         def callback(rocketmq_msg):
-            # self.logger.debug(f'从rocketmq的 [{self._queue_name}] 主题的queue_id {rocketmq_msg.queue_id} 中 取出的消息是：{rocketmq_msg.body}')
+            # self.logger.debug(f'Message fetched from rocketmq topic [{self._queue_name}] queue_id {rocketmq_msg.queue_id}: {rocketmq_msg.body}')
 
             kw = {'body': rocketmq_msg.body, 'rocketmq_msg': rocketmq_msg}
             self._submit_task(kw)

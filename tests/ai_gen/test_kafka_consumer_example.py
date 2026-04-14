@@ -1,6 +1,6 @@
 """
-KafkaManyThreadsConsumer 使用示例和测试
-演示如何使用有序offset提交的多线程Kafka消费者
+KafkaManyThreadsConsumer usage examples and tests
+Demonstrates how to use the multi-threaded Kafka consumer with ordered offset commits
 """
 
 import time
@@ -11,62 +11,62 @@ from kafka_many_threads_consumer import KafkaManyThreadsConsumer
 
 
 def simple_callback(message):
-    """简单的消息处理回调"""
-    print(f"处理消息: partition={message.partition}, offset={message.offset}, "
+    """Simple message processing callback"""
+    print(f"Processing message: partition={message.partition}, offset={message.offset}, "
           f"value={message.value[:100] if message.value else None}...")
 
 
 def complex_callback(message):
-    """复杂的消息处理回调 - 模拟实际业务场景"""
+    """Complex message processing callback - simulates a real business scenario"""
     import random
-    
-    # 模拟不同的处理时间（0.1秒到5秒）
+
+    # Simulate different processing times (0.1s to 5s)
     processing_time = random.uniform(0.1, 5.0)
-    
-    print(f"开始处理消息: partition={message.partition}, offset={message.offset}, "
-          f"预计耗时={processing_time:.2f}s")
-    
-    # 模拟处理过程
+
+    print(f"Start processing message: partition={message.partition}, offset={message.offset}, "
+          f"estimated_time={processing_time:.2f}s")
+
+    # Simulate processing
     time.sleep(processing_time)
-    
-    # 模拟偶尔的处理失败
-    if random.random() < 0.03:  # 3%失败率
-        raise Exception(f"模拟处理失败: partition={message.partition}, offset={message.offset}")
-    
-    print(f"完成处理消息: partition={message.partition}, offset={message.offset}, "
-          f"实际耗时={processing_time:.2f}s")
+
+    # Simulate occasional processing failure
+    if random.random() < 0.03:  # 3% failure rate
+        raise Exception(f"Simulated processing failure: partition={message.partition}, offset={message.offset}")
+
+    print(f"Finished processing message: partition={message.partition}, offset={message.offset}, "
+          f"actual_time={processing_time:.2f}s")
 
 
 def database_callback(message):
-    """模拟数据库写入场景"""
+    """Simulate a database write scenario"""
     try:
-        # 解析消息内容
+        # Parse message content
         if message.value:
             data = json.loads(message.value)
         else:
             data = {"empty": True}
-        
-        # 模拟数据库操作
+
+        # Simulate database operation
         time.sleep(random.uniform(0.2, 1.0))
-        
-        # 模拟偶尔的数据库连接失败
-        if random.random() < 0.02:  # 2%失败率
-            raise Exception("数据库连接失败")
-        
-        print(f"数据已保存到数据库: partition={message.partition}, offset={message.offset}")
-        
+
+        # Simulate occasional database connection failure
+        if random.random() < 0.02:  # 2% failure rate
+            raise Exception("Database connection failed")
+
+        print(f"Data saved to database: partition={message.partition}, offset={message.offset}")
+
     except json.JSONDecodeError:
-        print(f"消息格式错误: partition={message.partition}, offset={message.offset}")
-        # 对于格式错误的消息，我们选择跳过（不抛出异常）
+        print(f"Message format error: partition={message.partition}, offset={message.offset}")
+        # For format errors, we choose to skip (do not raise exception)
     except Exception as e:
-        print(f"数据库操作失败: {e}")
-        raise  # 重新抛出异常，这样消息会标记为失败
+        print(f"Database operation failed: {e}")
+        raise  # Re-raise exception so the message is marked as failed
 
 
 def run_basic_example():
-    """基础使用示例"""
-    print("=== 基础使用示例 ===")
-    
+    """Basic usage example"""
+    print("=== Basic Usage Example ===")
+
     consumer = KafkaManyThreadsConsumer(
         kafka_broker_address="localhost:9092",
         topic="test-topic",
@@ -74,65 +74,65 @@ def run_basic_example():
         num_threads=10,
         callback_func=simple_callback
     )
-    
+
     try:
         consumer.start()
-        
-        # 运行30秒
+
+        # Run for 30 seconds
         for i in range(6):
             time.sleep(5)
             stats = consumer.get_stats()
-            print(f"统计信息 [{i+1}/6]: 消费={stats['consumed_count']}, "
-                  f"处理成功={stats['processed_count']}, 失败={stats['failed_count']}, "
-                  f"已提交={stats['committed_count']}")
-            
+            print(f"Statistics [{i+1}/6]: consumed={stats['consumed_count']}, "
+                  f"processed={stats['processed_count']}, failed={stats['failed_count']}, "
+                  f"committed={stats['committed_count']}")
+
     except KeyboardInterrupt:
-        print("接收到中断信号")
+        print("Received interrupt signal")
     finally:
         consumer.stop()
 
 
 def run_high_concurrency_example():
-    """高并发场景示例"""
-    print("=== 高并发场景示例 ===")
-    
+    """High concurrency scenario example"""
+    print("=== High Concurrency Scenario Example ===")
+
     consumer = KafkaManyThreadsConsumer(
         kafka_broker_address="localhost:9092",
         topic="high-throughput-topic",
         group_id="high-concurrency-group",
-        num_threads=100,  # 100个线程
+        num_threads=100,  # 100 threads
         callback_func=complex_callback
     )
-    
+
     try:
         consumer.start()
-        
-        # 运行60秒，观察高并发下的表现
+
+        # Run for 60 seconds, observe performance under high concurrency
         for i in range(12):
             time.sleep(5)
             stats = consumer.get_stats()
             offset_status = stats['offset_manager_status']
-            
-            print(f"高并发统计 [{i+1}/12]:")
-            print(f"  消费: {stats['consumed_count']}")
-            print(f"  处理成功: {stats['processed_count']}")
-            print(f"  处理失败: {stats['failed_count']}")
-            print(f"  已提交: {stats['committed_count']}")
-            print(f"  待处理队列: {offset_status['pending_count']}")
-            print(f"  可提交offset: {offset_status['committable_offsets']}")
+
+            print(f"High concurrency statistics [{i+1}/12]:")
+            print(f"  Consumed: {stats['consumed_count']}")
+            print(f"  Processing successes: {stats['processed_count']}")
+            print(f"  Processing failures: {stats['failed_count']}")
+            print(f"  Committed: {stats['committed_count']}")
+            print(f"  Pending queue: {offset_status['pending_count']}")
+            print(f"  Committable offsets: {offset_status['committable_offsets']}")
             print("---")
-            
+
     except KeyboardInterrupt:
-        print("接收到中断信号")
+        print("Received interrupt signal")
     finally:
         consumer.stop()
 
 
 def run_reliability_test():
-    """可靠性测试 - 模拟kill -9场景"""
-    print("=== 可靠性测试 ===")
-    print("这个测试会在30秒后自动停止，模拟突然中断的场景")
-    
+    """Reliability test - simulate kill -9 scenario"""
+    print("=== Reliability Test ===")
+    print("This test will automatically stop after 30 seconds, simulating a sudden interruption")
+
     consumer = KafkaManyThreadsConsumer(
         kafka_broker_address="localhost:9092",
         topic="reliability-topic",
@@ -140,102 +140,102 @@ def run_reliability_test():
         num_threads=50,
         callback_func=database_callback
     )
-    
+
     def auto_stop():
-        """30秒后自动停止"""
+        """Auto-stop after 30 seconds"""
         time.sleep(30)
-        print("30秒到，模拟突然停止...")
+        print("30 seconds elapsed, simulating sudden stop...")
         consumer.stop()
-    
+
     try:
         consumer.start()
-        
-        # 启动自动停止线程
+
+        # Start auto-stop thread
         stop_thread = threading.Thread(target=auto_stop, daemon=True)
         stop_thread.start()
-        
-        # 监控状态
+
+        # Monitor status
         start_time = time.time()
         while consumer.running:
             time.sleep(2)
             elapsed = time.time() - start_time
             stats = consumer.get_stats()
-            
-            print(f"运行时间: {elapsed:.1f}s, 消费: {stats['consumed_count']}, "
-                  f"处理: {stats['processed_count']}, 失败: {stats['failed_count']}")
-            
-            if elapsed > 35:  # 安全退出
+
+            print(f"Runtime: {elapsed:.1f}s, consumed: {stats['consumed_count']}, "
+                  f"processed: {stats['processed_count']}, failed: {stats['failed_count']}")
+
+            if elapsed > 35:  # Safety exit
                 break
-                
-        print("可靠性测试完成")
-        
+
+        print("Reliability test complete")
+
     except KeyboardInterrupt:
-        print("接收到中断信号")
+        print("Received interrupt signal")
     finally:
         if consumer.running:
             consumer.stop()
 
 
 def run_multiple_consumers():
-    """多消费者实例测试"""
-    print("=== 多消费者实例测试 ===")
-    print("启动3个消费者实例，测试负载均衡")
-    
+    """Multiple consumer instance test"""
+    print("=== Multiple Consumer Instance Test ===")
+    print("Starting 3 consumer instances to test load balancing")
+
     consumers = []
-    
+
     for i in range(3):
         consumer = KafkaManyThreadsConsumer(
             kafka_broker_address="localhost:9092",
             topic="multi-consumer-topic",
-            group_id="multi-consumer-group",  # 同一个group
+            group_id="multi-consumer-group",  # Same group
             num_threads=20,
-            callback_func=lambda msg, idx=i: print(f"消费者{idx}: partition={msg.partition}, offset={msg.offset}")
+            callback_func=lambda msg, idx=i: print(f"Consumer {idx}: partition={msg.partition}, offset={msg.offset}")
         )
         consumers.append(consumer)
-    
+
     try:
-        # 启动所有消费者
+        # Start all consumers
         for i, consumer in enumerate(consumers):
             consumer.start()
-            print(f"消费者{i}已启动")
-            time.sleep(1)  # 错开启动时间
-        
-        # 运行40秒
+            print(f"Consumer {i} started")
+            time.sleep(1)  # Stagger start times
+
+        # Run for 40 seconds
         for second in range(40):
             time.sleep(1)
-            if second % 10 == 9:  # 每10秒打印一次统计
-                print(f"\n=== {second+1}秒统计 ===")
+            if second % 10 == 9:  # Print statistics every 10 seconds
+                print(f"\n=== {second+1}s statistics ===")
                 for i, consumer in enumerate(consumers):
                     stats = consumer.get_stats()
-                    print(f"消费者{i}: 消费={stats['consumed_count']}, "
-                          f"处理={stats['processed_count']}")
-        
+                    print(f"Consumer {i}: consumed={stats['consumed_count']}, "
+                          f"processed={stats['processed_count']}")
+
     except KeyboardInterrupt:
-        print("接收到中断信号")
+        print("Received interrupt signal")
     finally:
         for i, consumer in enumerate(consumers):
-            print(f"停止消费者{i}...")
+            print(f"Stopping consumer {i}...")
             consumer.stop()
 
 
 if __name__ == "__main__":
     import sys
-    
-    print("KafkaManyThreadsConsumer 测试程序")
-    print("请确保Kafka服务器运行在 localhost:9092")
-    print("并且已创建相应的topic")
+
+    print("KafkaManyThreadsConsumer test program")
+    print("Please ensure Kafka server is running at localhost:9092")
+    print("and the corresponding topics have been created")
     print()
-    
+
     if len(sys.argv) > 1:
         test_type = sys.argv[1]
     else:
-        print("可用的测试类型:")
-        print("1. basic - 基础使用示例")
-        print("2. high_concurrency - 高并发场景")
-        print("3. reliability - 可靠性测试")
-        print("4. multiple - 多消费者测试")
-        test_type = input("请选择测试类型 (1-4): ").strip()
-    
+        print("Available test types:")
+        print("1. basic - Basic usage example")
+        print("2. high_concurrency - High concurrency scenario")
+        print("3. reliability - Reliability test")
+        print("4. multiple - Multiple consumer test")
+        test_type = input("Please select test type (1-4): ").strip()
+
     test_mapping = {
         "1": run_basic_example,
         "basic": run_basic_example,
@@ -246,10 +246,10 @@ if __name__ == "__main__":
         "4": run_multiple_consumers,
         "multiple": run_multiple_consumers
     }
-    
+
     test_func = test_mapping.get(test_type)
     if test_func:
         test_func()
     else:
-        print(f"未知的测试类型: {test_type}")
+        print(f"Unknown test type: {test_type}")
         sys.exit(1)

@@ -7,7 +7,7 @@ import grpc
 
 
 class GrpcPublisher(AbstractPublisher, ):
-    """grpc 作为broker"""
+    """gRPC as broker"""
 
     def custom_init(self):
         host = self.publisher_params.broker_exclusive_config['host']
@@ -24,15 +24,15 @@ class GrpcPublisher(AbstractPublisher, ):
 
     def sync_call(self, msg_dict: dict, is_return_rpc_data_obj=True):
         """
-        同步请求,并阻塞等待结果返回.
-        不像push那样依赖AsyncResult + redis 实现的rpc
+        Synchronous request that blocks and waits for the result to return.
+        Unlike push, this does not rely on AsyncResult + redis for RPC.
         :param msg_dict:
         :return:
         """
 
         """
-        用法例子
-        $booster.publisher.sync_call({'x':i,'y':i*2}) 
+        Usage example:
+        $booster.publisher.sync_call({'x':i,'y':i*2})
         """
         request = funboost_grpc_pb2.FunboostGrpcRequest(json_req=Serialization.to_json_str(msg_dict),
                                                         call_type="sync_call")

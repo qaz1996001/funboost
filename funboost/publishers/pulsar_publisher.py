@@ -26,7 +26,7 @@ from funboost.funboost_config_deafult import BrokerConnConfig
 
 class PulsarPublisher(AbstractPublisher, ):
     """
-    使用pulsar作为中间件
+    Uses Pulsar as the broker.
     """
 
     def custom_init(self):
@@ -38,7 +38,7 @@ class PulsarPublisher(AbstractPublisher, ):
         self._producer.send(msg)
 
     def clear(self):
-        """用户换个 subscription_name 就可以重新消费了，不需要清空消息"""
+        """Users can re-consume by changing the subscription_name, no need to clear messages"""
         pass
 
 

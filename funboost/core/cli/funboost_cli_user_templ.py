@@ -1,5 +1,5 @@
 """
-funboost现在 新增 命令行启动消费 发布  和清空消息
+funboost now supports command-line launching of consumers, publishers, and clearing messages.
 
 
 """
@@ -8,32 +8,33 @@ from pathlib import Path
 import fire
 
 project_root_path = Path(__file__).absolute().parent
-print(f'project_root_path is : {project_root_path}  ,请确认是否正确')
-sys.path.insert(1, str(project_root_path))  # 这个是为了方便命令行不用用户手动先 export PYTHONPATTH=项目根目录
+print(f'project_root_path is : {project_root_path}  , please verify this is correct')
+sys.path.insert(1, str(project_root_path))  # This makes it convenient to use the CLI without manually running 'export PYTHONPATH=project_root_dir' first.
 
 # $$$$$$$$$$$$
-# 以上的sys.path代码需要放在最上面,先设置好pythonpath再导入funboost相关的模块
+# The sys.path code above must be placed at the top, setting up PYTHONPATH before importing funboost-related modules.
 # $$$$$$$$$$$$
 
 
 from funboost.core.cli.funboost_fire import BoosterFire, env_dict
 from funboost.core.cli.discovery_boosters import BoosterDiscovery
 
-# 需要启动的函数,那么该模块或函数建议建议要被import到这来, 否则需要要在 --import_modules_str 或 booster_dirs 中指定用户项目中有哪些模块包括了booster
+# For functions to be started, it is recommended to import the module or function here,
+# otherwise specify the modules containing boosters via --import_modules_str or booster_dirs.
 '''
-有4种方式,自动找到有@boost装饰器,注册booster
+There are 4 ways to auto-discover @boost decorators and register boosters:
 
-1. 用户亲自把要启动的消费函数所在模块或函数 手动 import 一下到此模块来
-2. 用户在使用命令行时候 --import_modules_str 指定导入哪些模块路径,就能启动那些队列名来消费和发布了.
-3. 用户使用BoosterDiscovery.auto_discovery_boosters  自动 import 指定文件夹下的 .py 文件来实现.
-4  用户在使用命令行时候传参 project_root_path booster_dirs ,自动扫描模块,自动import
+1. Manually import the module or function containing the consuming function into this module.
+2. Use --import_modules_str on the command line to specify which module paths to import, enabling consumption and publishing for those queue names.
+3. Use BoosterDiscovery.auto_discovery_boosters to automatically import .py files in a specified folder.
+4. Pass project_root_path and booster_dirs on the command line to auto-scan and import modules.
 '''
 env_dict['project_root_path'] = project_root_path
 
 if __name__ == '__main__':
-    # booster_dirs 用户可以自己增加扫描的文件夹,这样可以命令行少传了 --booster_dirs_str
-    # BoosterDiscovery 可以多次调用
-    BoosterDiscovery(project_root_path, booster_dirs=[], max_depth=1, py_file_re_str=None).auto_discovery()  # 这个最好放到main里面,如果要扫描自身文件夹,没写正则排除文件本身,会无限懵逼死循环导入
+    # booster_dirs: users can add additional folders to scan, reducing the need to pass --booster_dirs_str on the CLI.
+    # BoosterDiscovery can be called multiple times.
+    BoosterDiscovery(project_root_path, booster_dirs=[], max_depth=1, py_file_re_str=None).auto_discovery()  # Best placed inside main; if scanning its own folder without a regex to exclude the file itself, it will cause infinite circular imports.
     fire.Fire(BoosterFire, )
 
 '''

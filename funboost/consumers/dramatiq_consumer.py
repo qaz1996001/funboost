@@ -8,37 +8,37 @@ from funboost.assist.dramatiq_helper import DramatiqHelper
 
 class DramatiqConsumer(AbstractConsumer):
     """
-    dramatiq作为中间件实现的。
+    Consumer implemented using dramatiq as middleware.
     """
 
 
     def custom_init(self):
-        # 这就是核心，
+        # This is the core
         dramatiq_actor_options = self.consumer_params.broker_exclusive_config['dramatiq_actor_options']
         if self.consumer_params.function_timeout:
-            dramatiq_actor_options['time_limit'] = self.consumer_params.function_timeout * 1000  # dramatiq的超时单位是毫秒，funboost是秒。
+            dramatiq_actor_options['time_limit'] = self.consumer_params.function_timeout * 1000  # dramatiq timeout is in milliseconds, funboost uses seconds.
         dramatiq_actor_options['max_retries'] = self.consumer_params.max_retry_times
 
         @dramatiq.actor(actor_name=self.queue_name, queue_name=self.queue_name,
                         **dramatiq_actor_options)
         def f(*args, **kwargs):
-            self.logger.debug(f' 这条消息是 dramatiq 从 {self.queue_name} 队列中取出 ,是由 dramatiq 框架调度 {self.consuming_function.__name__} 函数处理: args:  {args} ,  kwargs: {kwargs}')
+            self.logger.debug(f' This message was fetched by dramatiq from queue {self.queue_name}, dispatched by dramatiq framework to function {self.consuming_function.__name__}: args: {args}, kwargs: {kwargs}')
             return self.consuming_function(*args, **kwargs)
 
         DramatiqHelper.queue_name__actor_map[self.queue_name] = f
 
     def start_consuming_message(self):
-        # 不单独每个函数都启动一次celery的worker消费，是把要消费的 queue name放到列表中，realy_start_dramatiq_worker 一次性启动多个函数消费。
+        # Don't start a worker for each function individually; put queue names in a list, and realy_start_dramatiq_worker starts consuming multiple functions at once.
         DramatiqHelper.to_be_start_work_celery_queue_name_set.add(self.queue_name)
         super().start_consuming_message()
 
     def _dispatch_task(self):
-        """ 完全由dramatiq框架接管控制消费，不使用funboost的AbstractConsumer的_run"""
+        """ Consumption is fully controlled by the dramatiq framework, not using funboost's AbstractConsumer._run"""
         while 1:
             time.sleep(100)
 
     def _confirm_consume(self, kw):
-        """dramatiq框架默认自带，不需要funboost实现"""
+        """Built-in with dramatiq framework, no funboost implementation needed"""
 
     def _requeue(self, kw):
         pass

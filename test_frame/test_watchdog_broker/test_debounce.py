@@ -1,26 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-测试 Watchdog Broker 的防抖功能
+Test Watchdog Broker's debounce functionality
 
-防抖功能说明：
-- debounce_seconds=None: 不防抖，每次文件事件都触发消费
-- debounce_seconds=2: 2秒防抖，在2秒内对同一文件的多次事件只触发一次消费
+Debounce functionality description:
+- debounce_seconds=None: no debounce; every file event triggers consumption
+- debounce_seconds=2: 2-second debounce; multiple events on the same file within 2 seconds trigger only one consumption
 
-测试场景：
-1. 第0秒创建文件
-2. 第0.5秒修改文件
-3. 第1秒再次修改文件
-如果设置 debounce_seconds=2，以上操作只会触发1次消费（在最后一次修改后2秒触发）
+Test scenario:
+1. Create file at second 0
+2. Modify file at second 0.5
+3. Modify file again at second 1
+If debounce_seconds=2 is set, the above operations trigger only 1 consumption (2 seconds after the last modification).
 """
 
 import time
 from pathlib import Path
 from funboost import boost, BoosterParams, ctrl_c_recv, BrokerEnum
 
-# 测试目录
+# Test directory
 TEST_DIR = Path(__file__).parent / "debounce_test_data"
 
-# 记录触发次数
+# Track the number of triggers
 trigger_count = 0
 
 
@@ -36,13 +36,13 @@ trigger_count = 0
             "ignore_patterns": [],
             "ignore_directories": True,
             "case_sensitive": False,
-            "event_types": ["created", "modified"],  # 同时监听创建和修改
+            "event_types": ["created", "modified"],  # Listen to both created and modified events
             "recursive": False,
-            "ack_action": "none",  # 纯监控模式，不删除文件，方便观察
+            "ack_action": "none",  # Monitoring only; do not delete files, for easy observation
             "read_file_content": True,
-            # ==================== 防抖配置 ====================
-            # 设置为 2 秒防抖
-            # 如果设置为 None，则每次文件事件都触发消费
+            # ==================== Debounce configuration ====================
+            # Set to 2-second debounce
+            # If set to None, every file event triggers consumption
             "debounce_seconds": 2,
         },
         should_check_publish_func_params=False,
@@ -56,60 +56,61 @@ def process_file_debounce(
     timestamp,
     file_content,
 ):
-    """处理文件事件（带防抖）"""
+    """Process file event (with debounce)"""
     global trigger_count
     trigger_count += 1
     print(f"\n{'='*60}")
-    print(f"[触发次数: {trigger_count}] [{event_type}] 文件: {Path(src_path).name}")
-    print(f"  时间戳: {time.strftime('%H:%M:%S', time.localtime(timestamp))}")
+    print(f"[Trigger count: {trigger_count}] [{event_type}] File: {Path(src_path).name}")
+    print(f"  Timestamp: {time.strftime('%H:%M:%S', time.localtime(timestamp))}")
     if file_content:
-        print(f"  内容: {file_content[:100]}")
+        print(f"  Content: {file_content[:100]}")
     print(f"{'='*60}\n")
-    return f"处理完成: {Path(src_path).name}"
+    return f"Processing complete: {Path(src_path).name}"
 
 
 def test_debounce():
     """
-    测试防抖效果
-    
-    对同一个文件进行多次快速操作，观察是否只触发一次消费
+    Test the debounce effect.
+
+    Perform multiple rapid operations on the same file and observe whether
+    only one consumption is triggered.
     """
     TEST_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     print("\n" + "="*60)
-    print("开始测试防抖功能 (debounce_seconds=2)")
+    print("Starting debounce test (debounce_seconds=2)")
     print("="*60)
-    
+
     test_file = TEST_DIR / "debounce_test.txt"
-    
-    # 第0秒：创建文件
-    print(f"\n[{time.strftime('%H:%M:%S')}] 创建文件...")
-    test_file.write_text("版本1: 初始内容", encoding="utf-8")
-    
-    # 第0.5秒：修改文件
+
+    # Second 0: create the file
+    print(f"\n[{time.strftime('%H:%M:%S')}] Creating file...")
+    test_file.write_text("Version 1: initial content", encoding="utf-8")
+
+    # Second 0.5: modify the file
     time.sleep(0.5)
-    print(f"[{time.strftime('%H:%M:%S')}] 第1次修改...")
-    test_file.write_text("版本2: 第一次修改", encoding="utf-8")
-    
-    # 第1秒：再次修改
+    print(f"[{time.strftime('%H:%M:%S')}] Modification 1...")
+    test_file.write_text("Version 2: first modification", encoding="utf-8")
+
+    # Second 1: modify again
     time.sleep(0.5)
-    print(f"[{time.strftime('%H:%M:%S')}] 第2次修改...")
-    test_file.write_text("版本3: 第二次修改", encoding="utf-8")
-    
-    # 第1.5秒：第三次修改
+    print(f"[{time.strftime('%H:%M:%S')}] Modification 2...")
+    test_file.write_text("Version 3: second modification", encoding="utf-8")
+
+    # Second 1.5: third modification
     time.sleep(0.5)
-    print(f"[{time.strftime('%H:%M:%S')}] 第3次修改...")
-    test_file.write_text("版本4: 第三次修改", encoding="utf-8")
-    
-    print(f"\n[{time.strftime('%H:%M:%S')}] 完成4次文件操作（1次创建 + 3次修改）")
-    print("如果防抖生效，应该只触发1次消费（在最后一次修改后2秒）")
-    print(f"预计触发时间: {time.strftime('%H:%M:%S', time.localtime(time.time() + 2))}")
-    print("等待防抖定时器触发...\n")
+    print(f"[{time.strftime('%H:%M:%S')}] Modification 3...")
+    test_file.write_text("Version 4: third modification", encoding="utf-8")
+
+    print(f"\n[{time.strftime('%H:%M:%S')}] Completed 4 file operations (1 creation + 3 modifications)")
+    print("If debounce is working, only 1 consumption should be triggered (2 seconds after the last modification)")
+    print(f"Expected trigger time: {time.strftime('%H:%M:%S', time.localtime(time.time() + 2))}")
+    print("Waiting for debounce timer to fire...\n")
 
 
 if __name__ == "__main__":
     process_file_debounce.consume()
-    time.sleep(3)  # 等待消费者启动
+    time.sleep(3)  # Wait for the consumer to start
     test_debounce()
-    print("\n等待观察结果（约10秒后可 Ctrl+C 退出）...\n")
+    print("\nWaiting to observe results (press Ctrl+C to exit after about 10 seconds)...\n")
     ctrl_c_recv()

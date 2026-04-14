@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-测试内存队列的 call 方法：发布消息并通过 concurrent.futures.Future 获取结果，不依赖 Redis。
+Test the call method of memory queue: publish a message and retrieve the result
+via concurrent.futures.Future without depending on Redis.
 """
 import time
 from funboost import boost, BoosterParams, BrokerEnum
@@ -13,7 +14,7 @@ from funboost import boost, BoosterParams, BrokerEnum
     concurrent_num=10,
 ))
 def add(x, y):
-    time.sleep(0.5)  # 模拟耗时
+    time.sleep(0.5)  # Simulate time-consuming operation
     return x + y
 
 
@@ -28,28 +29,28 @@ def divide(a, b):
 
 
 if __name__ == '__main__':
-    # 启动消费
+    # Start consuming
     add.consume()
     divide.consume()
-    time.sleep(1)  # 等消费者启动
+    time.sleep(1)  # Wait for consumers to start
 
-    # ========== 测试1：正常调用 ==========
+    # ========== Test 1: Normal call ==========
     print('=' * 50)
-    print('测试1：call 方法正常获取结果')
+    print('Test 1: call method retrieves result normally')
     future = add.publisher.call(10, y=20)
-    # future 是 concurrent.futures.Future 对象
-    # .result(timeout) 阻塞等待结果，返回 FunctionResultStatus 对象
+    # future is a concurrent.futures.Future object
+    # .result(timeout) blocks and waits for the result, returns a FunctionResultStatus object
     function_result_status = future.result(timeout=10)
     print(f'  success: {function_result_status.success}')
     print(f'  result: {function_result_status.result}')
     print(f'  task_id: {function_result_status.task_id}')
     assert function_result_status.success is True
     assert function_result_status.result == 30
-    print('  ✅ 测试1 通过')
+    print('  ✅ Test 1 passed')
 
-    # ========== 测试2：多个 call 并发 ==========
+    # ========== Test 2: Multiple concurrent calls ==========
     print('=' * 50)
-    print('测试2：多个 call 并发获取结果')
+    print('Test 2: Multiple concurrent call results')
     futures = []
     for i in range(5):
         f = add.publisher.call(i, y=i * 10)
@@ -61,24 +62,24 @@ if __name__ == '__main__':
         print(f'  {i} + {i * 10} = {frs.result} (expected {expected}), success={frs.success}')
         assert frs.result == expected
         assert frs.success is True
-    print('  ✅ 测试2 通过')
+    print('  ✅ Test 2 passed')
 
-    # ========== 测试3：函数异常时 Future 也能正常返回 ==========
+    # ========== Test 3: Future returns normally even when function raises an exception ==========
     print('=' * 50)
-    print('测试3：函数异常时 Future 正常返回（success=False）')
-    future_err = divide.publisher.call(10, b=0)  # 除零错误
+    print('Test 3: Future returns normally when function raises exception (success=False)')
+    future_err = divide.publisher.call(10, b=0)  # Division by zero error
     frs_err = future_err.result(timeout=10)
     print(f'  success: {frs_err.success}')
     print(f'  exception: {frs_err.exception}')
     assert frs_err.success is False
-    print('  ✅ 测试3 通过')
+    print('  ✅ Test 3 passed')
 
-    # ========== 测试4：普通 push 不受影响 ==========
+    # ========== Test 4: Normal push is not affected ==========
     print('=' * 50)
-    print('测试4：普通 push 不受 call 影响')
+    print('Test 4: Normal push is not affected by call')
     add.push(100, y=200)
     time.sleep(2)
-    print('  ✅ 测试4 通过（push 正常运行）')
+    print('  ✅ Test 4 passed (push works normally)')
 
     print('=' * 50)
-    print('🎉 所有测试通过！内存队列 call 方法工作正常，完全不依赖 Redis。')
+    print('🎉 All tests passed! Memory queue call method works correctly, no Redis dependency.')

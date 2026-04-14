@@ -1,8 +1,8 @@
 # funboost/faas/__init__.py
 
 """
-惰性导入机制：只在用户实际访问时才导入对应的 router
-这样用户只使用 fastapi 时不会因为 flask/django 未安装而报错
+Lazy import mechanism: only imports the corresponding router when the user actually accesses it.
+This way, when the user only uses fastapi, it won't fail because flask/django is not installed.
 """
 
 import typing
@@ -16,7 +16,7 @@ from funboost.core.active_cousumer_info_getter import (
  )
 
 
-# 动态导入配置：映射表定义了所有支持的router
+# Dynamic import configuration: mapping table defines all supported routers
 _ROUTER_CONFIG = {
     'fastapi_router': {
         'module': 'fastapi_adapter',
@@ -35,27 +35,27 @@ _ROUTER_CONFIG = {
     },
 }
 
-# 动态导入的缓存
+# Cache for dynamic imports
 _cache = {}
 
 
 def __getattr__(name: str):
     """
-    惰性导入机制：只在用户实际访问时才导入对应的 router
-    这样用户只使用 fastapi 时不会因为 flask/django 未安装而报错
+    Lazy import mechanism: only imports the corresponding router when the user actually accesses it.
+    This way, when the user only uses fastapi, it won't fail because flask/django is not installed.
     """
-    # 检查是否是支持的router
+    # Check if it is a supported router
     if name not in _ROUTER_CONFIG:
         raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
     
-    # 如果已缓存，直接返回
+    # If already cached, return directly
     if name in _cache:
         return _cache[name]
     
-    # 获取配置信息
+    # Get configuration info
     config = _ROUTER_CONFIG[name]
     
-    # 动态导入
+    # Dynamic import
     try:
         module = __import__(
             f"{__package__}.{config['module']}", 
@@ -66,12 +66,12 @@ def __getattr__(name: str):
         return router_obj
     except ImportError as e:
         raise ImportError(
-            f"无法导入 {name}，请先安装 {config['package']}: pip install {config['package']}\n"
-            f"原始错误: {e}"
+            f"Cannot import {name}, please install {config['package']} first: pip install {config['package']}\n"
+            f"Original error: {e}"
         )
 
 
-# 定义 __all__ 以支持 from funboost.faas import *
+# Define __all__ to support from funboost.faas import *
 __all__ = [
     'ActiveCousumerProcessInfoGetter',
     'QueuesConusmerParamsGetter',
@@ -83,9 +83,9 @@ __all__ = [
 ]
 
 
-# 4. 类型检查支持 (让 PyCharm/VSCode 能补全)
+# 4. Type checking support (enables PyCharm/VSCode autocompletion)
 if typing.TYPE_CHECKING:
-    # 这里只是给 IDE 看的，运行时不会执行，所以不会报错
+    # This is only for IDE inspection, not executed at runtime, so it won't cause errors
     from .fastapi_adapter import fastapi_router 
     from .flask_adapter import flask_blueprint
     from .django_adapter import django_router

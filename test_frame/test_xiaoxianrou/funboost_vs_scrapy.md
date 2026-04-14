@@ -6,12 +6,12 @@ tags: []
 
 # Funboost vs Scrapy
 
-## 引言
-在爬虫开发中，Scrapy是一种常用的框架。本文将通过一个爬虫示例对比Funboost和Scrapy这两者的优缺点。
+## Introduction
+In web scraping development, Scrapy is a commonly used framework. This article compares the pros and cons of Funboost and Scrapy through a web scraping example.
 
-## 示例代码
-### Funboost 示例
-以下是使用Funboost框架的爬虫代码示例，用于下载明星图片：
+## Example Code
+### Funboost Example
+The following is a web scraping code example using the Funboost framework for downloading celebrity images:
 
 ```python
 from funboost import boost, BoosterParams
@@ -20,7 +20,7 @@ from parsel import Selector
 
 @boost(BoosterParams(queue_name='xiaoxianrou_list_page', qps=0.2))
 def crawl_list_page(page_index):
-    """爬取列表页"""
+    """Crawl the list page"""
     url = f'http://www.5442tu.com/mingxing/list_2_{page_index}.html'
     resp = requests.get(url)
     sel = Selector(resp.content.decode('gbk'))
@@ -30,28 +30,28 @@ def crawl_list_page(page_index):
         title = detail_sel.xpath('./@title').extract_first()
         crawl_detail_page.push(detail_url, title)
 
-    # 翻页逻辑
-    next_page = sel.xpath('//a[text()="下一页"]/@href').extract_first()
+    # Pagination logic
+    next_page = sel.xpath('//a[text()="Next Page"]/@href').extract_first()
     if next_page:
         next_page_index = page_index + 1
         crawl_list_page.push(next_page_index)
 
 @boost(BoosterParams(queue_name='xiaoxianrou_detail_page', qps=0.2))
 def crawl_detail_page(detail_url, title):
-    """爬取详情页"""
+    """Crawl the detail page"""
     resp = requests.get(detail_url)
     sel = Selector(resp.content.decode('gbk'))
     img_url = sel.xpath('//div[@class="imgContent"]//img/@src').extract_first()
-    print(f'获取到图片: {title} - {img_url}')
+    print(f'Image found: {title} - {img_url}')
 
 if __name__ == '__main__':
-    crawl_list_page.push(1)  # 从第1页开始爬取
+    crawl_list_page.push(1)  # Start crawling from page 1
     crawl_list_page.consume()
     crawl_detail_page.consume()
 ```
 
-### Scrapy 示例
-以下是使用Scrapy框架的爬虫代码示例：
+### Scrapy Example
+The following is a web scraping code example using the Scrapy framework:
 
 ```python
 import scrapy
@@ -63,7 +63,7 @@ class XiaoxianrouSpider(RedisSpider):
     start_urls = ["http://www.5442tu.com/mingxing/list_2_1.html"]
 
     def parse(self, response):
-        """解析列表页"""
+        """Parse the list page"""
         detail_sels = response.xpath('//div[@class="imgList2"]/ul/li/a')
         for detail_sel in detail_sels:
             yield scrapy.Request(
@@ -72,13 +72,13 @@ class XiaoxianrouSpider(RedisSpider):
                 meta={'title': detail_sel.xpath('./@title').extract_first()}
             )
 
-        # 翻页逻辑
-        next_page = response.xpath('//a[text()="下一页"]/@href').extract_first()
+        # Pagination logic
+        next_page = response.xpath('//a[text()="Next Page"]/@href').extract_first()
         if next_page:
             yield scrapy.Request(url=next_page, callback=self.parse)
 
     def parse_detail(self, response):
-        """解析详情页"""
+        """Parse the detail page"""
         title = response.meta['title']
         img_url = response.xpath('//div[@class="imgContent"]//img/@src').extract_first()
         yield {
@@ -87,60 +87,60 @@ class XiaoxianrouSpider(RedisSpider):
         }
 ```
 
-## 框架对比分析
+## Framework Comparison Analysis
 
-### 1. 代码结构
-- **Funboost**: 
-  - 结构简单，灵活性高，用户可以自由编写请求逻辑，使用任何请求库。
-  - 使用装饰器即可实现分布式功能，无需创建复杂的项目结构。
+### 1. Code Structure
+- **Funboost**:
+  - Simple structure, high flexibility; users can freely write request logic and use any request library.
+  - Distributed functionality is achieved simply with a decorator, without creating a complex project structure.
 
-- **Scrapy**: 
-  - 需要创建完整的项目结构，用户需要频繁在多个文件中来回切换写代码。
-  - 必须遵循框架规范编写代码。
-  - 文件较多，包括settings.py、items.py、pipelines.py等。
+- **Scrapy**:
+  - Requires creating a complete project structure; users must frequently switch between multiple files while writing code.
+  - Must follow framework conventions when writing code.
+  - Many files are involved, including settings.py, items.py, pipelines.py, etc.
 
-一个scrapy项目的固定目录结构如下：
+A fixed directory structure for a Scrapy project looks like this:
   my_scrapy_project/
-├── scrapy.cfg                # 项目配置文件
-├── my_scrapy_project/        # 项目主目录
-│   ├── __init__.py           # 项目初始化文件
-│   ├── items.py              # 定义爬取的数据结构
-│   ├── middlewares.py        # 中间件配置
-│   ├── pipelines.py          # 数据处理管道
-│   ├── settings.py           # 项目设置文件
-│   ├── spiders/              # 爬虫目录
-│   │   ├── __init__.py       # 爬虫初始化文件
-│   │   └── example_spider.py # 示例爬虫文件
-│   └── utils/                # 工具目录（可选）
-│       └── __init__.py       # 工具初始化文件
-└── requirements.txt          # 项目依赖文件（可选）
+├── scrapy.cfg                # Project configuration file
+├── my_scrapy_project/        # Project main directory
+│   ├── __init__.py           # Project initialization file
+│   ├── items.py              # Defines the data structure to be scraped
+│   ├── middlewares.py        # Middleware configuration
+│   ├── pipelines.py          # Data processing pipeline
+│   ├── settings.py           # Project settings file
+│   ├── spiders/              # Spider directory
+│   │   ├── __init__.py       # Spider initialization file
+│   │   └── example_spider.py # Example spider file
+│   └── utils/                # Utilities directory (optional)
+│       └── __init__.py       # Utilities initialization file
+└── requirements.txt          # Project dependencies (optional)
 
-### 2. 学习成本
+### 2. Learning Curve
 - **Funboost**:
-  - 学习曲线平缓，用户只需掌握装饰器的使用，能够快速上手。
+  - Gentle learning curve; users only need to master the use of decorators and can get started quickly.
 
 - **Scrapy**:
-  - 学习曲线陡峭，需要理解框架的各个组件，增加了学习难度。
+  - Steep learning curve; requires understanding the various components of the framework, increasing the learning difficulty.
 
-### 3. 功能特性
+### 3. Features
 - **Funboost**:
-  - 提供多种控制功能，支持高并发和灵活的任务调度，适合大规模爬虫项目。
-  - 允许用户在函数中编写爬虫代码，支持多种消息队列。
+  - Provides a wide range of control features, supports high concurrency and flexible task scheduling, suitable for large-scale crawling projects.
+  - Allows users to write crawler code inside functions and supports multiple message queues.
 
 - **Scrapy**:
-  - 功能相对较弱，难以实现复杂的调度逻辑，扩展性较差。
-  - 用户需要十分精通Scrapy框架本身，才能随心所欲地改造请求和实现独特的奇葩想法。
+  - Relatively limited features; it is difficult to implement complex scheduling logic and extensibility is poor.
+  - Users must be very proficient in the Scrapy framework itself to freely customize requests and implement unconventional ideas.
 
-### 4. 代码迁移
+### 4. Code Migration
 - **Funboost**:
-  - 对现有代码侵入性小
-  - 只需添加装饰器即可
-  - 保持原有代码逻辑不变
+  - Minimal intrusion into existing code
+  - Only requires adding a decorator
+  - Preserves the original code logic unchanged
 
 - **Scrapy**:
-  - 在高并发场景下，Scrapy的性能表现不如Funboost。
+  - In high-concurrency scenarios, Scrapy's performance falls short of Funboost's.
 
-## 结论
-**Funboost在爬虫方面远远优于Scrapy，无论是灵活性、学习成本、功能特性还是性能，Funboost都能为开发者提供更好的体验。选择Funboost将使开发者能够更快速、高效地完成爬虫项目，真正实现爬虫的高效和便捷。**
+## Conclusion
+**Funboost is far superior to Scrapy for web scraping in every dimension — flexibility, learning curve, features, and performance. Funboost provides a better developer experience. Choosing Funboost allows developers to complete crawler projects faster and more efficiently, truly achieving high-performance and convenient scraping.**
 
-此外，中国还有一大批仿Scrapy API用法的爬虫框架，例如Feapder，这些框架同样存在与Scrapy相似的问题，导致在使用难度和性能上远远落后于Funboost。
+In addition, there is a large number of Scrapy-API-imitation crawler frameworks in China, such as Feapder. These frameworks suffer from the same issues as Scrapy and are far behind Funboost in terms of ease of use and performance.

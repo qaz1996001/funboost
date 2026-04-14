@@ -2,8 +2,8 @@
 # @Author  : ydf
 # @Time    : 2022/8/8 0008 13:10
 """
-任务消费完成后，如果重复发布则过滤。分别实现永久性过滤重复任务和过滤有效期内的重复任务。
-任务过滤 = 函数参数过滤 = 字典过滤 = 排序后的键值对json字符串过滤。
+After task consumption is completed, duplicate publications are filtered. Implements both permanent duplicate task filtering and time-limited duplicate task filtering.
+Task filtering = function parameter filtering = dictionary filtering = sorted key-value pair JSON string filtering.
 """
 
 import json
@@ -20,21 +20,21 @@ from funboost.utils.redis_manager import RedisMixin
 
 class RedisFilter(RedisMixin, FunboostFileLoggerMixin):
     """
-    使用set结构，
-    基于函数参数的任务过滤。这个是永久性的过滤，除非自己手动删除这个键。
+    Uses set structure.
+    Task filtering based on function parameters. This is permanent filtering unless the key is manually deleted.
     """
 
     def __init__(self, redis_key_name, redis_filter_task_expire_seconds):
         """
-        :param redis_key_name: 任务过滤键
-        :param redis_filter_task_expire_seconds: 任务过滤的过期时间
+        :param redis_key_name: Task filter key
+        :param redis_filter_task_expire_seconds: Task filter expiration time
         """
         self._redis_key_name = redis_key_name
         self._redis_filter_task_expire_seconds = redis_filter_task_expire_seconds
 
         # @staticmethod
         # def _get_ordered_str(value):
-        #     """对json的键值对在redis中进行过滤，需要先把键值对排序，否则过滤会不准确如 {"a":1,"b":2} 和 {"b":2,"a":1}"""
+        #     """For filtering JSON key-value pairs in redis, keys must be sorted first; otherwise filtering will be inaccurate, e.g., {"a":1,"b":2} and {"b":2,"a":1} would be treated differently."""
         #     value = Serialization.to_dict(value)
         #     ordered_dict = OrderedDict()
         #     for k in sorted(value):
@@ -43,8 +43,8 @@ class RedisFilter(RedisMixin, FunboostFileLoggerMixin):
     
     @staticmethod
     def generate_filter_str(value: typing.Union[str, dict],  filter_str: typing.Optional[str] = None):
-        """对json的键值对在redis中进行过滤，需要先把键值对排序，否则过滤会不准确如 {"a":1,"b":2} 和 {"b":2,"a":1}"""
-        if filter_str: # 如果用户单独指定了过滤字符串，就使用使用户指定的过滤字符串，否则使用排序后的键值对字符串
+        """When filtering JSON key-value pairs in Redis, keys must be sorted first, otherwise filtering will be inaccurate, e.g. {"a":1,"b":2} and {"b":2,"a":1}"""
+        if filter_str: # If user specified a filter string, use it; otherwise use the sorted key-value pair string
             return filter_str
         value = Serialization.to_dict(value)
         ordered_dict = OrderedDict()
@@ -69,9 +69,9 @@ class RedisFilter(RedisMixin, FunboostFileLoggerMixin):
 
 class RedisImpermanencyFilter(RedisFilter):
     """
-    使用zset结构
-    基于函数参数的任务过滤。这个是非永久性的过滤，例如设置过滤过期时间是1800秒 ，30分钟前发布过1 + 2 的任务，现在仍然执行，
-    如果是30分钟内发布过这个任务，则不执行1 + 2，现在把这个逻辑集成到框架，一般用于接口缓存。
+    Uses zset structure.
+    Task filtering based on function parameters. This is non-permanent filtering, e.g. if the filter expiration time is set to 1800 seconds, a 1 + 2 task published 30 minutes ago will still execute,
+    but if this task was published within the last 30 minutes, 1 + 2 will not execute. This logic is now integrated into the framework, commonly used for API caching.
     """
 
     def add_a_value(self, value: typing.Union[str, dict], filter_str: typing.Optional[str] = None):
@@ -89,42 +89,41 @@ class RedisImpermanencyFilter(RedisFilter):
     @decorators.keep_circulating(60, block=False)
     def delete_expire_filter_task_cycle000(self):
         """
-        一直循环删除过期的过滤任务。
-        # REMIND 任务过滤过期时间最好不要小于60秒，否则删除会不及时,导致发布的新任务由于命中了任务过滤，而不能触发执行。一般实时价格接口是缓存5分钟或30分钟没有问题。
+        Continuously loops to delete expired filter tasks.
+        # REMIND The task filter expiration time should ideally not be less than 60 seconds, otherwise deletion may not be timely, causing newly published tasks to be filtered and not executed. Real-time price API caching of 5 minutes or 30 minutes is generally fine.
         :return:
         """
         time_max = time.time() - self._redis_filter_task_expire_seconds
         for value in self.redis_db_filter_and_rpc_result.zrangebyscore(self._redis_key_name, 0, time_max):
-            self.logger.info(f'删除 {self._redis_key_name} 键中的过滤任务 {value}')
+            self.logger.info(f'Deleting filter task {value} from key {self._redis_key_name}')
             self.redis_db_filter_and_rpc_result.zrem(self._redis_key_name, value)
 
     @decorators.keep_circulating(60, block=False)
     def delete_expire_filter_task_cycle(self):
         """
-
-        一直循环删除过期的过滤任务。任务过滤过期时间最好不要小于60秒，否则删除会不及时,导致发布的新任务不能触发执行。一般实时价格接口是缓存5分钟或30分钟。
+        Continuously loops to delete expired filter tasks. The task filter expiration time should ideally not be less than 60 seconds, otherwise deletion may not be timely, causing newly published tasks to not trigger execution. Real-time price API caching of 5 minutes or 30 minutes is typical.
         :return:
         """
         time_max = time.time() - self._redis_filter_task_expire_seconds
         delete_num = self.redis_db_filter_and_rpc_result.zremrangebyscore(self._redis_key_name, 0, time_max)
-        self.logger.warning(f'从{self._redis_key_name}  键删除 {delete_num} 个过期的过滤任务')
-        self.logger.warning(f'{self._redis_key_name}  键中有 {self.redis_db_filter_and_rpc_result.zcard(self._redis_key_name)} 个没有过期的过滤任务')
+        self.logger.warning(f'Deleted {delete_num} expired filter tasks from key {self._redis_key_name}')
+        self.logger.warning(f'Key {self._redis_key_name} has {self.redis_db_filter_and_rpc_result.zcard(self._redis_key_name)} non-expired filter tasks')
 
 
 class RedisImpermanencyFilterUsingRedisKey(RedisFilter):
     """
-    直接把任务当做redis的key，使用redis自带的过期机制删除过期的过滤任务。
-    基于函数参数的任务过滤。这个是非永久性的过滤，例如设置过滤过期时间是1800秒 ，30分钟前发布过1 + 2 的任务，现在仍然执行，
-    如果是30分钟内发布过这个任务，则不执行1 + 2，现在把这个逻辑集成到框架，一般用于接口缓存。
-    这种过滤模式键太多了，很难看，固定放到 redis_db_filter_and_rpc_result ，不放到消息队列的db里面。
+    Uses the task directly as a Redis key, leveraging Redis's built-in expiration mechanism to delete expired filter tasks.
+    Task filtering based on function parameters. This is non-permanent filtering, e.g. if the filter expiration time is set to 1800 seconds, a 1 + 2 task published 30 minutes ago will still execute,
+    but if this task was published within the last 30 minutes, 1 + 2 will not execute. This logic is now integrated into the framework, commonly used for API caching.
+    This filtering mode creates too many keys, which looks messy, so it is stored in redis_db_filter_and_rpc_result rather than the message queue's db.
     """
 
     def __add_dir_prefix(self, value):
         """
-        添加一个前缀，以便redis形成一个树形文件夹，方便批量删除和折叠
+        Add a prefix so Redis forms a tree-like folder structure, convenient for batch deletion and collapsing
         :return:
         """
-        return f'{self._redis_key_name}:{value.replace(":", "：")}'  # 任务是json，带有：会形成很多树，换成中文冒号。
+        return f'{self._redis_key_name}:{value.replace(":", "\uff1a")}'  # Task is JSON, colons would create many tree branches, replace with full-width colon.
 
     def add_a_value(self, value: typing.Union[str, dict], filter_str: typing.Optional[str] = None):
         redis_key = self.__add_dir_prefix(self.generate_filter_str(value, filter_str))
@@ -139,7 +138,7 @@ class RedisImpermanencyFilterUsingRedisKey(RedisFilter):
 
     def delete_expire_filter_task_cycle(self):
         """
-        redis服务端会自动删除过期的过滤任务键。不用在客户端管理。
+        The Redis server will automatically delete expired filter task keys. No need for client-side management.
         :return:
         """
         pass

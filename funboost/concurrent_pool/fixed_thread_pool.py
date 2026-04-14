@@ -1,7 +1,8 @@
 """
-flxed_thread_pool.py 固定大小的非智能线程池, 最简单的粗暴实现线程池方式,任何人都可以写得出来.
-弊端是代码不会自动结束,因为线程池的每个线程 while 1是非守护线程,不能自动判断代码是否需要结束.
-如果有的人的代码是长期运行不需要结束的,可以用这种线程池。
+fixed_thread_pool.py - A fixed-size non-intelligent thread pool, the simplest brute-force implementation that anyone can write.
+The downside is that the code won't exit automatically because each thread in the pool runs a while-loop as a non-daemon thread
+and cannot automatically determine when the code should exit.
+If your code is long-running and doesn't need to exit, this type of thread pool works well.
 """
 
 import threading

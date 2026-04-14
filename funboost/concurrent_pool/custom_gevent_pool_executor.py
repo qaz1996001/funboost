@@ -14,20 +14,20 @@ from funboost.concurrent_pool import FunboostBaseConcurrentPool
 from funboost.core.loggers import get_funboost_file_logger, FunboostFileLoggerMixin
 
 
-# print('gevent 导入')
+# print('gevent imported')
 
 def check_gevent_monkey_patch(raise_exc=True):
     try:
-        if not GeventImporter().monkey.is_module_patched('socket'):  # 随便选一个检测标志
+        if not GeventImporter().monkey.is_module_patched('socket'):  # Pick any flag to check
             if raise_exc:
-                warnings.warn(f'检测到 你还没有打gevent包的猴子补丁，请在所运行的起始脚本第一行写上  【import gevent.monkey;gevent.monkey.patch_all()】  这句话。')
-                raise Exception(f'检测到 你还没有打gevent包的猴子补丁，请在所运行的起始脚本第一行写上  【import gevent.monkey;gevent.monkey.patch_all()】  这句话。')
+                warnings.warn(f'Detected that gevent monkey patch is not applied. Please add "import gevent.monkey;gevent.monkey.patch_all()" at the first line of your entry script.')
+                raise Exception(f'Detected that gevent monkey patch is not applied. Please add "import gevent.monkey;gevent.monkey.patch_all()" at the first line of your entry script.')
         else:
             return 1
     except ModuleNotFoundError:
         if raise_exc:
-            warnings.warn(f'检测到 你还没有打gevent包的猴子补丁，请在所运行的起始脚本第一行写上  【import gevent.monkey;gevent.monkey.patch_all()】  这句话。')
-            raise Exception(f'检测到 你还没有打gevent包的猴子补丁，请在所运行的起始脚本第一行写上  【import gevent.monkey;gevent.monkey.patch_all()】  这句话。')
+            warnings.warn(f'Detected that gevent monkey patch is not applied. Please add "import gevent.monkey;gevent.monkey.patch_all()" at the first line of your entry script.')
+            raise Exception(f'Detected that gevent monkey patch is not applied. Please add "import gevent.monkey;gevent.monkey.patch_all()" at the first line of your entry script.')
 
 
 logger_gevent_timeout_deco = get_funboost_file_logger('gevent_timeout_deco')
@@ -42,7 +42,7 @@ def gevent_timeout_deco(timeout_t):
             try:
                 result = f(*args, **kwargs)
             except GeventImporter().gevent.Timeout as t:
-                logger_gevent_timeout_deco.error(f'函数 {f} 运行超过了 {timeout_t} 秒')
+                logger_gevent_timeout_deco.error(f'Function {f} exceeded {timeout_t} seconds')
                 if t is not timeout:
                     print(t)
                     # raise  # not my timeout
@@ -58,7 +58,7 @@ def gevent_timeout_deco(timeout_t):
 def get_gevent_pool_executor(size=None, greenlet_class=None):
     class GeventPoolExecutor(GeventImporter().gevent_pool.Pool, FunboostBaseConcurrentPool):
         def __init__(self, size2=None, greenlet_class2=None):
-            check_gevent_monkey_patch()  # basecomer.py中检查。
+            check_gevent_monkey_patch()  # Checked in basecomer.py.
             super().__init__(size2, greenlet_class2)
             atexit.register(self.shutdown)
 
@@ -86,7 +86,7 @@ class GeventPoolExecutor2(FunboostFileLoggerMixin, FunboostBaseConcurrentPool):
             try:
                 fn(*args, **kwargs)
             except BaseException as exc:
-                self.logger.exception(f'函数 {fn.__name__} 中发生错误，错误原因是 {type(exc)} {exc} ')
+                self.logger.exception(f'Error occurred in function {fn.__name__}, reason: {type(exc)} {exc} ')
             finally:
                 pass
                 self._q.task_done()
@@ -95,7 +95,7 @@ class GeventPoolExecutor2(FunboostFileLoggerMixin, FunboostBaseConcurrentPool):
         self._q.put((fn, args, kwargs))
 
     def __atexit(self):
-        self.logger.critical('想即将退出程序。')
+        self.logger.critical('About to exit the program.')
         self._q.join()
 
 
@@ -113,7 +113,7 @@ class GeventPoolExecutor3(FunboostFileLoggerMixin, FunboostBaseConcurrentPool):
             try:
                 fn(*args, **kwargs)
             except BaseException as exc:
-                self.logger.exception(f'函数 {fn.__name__} 中发生错误，错误原因是 {type(exc)} {exc} ')
+                self.logger.exception(f'Error occurred in function {fn.__name__}, reason: {type(exc)} {exc} ')
 
     def submit(self, fn: Callable, *args, **kwargs):
         self._q.put((fn, args, kwargs))
@@ -125,7 +125,7 @@ class GeventPoolExecutor3(FunboostFileLoggerMixin, FunboostBaseConcurrentPool):
         threading.Thread(target=self.joinall)
 
     def __atexit(self):
-        self.logger.critical('想即将退出程序。')
+        self.logger.critical('About to exit the program.')
         self.joinall()
 
 
@@ -143,7 +143,7 @@ if __name__ == '__main__':
 
     for i in range(20):
         time.sleep(0.1)
-        print(f'放入{i}')
+        print(f'submitting {i}')
         pool.submit(gevent_timeout_deco(8)(f2), i)
     # pool.joinall_in_new_thread()
     print(66666666)

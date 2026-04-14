@@ -15,7 +15,7 @@ queue_name = 'test_kombu_mongo4'
            },
            'prefetch_count': 10})
 def f2(x, y):
-    print(f'start {x} {y} 。。。')
+    print(f'start {x} {y} ...')
     time.sleep(60)
     print(f'{x} + {y} = {x + y}')
     print(f'over {x} {y}')

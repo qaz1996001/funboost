@@ -3,14 +3,13 @@ import abc
 from funboost.utils.decorators import cached_method_result, singleton, SingletonBaseNew, SingletonBaseCustomInit, singleton_no_lock
 
 """
-延迟导入
-或者使用时候再pip安装
+Lazy imports, or pip install at the time of use.
 """
 
 
 class FunboostLazyImpoter(SingletonBaseNew):
     """
-    延迟导入,避免需要互相导入.
+    Lazy imports to avoid circular import issues.
     """
 
     @property
@@ -53,7 +52,7 @@ funboost_lazy_impoter = FunboostLazyImpoter()
 @singleton
 class GeventImporter:
     """
-    避免提前导入
+    Avoid importing too early.
     import gevent
     from gevent import pool as gevent_pool
     from gevent import monkey
@@ -62,7 +61,7 @@ class GeventImporter:
 
     def __init__(self):
         import gevent
-        print('导入gevent')
+        print('Importing gevent')
         from gevent import pool as gevent_pool
         from gevent import monkey
         from gevent.queue import JoinableQueue
@@ -75,13 +74,13 @@ class GeventImporter:
 @singleton_no_lock
 class EventletImporter:
     """
-    避免提前导入
+    Avoid importing too early.
     from eventlet import greenpool, monkey_patch, patcher, Timeout
     """
 
     def __init__(self):
         from eventlet import greenpool, monkey_patch, patcher, Timeout
-        print('导入eventlet')
+        print('Importing eventlet')
         self.greenpool = greenpool
         self.monkey_patch = monkey_patch
         self.patcher = patcher

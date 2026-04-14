@@ -8,13 +8,13 @@ from funboost.constant import BrokerEnum
 from funboost.consumers.base_consumer import AbstractConsumer
 from funboost.utils.rabbitmq_factory import RabbitMqFactory
 
-@deprecated('不建议使用这个中间件模式，建议使用 BrokerEnum.RABBITMQ_AMQPSTORM 操作rabbitmq')
+@deprecated('This middleware mode is not recommended. Please use BrokerEnum.RABBITMQ_AMQPSTORM to operate rabbitmq')
 class RabbitmqConsumerRabbitpy(AbstractConsumer):
     """
-    使用rabbitpy实现的
+    Implemented using rabbitpy
     """
     def custom_init(self):
-        raise Exception('不建议使用这个中间件模式，建议使用 BrokerEnum.RABBITMQ_AMQPSTORM 操作rabbitmq')
+        raise Exception('This middleware mode is not recommended. Please use BrokerEnum.RABBITMQ_AMQPSTORM to operate rabbitmq')
 
     def _dispatch_task(self):
         # noinspection PyTypeChecker
@@ -23,7 +23,7 @@ class RabbitmqConsumerRabbitpy(AbstractConsumer):
         channel.basic_qos(prefetch_count=self.consumer_params.concurrent_num)
         for message in channel.basic_consume(self._queue_name, no_ack=False):
             body = message.body.decode()
-            # self.logger.debug(f'从rabbitmq {self._queue_name} 队列中 取出的消息是：  {body}')
+            # self.logger.debug(f'Message fetched from rabbitmq queue {self._queue_name}:  {body}')
             kw = {'message': message, 'body': body}
             self._submit_task(kw)
 

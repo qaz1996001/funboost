@@ -24,7 +24,7 @@ def get_hostname():
     return socket.gethostname()
 
 def get_host_ip():
-    """获取本机ip"""
+    """Get the local machine's IP address"""
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(('8.8.8.8', 80))
@@ -38,7 +38,7 @@ def get_host_ip():
             return '127.0.0.1'
 
 def get_mac_address():
-    """获取mac地址"""
+    """Get the MAC address"""
     mac = uuid.UUID(int=uuid.getnode()).hex[-12:]
     return ":".join([mac[e:e + 2] for e in range(0, 11, 2)])
 
@@ -64,5 +64,5 @@ def get_python_version():
     return platform.python_version()
 
 def get_current_function_name():
-    """获取当前函数名"""
+    """Get the current function name"""
     return inspect.stack()[1][3]

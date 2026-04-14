@@ -1,7 +1,7 @@
 
 """
-这个是实现后进先出，
-原理就是吧消息发布到队尾
+This implements last-in-first-out (LIFO),
+by publishing messages to the front of the queue instead of the back.
 """
 
 import random
@@ -27,14 +27,14 @@ class OppositeRedisPublisher(RedisPublisher):
 @boost(BoosterParams(queue_name='test_redis_ack_opp_publish', broker_kind=BrokerEnum.REDIS_ACK_ABLE,
                      concurrent_mode=ConcurrentModeEnum.SINGLE_THREAD,
                      log_level=10,  
-                     publisher_override_cls=OppositeRedisPublisher, # 这个是核心，覆盖了发布者。
+                     publisher_override_cls=OppositeRedisPublisher,  # This is the key: overrides the publisher.
                      is_show_message_get_from_broker=True,broker_exclusive_config={'pull_msg_batch_size':1}))
 def cost_long_time_fun(x):
     print(f'start {x}')
     time.sleep(2)
     print(fct.queue_name,fct.full_msg)
     if random.random()>0.5:
-        cost_long_time_fun.publisher.OppositePublish(fct.full_msg) # 这个是后进但能先出
+        cost_long_time_fun.publisher.OppositePublish(fct.full_msg)  # This publishes to the front so last-in is first-out
         return 
     print(f'end {x}')
     return x*2

@@ -1,5 +1,6 @@
 """
-这个文件作用主要是兼容老的  from funboost.funboost_web_manager import xx
+The main purpose of this file is to maintain backward compatibility for the old import style:
+from funboost.funboost_web_manager import xx
 """
 
 from funboost.funweb.app import *

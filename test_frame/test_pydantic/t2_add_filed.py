@@ -17,12 +17,12 @@ class MyModel(BaseModel):
     class Config:
         extra = "forbid"
 
-# 创建一个实例
+# Create an instance
 obj = MyModel(name="John", age=30)
 
-# 子类试图增加额外字段
+# Subclass attempts to add extra fields
 class SubModel(MyModel):
     extra_field: bool
 
-# 试图创建子类实例
-sub_obj = SubModel(name="Jane", age=25, extra_field=True)  # 引发错误：pydantic.error_wrappers.ValidationError
+# Attempt to create subclass instance
+sub_obj = SubModel(name="Jane", age=25, extra_field=True)  # Raises error: pydantic.error_wrappers.ValidationError

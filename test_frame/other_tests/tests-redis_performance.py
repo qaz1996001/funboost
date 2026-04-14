@@ -1,5 +1,5 @@
 """
-测试redis无其他逻辑时候的性能
+Test redis performance without any other logic
 """
 from funboost.utils.redis_manager import RedisMixin
 from redis3 import Redis

@@ -38,7 +38,7 @@ def _process_worker(call_queue, result_queue):
         except BaseException as e:
             exc = _ExceptionWithTraceback(e, e.__traceback__)
             result_queue.put(_ResultItem(call_item.work_id, exception=exc))
-            logger.exception(e)  # 主要是直接显示错误。
+            logger.exception(e)  # Primarily to directly display errors.
         else:
             result_queue.put(_ResultItem(call_item.work_id,
                                          result=r))
@@ -78,7 +78,7 @@ def _process_worker_grater_than_py37(call_queue, result_queue, initializer, init
         except BaseException as e:
             exc = _ExceptionWithTraceback(e, e.__traceback__)
             _sendback_result(result_queue, call_item.work_id, exception=exc)
-            logger.exception(e)  # 主要是直接显示错误。
+            logger.exception(e)  # Primarily to directly display errors.
         else:
             _sendback_result(result_queue, call_item.work_id, result=r)
             del r

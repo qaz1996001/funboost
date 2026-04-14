@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-测试任务定义：故意让部分任务失败，配合 MongoAlertMonitor 观察告警效果。
+Test task definitions: intentionally cause some tasks to fail, to observe alert effects with MongoAlertMonitor.
 
-运行步骤：
-  1. 先运行本文件启动消费者并持续投递任务
-  2. 再运行 t_monitor.py 启动告警监控（也可以先启动监控再投递）
+Steps:
+  1. Run this file first to start consumers and continuously publish tasks
+  2. Then run t_monitor.py to start alert monitoring (or start monitoring first, then publish)
 
-前置条件：
-  - funboost_config.py 中配置好 Redis（broker）和 MongoDB（状态持久化）连接信息
+Prerequisites:
+  - Configure Redis (broker) and MongoDB (status persistence) connection info in funboost_config.py
 """
 import random
 import time
@@ -16,7 +16,7 @@ from funboost import boost, BrokerEnum
 from funboost.core.func_params_model import BoosterParams, FunctionResultStatusPersistanceConfig
 
 
-# ── 任务A：高失败率队列，约 60% 的任务会抛异常 ──────────────────────────────
+# -- Task A: High-failure-rate queue, ~60% of tasks will raise an exception --
 @boost(BoosterParams(
     queue_name='test_alert__high_failure_rate',
     broker_kind=BrokerEnum.REDIS,
@@ -27,11 +27,11 @@ from funboost.core.func_params_model import BoosterParams, FunctionResultStatusP
 ))
 def task_high_failure(x: int):
     if random.random() < 0.6:
-        raise ValueError(f"task_high_failure 故意失败: x={x}")
+        raise ValueError(f"task_high_failure intentional failure: x={x}")
     return f"ok: {x}"
 
 
-# ── 任务B：低失败率队列，约 10% 的任务会抛异常 ──────────────────────────────
+# -- Task B: Low-failure-rate queue, ~10% of tasks will raise an exception --
 @boost(BoosterParams(
     queue_name='test_alert__low_failure_rate',
     broker_kind=BrokerEnum.REDIS,
@@ -42,16 +42,16 @@ def task_high_failure(x: int):
 ))
 def task_low_failure(x: int):
     if random.random() < 0.1:
-        raise ValueError(f"task_low_failure 故意失败: x={x}")
+        raise ValueError(f"task_low_failure intentional failure: x={x}")
     return f"ok: {x}"
 
 
 if __name__ == '__main__':
-    # 启动消费者（后台消费）
+    # Start consumers (background consuming)
     task_high_failure.consume()
     task_low_failure.consume()
 
-    # 持续投递任务，每 0.5 秒投一批
+    # Continuously publish tasks, one batch every 0.5 seconds
     i = 0
     while True:
         task_high_failure.push(x=i)

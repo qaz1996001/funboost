@@ -51,15 +51,15 @@ def f2(a, b):
     # time.sleep(100)
     time.sleep(1)
     if random.random() > 0.9:
-        raise ValueError('普通错误会对函数重试n次')
+        raise ValueError('Regular error will retry the function n times')
     # if random.random() > 0.8:
-    #     raise ExceptionForRequeue('重新入队去吧')
+    #     raise ExceptionForRequeue('Requeue to queue')
     # if random.random() > 0.9:
-    #     raise ExceptionForPushToDlxqueue('放入死信队列')
+    #     raise ExceptionForPushToDlxqueue('Push to dead letter queue')
     #     while 1:
     #         time.sleep(10)
     print(a, b)
-    f2.consumer.logger.info(' 测试把业务日志和框架队列的 test_queue77h6j消费日志写入到一个文件中')
+    f2.consumer.logger.info(' Test writing business logs and framework queue test_queue77h6j consume logs into one file')
 
     return a - b
 
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     #     time.sleep(60)
 
     """
-    win命令行运行
+    Windows command line:
     conda activate py311c    conda activate  py37c
     set PYTHONPATH=/codes/funboost &&  python /codes/funboost/test_frame/test_broker/test_consume.py
     d:  ;cd  /codes/funboost  ;$ENV:PYTHONPATH="./" ;  python /codes/funboost/test_frame/test_broker/test_consume.py

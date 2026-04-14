@@ -26,7 +26,7 @@ def f1(x, y):
 @boost('celery_qq4b2', broker_kind=BrokerEnum.CELERY, log_level=20,qps=0.1)
 def f2(a, b):
     # time.sleep(2)
-    # print('嘻嘻', a, b)
+    # print('hehe', a, b)
     if a % 1000 == 0:
         print(a)
     return a - b

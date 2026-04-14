@@ -12,7 +12,7 @@ from funboost.publishers.base_publisher import AbstractPublisher
 
 class KafkaPublisher(AbstractPublisher, ):
     """
-    使用kafka作为中间件
+    Uses kafka as the broker.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -28,7 +28,7 @@ class KafkaPublisher(AbstractPublisher, ):
             pass
         except BaseException as e:
             self.logger.exception(e)
-        atexit.register(self.close)  # 程序退出前不主动关闭，会报错。
+        atexit.register(self.close)  # Will raise an error if not actively closed before program exit.
 
     def _publish_impl(self, msg):
         # noinspection PyTypeChecker
@@ -37,12 +37,12 @@ class KafkaPublisher(AbstractPublisher, ):
         self._producer.send(self._queue_name, msg.encode(), )
 
     def clear(self):
-        self.logger.warning('还没开始实现 kafka 清空 消息')
+        self.logger.warning('Kafka queue clearing not yet implemented')
         # self._consumer.seek_to_end()
-        # self.logger.warning(f'将kafka offset 重置到最后位置')
+        # self.logger.warning(f'Reset kafka offset to the latest position')
 
     def get_message_count(self):
-        # return -1 # 还没找到获取所有分区未消费数量的方法 。
+        # return -1 # Haven't found a method to get unconsumed count across all partitions.
         # print(self._admin_client.list_consumer_group_offsets('frame_group'))
         # print(self._admin_client.describe_consumer_groups('frame_group'))
         return -1

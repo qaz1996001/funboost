@@ -2,16 +2,19 @@
 # @Author  : ydf
 # @Time    : 2022/12/18 0018 10:06
 """
-这里是最精简的乞丐版的基于redis的分布式函数执行的实现。相对于完整版，砍掉所有功能，只是演示框架的最精简最本质的实现。
-主要是砍掉很多功能，大大简化代码行数，演示框架思路是如何分布式执行python
-函数的，这个只做精简演示，不要亲自去使用这里，功能太弱。
+This is the most minimal "beggar version" of a Redis-based distributed function execution implementation.
+Compared to the full version, all features are stripped away to demonstrate the most essential and minimal implementation of the framework.
+The main purpose is to greatly simplify the code by removing many features, demonstrating the core idea of how to execute
+Python functions in a distributed manner. This is only for simplified demonstration - do not use it in production as it is too limited.
 
-完整版支持3种并发类型，乞丐版只支持多线程并发。完整版的线程池是有界队列，线程大小动态伸缩，乞丐版线程池的线程数量只会增加不能主动主动缩小。
+The full version supports 3 concurrency types; the beggar version only supports multi-threaded concurrency.
+The full version's thread pool has a bounded queue with dynamically scaling thread sizes;
+the beggar version's thread pool can only increase threads and cannot proactively shrink.
 
-完整版支持15种函数辅助控制，包括控频、超时杀死、消费确认 等15种功能，
-乞丐版为了简化代码演示，全部不支持。
+The full version supports 15 types of function auxiliary controls, including rate limiting, timeout killing,
+consumption acknowledgment, and 15 other features. The beggar version does not support any of these for code simplicity.
 
-完整版支持10种消息队列中间件，这里只演示大家喜欢的redis作为中间件。
+The full version supports 10 types of message queue middleware; here we only demonstrate Redis as middleware since it's popular.
 """
 import json
 import redis
@@ -25,10 +28,10 @@ redis_db_frame = redis.Redis(host=BrokerConnConfig.REDIS_HOST, password=BrokerCo
 
 
 class BeggarRedisConsumer:
-    """保持和完整版差不多的代码形态。如果仅仅是像这里的十分简化的版本，一个函数实现也可以了。例如下面的函数。"""
+    """Maintains a code structure similar to the full version. For a simplified version like this, a single function implementation would also suffice. See the function below."""
 
     def __init__(self, queue_name, consume_function, threads_num):
-        self.pool = ThreadPoolExecutor(threads_num)  # 最好是使用BoundedThreadpoolexecutor或customThreadpoolexecutor。无界队列会迅速取完redis消息。
+        self.pool = ThreadPoolExecutor(threads_num)  # It's better to use BoundedThreadPoolExecutor or CustomThreadPoolExecutor. An unbounded queue will rapidly consume all Redis messages.
         self.consume_function = consume_function
         self.queue_name = queue_name
 
@@ -38,20 +41,20 @@ class BeggarRedisConsumer:
                 redis_task = redis_db_frame.blpop(self.queue_name, timeout=60)
                 if redis_task:
                     task_str = redis_task[1]
-                    print(f'从redis的 [{self.queue_name}] 队列中 取出的消息是： {task_str}  ')
+                    print(f'Message retrieved from Redis queue [{self.queue_name}]: {task_str}  ')
                     task_dict = json.loads(task_str)
                     self.pool.submit(self.consume_function, **task_dict)
                 else:
-                    print(f'redis的 {self.queue_name} 队列中没有任务')
+                    print(f'No tasks in Redis queue {self.queue_name}')
             except redis.RedisError as e:
                 print(e)
 
 
 def start_consuming_message(queue_name, consume_function, threads_num=50):
     """
-    本例子实现的功能和中间件过于简单，单一函数最好了。
-    看不懂有类的代码，不用看上面那个类，看这个函数就可以，使用一个10行代码的函数实现乞丐版分布式函数执行框架。
-
+    The functionality and middleware in this example are too simple, so a single function is best.
+    If you can't understand the class-based code, ignore the class above and just look at this function -
+    it implements the beggar version distributed function execution framework in about 10 lines of code.
     """
     pool = ThreadPoolExecutor(threads_num)
     while True:
@@ -59,10 +62,10 @@ def start_consuming_message(queue_name, consume_function, threads_num=50):
             redis_task = redis_db_frame.brpop(queue_name, timeout=60)
             if redis_task:
                 task_str = redis_task[1]
-                # print(f'从redis的 {queue_name} 队列中 取出的消息是： {task_str}')
+                # print(f'Message retrieved from Redis queue {queue_name}: {task_str}')
                 pool.submit(consume_function, **json.loads(task_str))
             else:
-                print(f'redis的 {queue_name} 队列中没有任务')
+                print(f'No tasks in Redis queue {queue_name}')
         except redis.RedisError as e:
             print(e)
 
@@ -73,15 +76,15 @@ if __name__ == '__main__':
 
     def add(x, y):
         time.sleep(5)
-        print(f'{x} + {y} 的结果是 {x + y}')
+        print(f'The result of {x} + {y} is {x + y}')
 
 
-    # 推送任务
+    # Push tasks
     for i in range(100):
         print(i)
         redis_db_frame.lpush('test_beggar_redis_consumer_queue', json.dumps(dict(x=i, y=i * 2)))
 
-    # 消费任务
+    # Consume tasks
     # consumer = BeggarRedisConsumer('test_beggar_redis_consumer_queue', consume_function=add, threads_num=100)
     # consumer.start_consuming_message()
 

@@ -1,8 +1,9 @@
 """
-这是个简单例子，演示web中如何发布和获取结果。
+This is a simple example demonstrating how to publish messages and retrieve results in a web context.
 
-更建议使用  from funboost.fass ,见教程第15章节。
-因为是一键开箱即用，还能更好的和你的fastapi 融合成一个服务端口，而且支持的url路由更多
+It is recommended to use `from funboost.fass` instead, as described in tutorial chapter 15.
+It provides out-of-the-box functionality, better integration with your FastAPI service on a single port,
+and supports more URL routes.
 
 """
 
@@ -18,24 +19,26 @@ from pydantic import BaseModel
 
 
 class MsgItem(BaseModel):
-    queue_name: str  # 队列名
-    msg_body: dict  # 消息体,就是boost函数的入参字典,例如 {"x":1,"y":2}
-    need_result: bool = False  # 发布消息后,是否需要返回结果
-    timeout: int = 60  # 等待结果返回的最大等待时间.
+    queue_name: str  # Queue name
+    msg_body: dict  # Message body, i.e. the input parameter dict of the boost function, e.g. {"x":1,"y":2}
+    need_result: bool = False  # Whether to return the result after publishing the message
+    timeout: int = 60  # Maximum wait time for the result to be returned.
 
 
 class PublishResponse(BaseModel):
     succ: bool
     msg: str
-    status_and_result: typing.Optional[dict] = None  # 消费函数的消费状态和结果.
+    status_and_result: typing.Optional[dict] = None  # The consumption status and result of the consuming function.
 
 
-# 创建 FastAPI 应用实例
+# Create FastAPI application instance
 app = FastAPI()
 
 '''
-如果你在发布消息后还需要获取函数执行结果,
-那么推荐使用asyncio类型的web框架例如 fastapi tornado,而不是使用flask django,更好的应付由于获取结果而需要的阻塞时间.不使用asyncio的话web框架需要设置开启很高的线程才行.
+If you need to retrieve the function execution result after publishing a message,
+it is recommended to use an asyncio-based web framework such as FastAPI or Tornado, rather than Flask or Django,
+to better handle the blocking time required for obtaining results. Without asyncio, the web framework would need
+a very high number of threads configured.
 '''
 
 
@@ -46,25 +49,25 @@ async def publish_msg(msg_item: MsgItem):
         booster = BoostersManager.get_or_create_booster_by_queue_name(msg_item.queue_name)
         if msg_item.need_result:
             if booster.boost_params.is_using_rpc_mode is False:
-                raise ValueError(f' need_result 为true,{booster.queue_name} 队列消费者 需要@boost设置支持rpc模式')
+                raise ValueError(f' need_result is true, the consumer for queue {booster.queue_name} needs @boost configured to support rpc mode')
             async_result = await booster.aio_publish(msg_item.msg_body,task_options=TaskOptions(is_using_rpc_mode=True))
             status_and_result = await AioAsyncResult(async_result.task_id, timeout=msg_item.timeout).status_and_result
             print(status_and_result)
             # status_and_result = AsyncResult(async_result.task_id, timeout=msg_item.timeout).status_and_result
         else:
             await booster.aio_publish(msg_item.msg_body)
-        return PublishResponse(succ=True, msg=f'{msg_item.queue_name} 队列,消息发布成功', status_and_result=status_and_result)
+        return PublishResponse(succ=True, msg=f'Queue {msg_item.queue_name}, message published successfully', status_and_result=status_and_result)
     except Exception as e:
-        return PublishResponse(succ=False, msg=f'{msg_item.queue_name} 队列,消息发布失败 {type(e)} {e} {traceback.format_exc()}',
+        return PublishResponse(succ=False, msg=f'Queue {msg_item.queue_name}, message publish failed {type(e)} {e} {traceback.format_exc()}',
                                status_and_result=status_and_result)
 
 
-# 运行应用
+# Run the application
 if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run('funboost.contrib.api_publish_msg:app', host="0.0.0.0", port=16666, workers=4)
 
     '''
-    test_frame/test_api_publish_msg 中有使用例子.
+    Usage examples can be found in test_frame/test_api_publish_msg.
     '''

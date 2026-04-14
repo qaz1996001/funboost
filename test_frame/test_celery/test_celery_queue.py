@@ -1,19 +1,19 @@
 
 
-# Celery 的写法
+# Celery style
 from celery import Celery
 import time
 
 from celery.utils.log import get_task_logger
 logger = get_task_logger(__name__)
 
-# 创建 Celery 实例时仍需要基础配置
+# Basic configuration is still needed when creating a Celery instance
 app = Celery('myapp', broker='redis://localhost:6379/0')
 
 @app.task(queue='my_queue_name1b',rate_limit='10/h')
 def task_function(x):
-    print('task_function运行',time.strftime('%Y-%m-%d %H:%M:%S'),x)
-    logger.info(f'task_function运行 {time.strftime("%Y-%m-%d %H:%M:%S")} {x}')
+    print('task_function running',time.strftime('%Y-%m-%d %H:%M:%S'),x)
+    logger.info(f'task_function running {time.strftime("%Y-%m-%d %H:%M:%S")} {x}')
     return x * 2
 
 

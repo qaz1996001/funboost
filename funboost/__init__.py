@@ -6,11 +6,11 @@ import nb_log
 from nb_log import nb_print
 
 '''
-set_frame_config 这行要放在所有导入其他代码之前最好,以便防止其他项目提前 from funboost.funboost_config_deafult import xx ,
-如果是 from funboost import funboost_config_deafult,在函数内部使用他的配置就没事,但最后不要让其他模块在 set_frame_config 之前导入.
-set_frame_config这个模块的 use_config_form_funboost_config_module() 是核心,把用户的funboost_config.py的配置覆盖到funboost_config_deafult模块了
+The set_frame_config import should be placed before all other code imports to prevent other projects from prematurely importing from funboost.funboost_config_deafult.
+If using "from funboost import funboost_config_deafult" and accessing its config inside functions, it's fine, but avoid letting other modules import before set_frame_config.
+The use_config_form_funboost_config_module() function in the set_frame_config module is the core — it overrides funboost_config_deafult module with the user's funboost_config.py settings.
 
-这段注释说明和使用的用户无关,只和框架开发人员有关.
+This comment is only relevant to framework developers, not end users.
 '''
 
 __version__ = "54.4"
@@ -18,7 +18,7 @@ __version__ = "54.4"
 from funboost.set_frame_config import show_frame_config
 
 # noinspection PyUnresolvedReferences
-from funboost.utils.dependency_packages_in_pythonpath import add_to_pythonpath as _  # 这是把 dependency_packages_in_pythonpath 添加到 PYTHONPATH了。
+from funboost.utils.dependency_packages_in_pythonpath import add_to_pythonpath as _  # This adds dependency_packages_in_pythonpath to PYTHONPATH.
 from funboost.utils import monkey_patches as _
 
 from funboost.core.loggers import get_logger, get_funboost_file_logger, FunboostFileLoggerMixin, FunboostMetaTypeFileLogger, flogger
@@ -26,7 +26,7 @@ from funboost.core.func_params_model import (BoosterParams, BoosterParamsComplet
                                              TaskOptions, PublisherParams, BoosterParamsComplete)
 from funboost.funboost_config_deafult import FunboostCommonConfig, BrokerConnConfig
 
-# from funboost.core.fabric_deploy_helper import fabric_deploy, kill_all_remote_tasks # fabric2还没适配python3.12以上版本，不在这里导入，否则高版本python报错。
+# from funboost.core.fabric_deploy_helper import fabric_deploy, kill_all_remote_tasks # fabric2 has not yet been adapted for Python 3.12+, so it's not imported here to avoid errors on higher Python versions.
 from funboost.utils.paramiko_util import ParamikoFolderUploader
 
 from funboost.consumers.base_consumer import (wait_for_possible_has_finish_all_tasks_by_conusmer_list,

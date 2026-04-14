@@ -12,7 +12,7 @@ from funboost.utils.redis_manager import RedisMixin
 
 class DramatiqPublisher(AbstractPublisher, ):
     """
-    使用dramatiq框架作为中间件
+    Uses the dramatiq framework as the broker.
     """
 
     # noinspection PyAttributeOutsideInit
@@ -34,7 +34,7 @@ class DramatiqPublisher(AbstractPublisher, ):
         # pass
         # return -1
         if BrokerConnConfig.DRAMATIQ_URL.startswith('redis'):
-            return RedisMixin().redis_db_frame.llen(self.queue_name)  # redis 无，需要自己实现
+            return RedisMixin().redis_db_frame.llen(self.queue_name)  # Redis backend needs custom implementation
         if BrokerConnConfig.DRAMATIQ_URL.startswith('amqp'):
             cnts = DramatiqHelper.broker.get_queue_message_counts(self.queue_name)
             return cnts[0]

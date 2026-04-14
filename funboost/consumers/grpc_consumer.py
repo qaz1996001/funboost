@@ -28,18 +28,18 @@ class GrpcConsumer(AbstractConsumer, ):
     def custom_init(self):
         class FunboostGrpcServicer(funboost_grpc_pb2_grpc.FunboostBrokerServiceServicer):
             """
-            HelloService 的实现类
+            Implementation class for the service
             """
 
             def Call(this, request, context):
                 """
-                实现 SayHello 方法
+                Implement the Call method
                 """
                 future_status_result = FutureStatusResult(call_type=request.call_type)
                 kw = {'body': request.json_req, 'future_status_result': future_status_result,}
                 self._submit_task(kw)
                 if request.call_type =="sync_call":
-                    if future_status_result.wait_finish(self.consumer_params.rpc_timeout):  # 等待并发出的消费结果
+                    if future_status_result.wait_finish(self.consumer_params.rpc_timeout):  # Wait for the consumption result to be dispatched
                         return funboost_grpc_pb2.FunboostGrpcResponse(json_resp=Serialization.to_json_str(
                             future_status_result.get_staus_result_obj().get_status_dict(without_datetime_obj=True)))
                     else:
@@ -55,22 +55,22 @@ class GrpcConsumer(AbstractConsumer, ):
     def _dispatch_task(self):
         server = grpc.server(self.concurrent_pool)
 
-        # 添加服务
+        # Add service
         funboost_grpc_pb2_grpc.add_FunboostBrokerServiceServicer_to_server(self.GRPC_SERVICER_CLS(), server)
 
-        # 绑定端口
+        # Bind port
         port = self.consumer_params.broker_exclusive_config['port']
         if port is None:
             raise ValueError('please specify port')
         listen_addr = f'[::]:{port}'
         server.add_insecure_port(listen_addr)
 
-        # 启动服务器
+        # Start server
         server.start()
         print(f"GRPC Has started. listening on: {listen_addr}")
 
         while True:
-            time.sleep(100)  # 保持服务器运行
+            time.sleep(100)  # Keep server running
 
     def _confirm_consume(self, kw):
         pass
@@ -82,4 +82,4 @@ class GrpcConsumer(AbstractConsumer, ):
         future_status_result: FutureStatusResult = kw['future_status_result']
         if future_status_result.call_type == "sync_call":
             future_status_result.set_staus_result_obj(current_function_result_status)
-            future_status_result.set_finish()  # 这是最重要最核心的, 并发池里面处理函数完成,马上告诉grpc服务端，已经处理完成.
+            future_status_result.set_finish()  # This is the most important core part. When the function completes in the concurrent pool, immediately notify the grpc server that processing is done.

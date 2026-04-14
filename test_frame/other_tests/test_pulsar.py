@@ -2,7 +2,7 @@
 
 https://blog.csdn.net/pchwenwenti/article/details/83143345
 
-pulsar manager 账号密码  "name": "admin", "password": "apachepulsar",
+pulsar manager account and password  "name": "admin", "password": "apachepulsar",
 
 pip install pulsar-cleint
 

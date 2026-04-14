@@ -12,24 +12,24 @@ import signal
 
 def timeout_linux(timeout: typing.Optional[int]):
     def _timeout_linux(func, ):
-        """装饰器，为函数添加超时功能"""
+        """Decorator that adds timeout functionality to a function"""
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             def _timeout_handler(signum, frame):
-                """超时处理函数，当接收到信号时抛出异常"""
+                """Timeout handler function, raises exception when signal is received"""
                 raise TimeoutError(f"Function: {func} params: {args}, {kwargs} ,execution timed out: {timeout}")
 
-            # 设置超时信号处理器
-            signal.signal(signal.SIGALRM, _timeout_handler)  # 只适合linux 的 timout
-            # 启动一个定时器，超时后发送信号
+            # Set timeout signal handler
+            signal.signal(signal.SIGALRM, _timeout_handler)  # Only suitable for Linux timeout
+            # Start a timer, sends signal after timeout
             signal.alarm(timeout)
 
             try:
                 return func(*args, **kwargs)
             finally:
-                # 执行完毕记得取消定时器
-                signal.alarm(0)  # 关闭定时器
+                # Remember to cancel the timer after execution completes
+                signal.alarm(0)  # Disable the timer
 
         return wrapper
 
@@ -38,18 +38,18 @@ def timeout_linux(timeout: typing.Optional[int]):
 
 if __name__ == '__main__':
 
-    # 使用装饰器实现超时功能
+    # Use decorator to implement timeout functionality
     @timeout_linux(3)
     def fun(x, ):
-        """示例函数，模拟长时间运行的操作"""
+        """Example function simulating a long-running operation"""
         print(f"Running function with x={x}")
-        time.sleep(5)  # 模拟耗时操作
+        time.sleep(5)  # Simulate time-consuming operation
         print("Function completed")
         return x + 1
 
 
     try:
-        print(fun(10))  # 尝试运行函数，设置超时为3秒
+        print(fun(10))  # Try to run the function with a 3-second timeout
     except TimeoutError as e:
         traceback.print_exc()
 

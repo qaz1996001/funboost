@@ -19,7 +19,7 @@ async def async_request(i):
         async with aiohttp.request('get',url,timeout=aiohttp.ClientTimeout(20)) as resp:
             text = await resp.text()
             # print(text[:10])
-        print(f'异步{i}')
+        print(f'async{i}')
         await asyncio.sleep(0.1)
         global total_succ_async
         total_succ_async += 1
@@ -33,7 +33,7 @@ def sync_request(i):
     try:
         resp = requests.get(url,timeout=10)
         text = resp.text
-        print(f'同步{i}')
+        print(f'sync{i}')
         time.sleep(0.1)
 
         # print(text[:10])

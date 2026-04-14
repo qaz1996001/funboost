@@ -19,21 +19,21 @@ def get_publisher(publisher_params: PublisherParams) -> AbstractPublisher:
     :param logger_prefix:
     :param is_add_file_handler:
     :param clear_queue_within_init:
-    :param is_add_publish_time:是否添加发布时间，以后废弃，都添加。
-    :param consuming_function:消费函数，为了做发布时候的函数入参校验用的，如果不传则不做发布任务的校验，
-               例如add 函数接收x，y入参，你推送{"x":1,"z":3}就是不正确的，函数不接受z参数。
-    :param broker_kind: 中间件或使用包的种类。
-    :param broker_exclusive_config 加上一个不同种类中间件非通用的配置,不同中间件自身独有的配置，不是所有中间件都兼容的配置，因为框架支持30种消息队列，消息队列不仅仅是一般的先进先出queue这么简单的概念，
-           例如kafka支持消费者组，rabbitmq也支持各种独特概念例如各种ack机制 复杂路由机制，每一种消息队列都有独特的配置参数意义，可以通过这里传递。
+    :param is_add_publish_time: Whether to add publish time; will be deprecated in the future, always added.
+    :param consuming_function: The consuming function, used for validating function parameters at publish time. If not provided, no validation is performed on published tasks.
+               For example, if the add function accepts x and y parameters, pushing {"x":1,"z":3} would be incorrect since the function does not accept a z parameter.
+    :param broker_kind: The type of broker or package used.
+    :param broker_exclusive_config: Broker-specific non-universal configuration. Different brokers have their own unique settings that are not compatible across all brokers. Since the framework supports 30+ message queues, message queues are not simply FIFO queues.
+           For example, Kafka supports consumer groups, RabbitMQ supports various unique concepts like different ack mechanisms and complex routing mechanisms. Each message queue has its own unique configuration parameters that can be passed here.
 
     :return:
     """
 
     from funboost.factories.broker_kind__publsiher_consumer_type_map import broker_kind__publsiher_consumer_type_map, regist_to_funboost
     broker_kind = publisher_params.broker_kind
-    regist_to_funboost(broker_kind)  # 动态注册中间件到框架是为了延迟导入，用户没安装不需要的第三方包不报错。
+    regist_to_funboost(broker_kind)  # Dynamically register brokers into the framework using lazy imports, so users won't get errors for uninstalled third-party packages they don't need.
     if broker_kind not in broker_kind__publsiher_consumer_type_map:
-        raise ValueError(f'设置的中间件种类不正确,你设置的值是 {broker_kind} ')
+        raise ValueError(f'The specified broker kind is invalid, the value you set is {broker_kind} ')
     publisher_cls = broker_kind__publsiher_consumer_type_map[broker_kind][0]
     if not publisher_params.publisher_override_cls:
         return publisher_cls(publisher_params)

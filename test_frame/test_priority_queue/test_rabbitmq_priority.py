@@ -1,12 +1,15 @@
 """
-演示不同的函数，怎么优先消费某个函数。
-比如爬虫你想深度优先，那就优先运行爬详情页的函数，把爬详情页函数的优先级调大。
-你想广度优先就优先运行爬列表页的函数，把爬列表页页函数的优先级调大。
+Demonstrates how to prioritize certain functions over others.
+For example, in a web crawler, if you want depth-first traversal, prioritize the detail page crawler function by giving it a higher priority.
+If you want breadth-first traversal, prioritize the list page crawler function by giving it a higher priority.
 
-如下代码就是把f3函数的优先级设置成了3，f2的优先级设置成了2，f1的优先级设置成了1，所以先发布3000个消息到消息队列中，会优先运行f3函数，最后才运行f1函数。
-优先级是针对某一个队列而言，不是针对不同队列的优先级，但只要懂得变通，在下面代码的例子中的boost_fun函数这样分发调用不同的函数，就可以实现多个函数之间的优先级了。
+The following code sets f3's priority to 3, f2's priority to 2, and f1's priority to 1.
+So after publishing 3000 messages to the queue, f3 will run first and f1 will run last.
+Priority applies to a single queue, not across different queues.
+However, with a clever approach like the dispatch_fun function below that routes calls to different functions,
+you can still implement priority ordering across multiple functions.
 
-运行可以发现控制台先打印的都是f3，最后还是f1.
+Running this, you will see f3 printed first in the console, and f1 printed last.
 """
 from funboost import boost, TaskOptions, BrokerEnum
 

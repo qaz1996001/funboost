@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Funboost Prometheus 监控指标 Mixin
+Funboost Prometheus Monitoring Metrics Mixin
 
-提供 Prometheus 指标采集能力，自动上报任务执行状态、耗时等指标。
+Provides Prometheus metrics collection capability, automatically reporting task execution status, latency, and other metrics.
 
-支持两种模式：
-1. HTTP Server 模式（单进程）— Prometheus 主动拉取
-2. Push Gateway 模式（多进程）— 主动推送到 Pushgateway
+Supports two modes:
+1. HTTP Server mode (single process) — Prometheus scrapes metrics actively
+2. Push Gateway mode (multi-process) — actively pushes metrics to Pushgateway
 
-用法1：HTTP Server 模式（单进程）
+Usage 1: HTTP Server mode (single process)
 ```python
 from funboost import boost
 from funboost.contrib.override_publisher_consumer_cls.funboost_promethus_mixin import (
@@ -16,7 +16,7 @@ from funboost.contrib.override_publisher_consumer_cls.funboost_promethus_mixin i
     start_prometheus_http_server
 )
 
-# 启动 Prometheus HTTP 服务（默认端口 8000） 
+# Start Prometheus HTTP server (default port 8000)
 start_prometheus_http_server(port=8000)
 
 @boost(PrometheusBoosterParams(queue_name='my_task'))
@@ -26,7 +26,7 @@ def my_task(x):
 my_task.consume()
 ```
 
-用法2：Push Gateway 模式（多进程推荐）
+Usage 2: Push Gateway mode (recommended for multi-process)
 ```python
 from funboost import boost
 from funboost.contrib.override_publisher_consumer_cls.funboost_promethus_mixin import (
@@ -36,9 +36,9 @@ from funboost.contrib.override_publisher_consumer_cls.funboost_promethus_mixin i
 @boost(PrometheusPushGatewayBoosterParams(
     queue_name='my_task',
     user_options={
-        'prometheus_pushgateway_url': 'localhost:9091',  # Pushgateway 地址
-        'prometheus_push_interval': 10.0,                # 推送间隔（秒）
-        'prometheus_job_name': 'my_app',                 # Prometheus job 名称
+        'prometheus_pushgateway_url': 'localhost:9091',  # Pushgateway address
+        'prometheus_push_interval': 10.0,                # Push interval (seconds)
+        'prometheus_job_name': 'my_app',                 # Prometheus job name
     }
 ))
 def my_task(x):
@@ -47,12 +47,12 @@ def my_task(x):
 my_task.consume()
 ```
 
-指标说明：
-- funboost_task_total: 任务计数 (labels: queue, status)
-- funboost_task_latency_seconds: 任务耗时直方图 (labels: queue)
-- funboost_task_retries_total: 重试次数计数 (labels: queue)
-- funboost_queue_msg_count: 队列剩余消息数量 (labels: queue)
-- funboost_publish_total: 发布消息计数 (labels: queue)
+Metrics description:
+- funboost_task_total: Task counter (labels: queue, status)
+- funboost_task_latency_seconds: Task execution latency histogram (labels: queue)
+- funboost_task_retries_total: Task retry counter (labels: queue)
+- funboost_queue_msg_count: Number of messages remaining in the queue (labels: queue)
+- funboost_publish_total: Published message counter (labels: queue)
 """
 
 import os
@@ -76,17 +76,17 @@ from funboost.core.function_result_status_saver import FunctionResultStatus
 
 
 # ============================================================
-# Prometheus 指标定义
+# Prometheus Metrics Definitions
 # ============================================================
 
-# 任务计数器 (按队列和状态分组)
+# Task counter (grouped by queue and status)
 TASK_TOTAL = Counter(
     'funboost_task_total',
     'Total number of tasks processed',
     ['queue', 'status']  # status: success, fail, requeue, dlx
 )
 
-# 任务耗时直方图 (按队列分组)
+# Task latency histogram (grouped by queue)
 TASK_LATENCY = Histogram(
     'funboost_task_latency_seconds',
     'Task execution latency in seconds',
@@ -94,21 +94,21 @@ TASK_LATENCY = Histogram(
     buckets=(0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, float('inf'))
 )
 
-# 重试次数计数器 (按队列分组)
+# Retry counter (grouped by queue)
 TASK_RETRIES = Counter(
     'funboost_task_retries_total',
     'Total number of task retries',
     ['queue']
 )
 
-# 队列剩余消息数量 (按队列分组)
+# Number of messages remaining in queue (grouped by queue)
 QUEUE_MSG_COUNT = Gauge(
     'funboost_queue_msg_count',
     'Number of messages remaining in the queue',
     ['queue']
 )
 
-# 发布消息计数器 (按队列分组)
+# Published message counter (grouped by queue)
 PUBLISH_TOTAL = Counter(
     'funboost_publish_total',
     'Total number of messages published',
@@ -117,64 +117,64 @@ PUBLISH_TOTAL = Counter(
 
 
 # ============================================================
-# Prometheus Publisher Mixin (发布者指标采集)
+# Prometheus Publisher Mixin (publisher metrics collection)
 # ============================================================
 
 class PrometheusPublisherMixin(AbstractPublisher):
     """
-    Prometheus 指标采集 Publisher Mixin
-    
-    自动采集发布消息的数量指标。
+    Prometheus Metrics Collection Publisher Mixin
+
+    Automatically collects the count metric for published messages.
     """
-    
+
     def _after_publish(self, msg: dict, msg_function_kw: dict, task_id: str):
         """
-        发布消息后的钩子方法，记录 Prometheus 发布指标
+        Hook method called after publishing a message, records Prometheus publish metric
         """
         PUBLISH_TOTAL.labels(queue=self.queue_name).inc()
         super()._after_publish(msg, msg_function_kw, task_id)
 
 
 # ============================================================
-# Prometheus Consumer Mixin (基础版 - HTTP Server 模式)
+# Prometheus Consumer Mixin (basic version - HTTP Server mode)
 # ============================================================
 
 class PrometheusConsumerMixin(AbstractConsumer):
     """
-    Prometheus 指标采集 Consumer Mixin (HTTP Server 模式)
-    
-    自动采集以下指标：
-    - 任务成功/失败计数
-    - 任务执行耗时
-    - 重试次数
-    
-    通过框架提供的 _both_sync_and_aio_frame_custom_record_process_info_func 钩子方法实现，
-    同步和异步任务都会调用此方法，无需分别实现。
+    Prometheus Metrics Collection Consumer Mixin (HTTP Server mode)
+
+    Automatically collects the following metrics:
+    - Task success/failure count
+    - Task execution latency
+    - Retry count
+
+    Implemented via the framework-provided _both_sync_and_aio_frame_custom_record_process_info_func hook,
+    which is called for both synchronous and asynchronous tasks — no need to implement separately.
     """
-    
+
     def _both_sync_and_aio_frame_custom_record_process_info_func(self, current_function_result_status: FunctionResultStatus, kw: dict):
         """
-        框架回调方法，同步和异步任务执行后都会调用此方法采集 Prometheus 指标
+        Framework callback method, called after both synchronous and asynchronous task execution to collect Prometheus metrics
         """
         self._record_prometheus_metrics(current_function_result_status)
         super()._both_sync_and_aio_frame_custom_record_process_info_func(current_function_result_status, kw)
-    
+
     def _record_prometheus_metrics(self, function_result_status: FunctionResultStatus):
         """
-        记录 Prometheus 指标
-        
-        :param function_result_status: 函数执行状态，包含 time_start 和 time_cost 等信息
+        Record Prometheus metrics
+
+        :param function_result_status: Function execution status, contains time_start, time_cost, etc.
         """
         queue_name = self.queue_name
-        
-        # 确定任务状态
+
+        # Determine task status
         if function_result_status is None:
             status = 'unknown'
             latency = 0.0
         else:
-            # 使用框架提供的 time_cost，如果没有则计算
+            # Use framework-provided time_cost; calculate if not available
             latency = function_result_status.time_cost if function_result_status.time_cost else (time.time() - function_result_status.time_start)
-            
+
             if function_result_status._has_requeue:
                 status = 'requeue'
             elif function_result_status._has_to_dlx_queue:
@@ -183,74 +183,74 @@ class PrometheusConsumerMixin(AbstractConsumer):
                 status = 'success'
             else:
                 status = 'fail'
-        
-        # 记录任务计数
+
+        # Record task count
         TASK_TOTAL.labels(queue=queue_name, status=status).inc()
-        
-        # 记录任务耗时
+
+        # Record task latency
         TASK_LATENCY.labels(queue=queue_name).observe(latency)
-        
-        # 记录重试次数（如果有重试）
+
+        # Record retry count (if retries occurred)
         if function_result_status and function_result_status.run_times > 1:
             retry_count = function_result_status.run_times - 1
             TASK_RETRIES.labels(queue=queue_name).inc(retry_count)
-        
-        # 记录队列剩余消息数量
+
+        # Record number of messages remaining in the queue
         msg_num_in_broker = self.metric_calculation.msg_num_in_broker
         if msg_num_in_broker is not None and msg_num_in_broker >= 0:
             QUEUE_MSG_COUNT.labels(queue=queue_name).set(msg_num_in_broker)
 
 
 # ============================================================
-# Push Gateway Consumer Mixin (多进程推荐)
+# Push Gateway Consumer Mixin (recommended for multi-process)
 # ============================================================
 
 class PrometheusPushGatewayConsumerMixin(PrometheusConsumerMixin):
     """
-    Prometheus Push Gateway 模式 Consumer Mixin
-    
-    适用于多进程场景，自动定期将指标推送到 Pushgateway。
-    
-    特性：
-    - 后台线程定期推送指标
-    - 自动生成实例标识（hostname_pid）
-    - 进程退出时自动清理指标
+    Prometheus Push Gateway mode Consumer Mixin
+
+    Suitable for multi-process scenarios; automatically pushes metrics to Pushgateway at regular intervals.
+
+    Features:
+    - Background thread pushes metrics periodically
+    - Automatically generates instance identifier (hostname_pid)
+    - Automatically cleans up metrics on process exit
     """
-    
-    # 类级别变量，确保每个进程只启动一个推送线程
+
+    # Class-level variables to ensure only one push thread is started per process
     _push_thread_started: typing.ClassVar[bool] = False
     _push_thread_lock: typing.ClassVar[threading.Lock] = threading.Lock()
-    
+
     def custom_init(self):
-        """初始化时启动 Push Gateway 后台线程"""
+        """Start Push Gateway background thread on initialization"""
         super().custom_init()
         self._start_push_gateway_thread_if_needed()
-    
+
     def _start_push_gateway_thread_if_needed(self):
-        """启动 Push Gateway 推送线程（确保只启动一次）"""
-        # 从 user_options 中获取 Prometheus 配置
+        """Start Push Gateway push thread (ensure it is only started once)"""
+        # Get Prometheus configuration from user_options
         user_options = self.consumer_params.user_options or {}
         pushgateway_url = user_options.get('prometheus_pushgateway_url', None)
         if not pushgateway_url:
             raise ValueError('prometheus_pushgateway_url is required')
-        
+
         with self._push_thread_lock:
             if PrometheusPushGatewayConsumerMixin._push_thread_started:
                 return
             PrometheusPushGatewayConsumerMixin._push_thread_started = True
-        
-        # 从 user_options 中获取配置
+
+        # Get configuration from user_options
         push_interval = user_options.get('prometheus_push_interval', 10.0)
         job_name = user_options.get('prometheus_job_name', 'funboost')
-        
-        # 生成实例标识
+
+        # Generate instance identifier
         hostname = socket.gethostname()
         pid = os.getpid()
         instance_id = f'{hostname}_{pid}'
-        
+
         grouping_key = {'instance': instance_id}
-        
-        # 启动后台推送线程
+
+        # Start background push thread
         def push_loop():
             while True:
                 try:
@@ -261,14 +261,14 @@ class PrometheusPushGatewayConsumerMixin(PrometheusConsumerMixin):
                         registry=REGISTRY
                     )
                 except Exception as e:
-                    # 推送失败时静默处理，避免影响主业务
+                    # Silently handle push failures to avoid affecting the main business
                     pass
                 time.sleep(push_interval)
-        
+
         push_thread = threading.Thread(target=push_loop, daemon=True, name='prometheus_push_thread')
         push_thread.start()
-        
-        # 注册退出时清理
+
+        # Register cleanup on exit
         def cleanup():
             try:
                 delete_from_gateway(
@@ -278,22 +278,22 @@ class PrometheusPushGatewayConsumerMixin(PrometheusConsumerMixin):
                 )
             except Exception:
                 pass
-        
+
         atexit.register(cleanup)
-        
+
         self.logger.info(f'🔥 Prometheus Push Gateway started: {pushgateway_url}, interval={push_interval}s, instance={instance_id}')
 
 
 # ============================================================
-# 预配置的 BoosterParams
+# Pre-configured BoosterParams
 # ============================================================
 
 class PrometheusBoosterParams(BoosterParams):
     """
-    预配置了 Prometheus 指标采集的 BoosterParams (HTTP Server 模式)
-    
-    适用于单进程场景，需要配合 start_prometheus_http_server() 使用。
-    自动采集消费者和发布者的指标。
+    BoosterParams pre-configured with Prometheus metrics collection (HTTP Server mode)
+
+    Suitable for single-process scenarios; must be used together with start_prometheus_http_server().
+    Automatically collects metrics for both consumer and publisher.
     """
     consumer_override_cls: typing.Type[PrometheusConsumerMixin] = PrometheusConsumerMixin
     publisher_override_cls: typing.Type[PrometheusPublisherMixin] = PrometheusPublisherMixin
@@ -301,17 +301,17 @@ class PrometheusBoosterParams(BoosterParams):
 
 class PrometheusPushGatewayBoosterParams(BoosterParams):
     """
-    预配置了 Prometheus Push Gateway 的 BoosterParams (多进程推荐)
-    
-    适用于多进程场景，自动推送指标到 Pushgateway。
-    自动采集消费者和发布者的指标。
-    
-    Prometheus 配置通过 user_options 传递，支持以下键：
-    - prometheus_pushgateway_url: Pushgateway 地址，如 'localhost:9091' (必填)
-    - prometheus_push_interval: 推送间隔（秒），默认 10.0
-    - prometheus_job_name: Prometheus job 名称，默认 'funboost'
-    
-    用法：
+    BoosterParams pre-configured with Prometheus Push Gateway (recommended for multi-process)
+
+    Suitable for multi-process scenarios; automatically pushes metrics to Pushgateway.
+    Automatically collects metrics for both consumer and publisher.
+
+    Prometheus configuration is passed via user_options, supporting the following keys:
+    - prometheus_pushgateway_url: Pushgateway address, e.g. 'localhost:9091' (required)
+    - prometheus_push_interval: Push interval in seconds, default 10.0
+    - prometheus_job_name: Prometheus job name, default 'funboost'
+
+    Usage:
     ```python
     @boost(PrometheusPushGatewayBoosterParams(
         queue_name='my_task',
@@ -330,24 +330,24 @@ class PrometheusPushGatewayBoosterParams(BoosterParams):
 
 
 # ============================================================
-# 辅助函数
+# Helper functions
 # ============================================================
 
 def start_prometheus_http_server(port: int = 8000, addr: str = '0.0.0.0'):
     """
-    启动 Prometheus HTTP 服务器 (单进程模式)
-    
-    启动后可以通过 http://<addr>:<port>/metrics 访问指标
-    
-    :param port: HTTP 端口，默认 8000
-    :param addr: 绑定地址，默认 0.0.0.0
+    Start Prometheus HTTP server (single-process mode)
+
+    After starting, metrics can be accessed at http://<addr>:<port>/metrics
+
+    :param port: HTTP port, default 8000
+    :param addr: Bind address, default 0.0.0.0
     """
     start_http_server(port, addr)
     print(f'🔥 Prometheus metrics server started at http://{addr}:{port}/metrics')
 
 
 # ============================================================
-# 导出
+# Exports
 # ============================================================
 
 __all__ = [

@@ -12,7 +12,7 @@ from funboost.utils.mongo_util import MongoMixin
 
 
 class MongoMqPublisher(AbstractPublisher, MongoMixin):
-    # 使用mongo-queue包实现的基于mongodb的队列。 队列是一个col，自动存放在consume_queues库中。
+    # MongoDB-based queue implemented using the mongo-queue package. Each queue is a collection, automatically stored in the consume_queues database.
     # noinspection PyAttributeOutsideInit
 
     pid__queue_map = {}
@@ -22,7 +22,7 @@ class MongoMqPublisher(AbstractPublisher, MongoMixin):
 
     @property
     def queue(self):
-        ''' 不能提前实例化，mongo fork进程不安全，这样是动态生成queue'''
+        '''Cannot instantiate in advance; mongo is not fork-safe, so the queue is dynamically generated.'''
         pid = os.getpid()
         key = (pid, MongoDbName.MONGOMQ_DB, self._queue_name)
         if key not in MongoMqPublisher.pid__queue_map:
@@ -42,7 +42,7 @@ class MongoMqPublisher(AbstractPublisher, MongoMixin):
 
     def clear(self):
         self.queue.clear()
-        self.logger.warning(f'清除 mongo队列 {self._queue_name} 中的消息成功')
+        self.logger.warning(f'Successfully cleared messages in mongo queue {self._queue_name}')
 
     def get_message_count(self):
         # return self.queue.size()

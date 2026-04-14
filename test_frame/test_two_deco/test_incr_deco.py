@@ -12,7 +12,7 @@ def incr_deco(redis_key):
         def __inner(*args, **kwargs):
             result = f(*args, **kwargs)
             RedisMixin().redis_db_frame.incr(redis_key)
-            # 创建索引
+            # Create index
 
             # MongoMixin().mongo_client.get_database('basea').get_collection('cola').insert({'result':result,'args':str(args),'kwargs':str(kwargs)})
             return result

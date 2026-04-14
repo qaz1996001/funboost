@@ -1,53 +1,54 @@
-"""
-【⚠️ 安全警示 & 最佳实践】
+“””
+[⚠️ Security Warning & Best Practices]
 
-1. 关于 BoosterDiscovery 自动扫描的风险提示
+1. Risk Warning for BoosterDiscovery Auto-Scanning
 -------------------------------------------------------
-BoosterDiscovery(....).auto_discovery() 请务必谨慎使用，强烈建议实例化时传入精确的过滤参数。
+BoosterDiscovery(....).auto_discovery() must be used with great care. It is strongly recommended to pass precise filter parameters when instantiating.
 
-原因：
-    部分开发者的编程习惯可能不严谨，对于包含执行动作的脚本，未添加 `if __name__ == '__main__':` 保护，
-    或者不理解 `__main__` 的作用。Python 的 import 机制意味着“导入即执行模块顶层代码”。
+Reason:
+    Some developers may have loose coding habits: scripts that perform actions at module level may lack
+    `if __name__ == '__main__':` protection, or the author may not understand how `__main__` works.
+    Python's import mechanism means “importing a module executes its top-level code.”
 
-危险场景假设：
-    假设项目中存在一个临时的脏数据清理脚本 `my_temp_dangerous_delete_mysql_script.py`：
+Dangerous scenario:
+    Suppose there is a temporary dirty-data cleanup script `my_temp_dangerous_delete_mysql_script.py` in the project:
 
     ```python
-    # ❌ 危险写法：写在模块顶层，不在函数内，也无 main 保护
+    # ❌ Dangerous: written at module top level, not inside a function, and without main guard
     import db_client
-    db_client.execute("DROP TABLE users") 
+    db_client.execute(“DROP TABLE users”)
     ```
 
-后果：
-    如果你使用了无限制的 `auto_discovery()`，即使项目上线2年后，一旦扫描并 import 到这个脚本，
-    数据库表会在瞬间被删除。这绝对是生产事故级别的灾难。
+Consequence:
+    If you use unrestricted `auto_discovery()`, even 2 years after the project goes live, once this script
+    is scanned and imported, the database table will be deleted instantly. This is an absolute production disaster.
 
-✅ 正确用法（精确传参）：
+✅ Correct usage (with precise parameters):
     BoosterDiscovery(
-        project_root_path='/path/to/your_project', 
+        project_root_path='/path/to/your_project',
         booster_dirs=['your_booster_dir'],
         max_depth=1,
-        py_file_re_str='tasks'  # 强烈建议：只扫描包含 'tasks' 的文件，避开临时脚本
+        py_file_re_str='tasks'  # Strongly recommended: only scan files containing 'tasks', avoiding temp scripts
     ).auto_discovery()
 
 
-2. 为什么推荐“显式 Import”而非“自动扫描”？BoosterDiscovery不是funboost的必需品！
+2. Why prefer “explicit Import” over “auto-scanning”? BoosterDiscovery is NOT required by funboost!
 -------------------------------------------------------
-其实不建议过度依赖 `auto_discovery()`，更推荐的最佳实践是：
-👉 手动明确 import 包含 @boost 的模块。需要用到哪些消费函数，就导入哪些模块。
+It is actually not recommended to over-rely on `auto_discovery()`. The recommended best practice is:
+👉 Manually and explicitly import the modules containing @boost. Import only what you need.
 
-Funboost vs Celery 的架构差异：
-    * Funboost：
-      没有中央 `app` 实例，不需要像 Celery 那样有一个单独的 `celery_app.py` 模块。
-      架构上天然不存在“互相依赖导入”的死结。因此，要用什么消费函数，直接导入即可，简单直观。
+Architecture difference between Funboost and Celery:
+    * Funboost:
+      Has no central `app` instance, no need for a separate `celery_app.py` module like Celery.
+      Architecturally, there is no “circular import deadlock” by design. Just import the consuming functions you need — simple and straightforward.
 
-    * Celery：
-      必须手写 `includes` 配置或调用 `autodiscover_tasks()`。
-      根本原因是：Celery 的 `xx_tasks.py` 需要导入 `celery_app.py` 中的 `app` 对象；
-      而 `celery worker` 启动 `app` 时又需要导入 `xx_tasks.py` 来注册任务。
-      这种设计导致双方陷入“循环导入”的死结，迫使 Celery 发明了一套复杂的导入机制，
-      也让新手在规划目录结构时小心翼翼、非常纠结。
-""" 
+    * Celery:
+      Must manually configure `includes` or call `autodiscover_tasks()`.
+      The root cause: Celery's `xx_tasks.py` needs to import the `app` object from `celery_app.py`;
+      while `celery worker` starting `app` also needs to import `xx_tasks.py` to register tasks.
+      This design traps both sides in a circular import deadlock, forcing Celery to invent a complex import mechanism
+      and making newcomers very careful and frustrated when planning the project directory structure.
+“”” 
 
 import re
 import sys
@@ -66,13 +67,13 @@ class BoosterDiscovery(FunboostFileLoggerMixin):
                  booster_dirs: typing.List[typing.Union[PathLike, str]],
                  max_depth=1, py_file_re_str: str = None):
         """
-        :param project_root_path 项目根目录
-        :param booster_dirs: @boost装饰器函数所在的模块的文件夹,不用包含项目根目录长路径
-        :param max_depth: 查找多少深层级子目录
-        :param py_file_re_str: 文件名匹配过滤. 例如你所有的消费函数都在xxx_task.py yyy_task.py这样的,  你可以传参 task.py , 避免自动import了不需要导入的模块
-        
-        BoosterDiscovery(....).auto_discovery() 需要谨慎使用，谨慎传参，原因见上面模块注释。
-        
+        :param project_root_path: Project root directory
+        :param booster_dirs: Folder(s) containing modules with @boost decorator functions, no need to include the full project root path
+        :param max_depth: How many levels of subdirectories to search
+        :param py_file_re_str: Filename match filter. E.g. if all your consuming functions are in xxx_task.py, yyy_task.py etc., you can pass 'task.py' to avoid auto-importing unneeded modules.
+
+        BoosterDiscovery(....).auto_discovery() must be used with caution and precise parameters. See the module-level comment above for reasons.
+
         """
         self.project_root_path = project_root_path
         self.booster__full_path_dirs = [Path(project_root_path) / Path(boost_dir) for boost_dir in booster_dirs]
@@ -83,7 +84,7 @@ class BoosterDiscovery(FunboostFileLoggerMixin):
         self._has_discovery_import = False
 
     def get_py_files_recursively(self, current_folder_path: Path, current_depth=0, ):
-        """先找到所有py文件"""
+        """First find all py files."""
         if current_depth > self.max_depth:
             return
         for item in current_folder_path.iterdir():
@@ -98,24 +99,24 @@ class BoosterDiscovery(FunboostFileLoggerMixin):
         self.py_files = list(set(self.py_files))
 
     def auto_discovery(self, ):
-        """把所有py文件自动执行import,主要是把 所有的@boost函数装饰器注册到 pid_queue_name__booster_map 中
-        这个auto_discovery方法最好放到main里面,如果要扫描自身文件夹,没写正则排除文件本身,会无限懵逼死循环导入,无无限懵逼死循环导入
+        """Automatically import all py files, mainly to register all @boost function decorators into pid_queue_name__booster_map.
+        This auto_discovery method is best placed inside main; if scanning the folder containing this file itself without a regex to exclude it, it will cause infinite circular imports.
         """
         if self._has_discovery_import is False:
             self._has_discovery_import = True
         else:
             pass
-            return  # 这一个判断是避免用户执行BoosterDiscovery.auto_discovery没有放到 if __name__ == '__main__'中,导致无限懵逼死循环.
+            return  # This check prevents infinite circular imports if the user calls BoosterDiscovery.auto_discovery() outside of `if __name__ == '__main__'`.
         self.logger.info(self.booster__full_path_dirs)
         for dir in self.booster__full_path_dirs:
             if not Path(dir).exists():
-                raise Exception(f'没有这个文件夹 ->  {dir}')
+                raise Exception(f'This folder does not exist ->  {dir}')
 
             self.get_py_files_recursively(Path(dir))
             for file_path in self.py_files:
-                self.logger.debug(f'导入模块 {file_path}')
+                self.logger.debug(f'Importing module {file_path}')
                 if Path(file_path) == Path(sys._getframe(1).f_code.co_filename):
-                    self.logger.warning(f'排除导入调用auto_discovery的模块自身 {file_path}')  # 否则下面的import这个文件,会造成无限懵逼死循环
+                    self.logger.warning(f'Excluding auto_discovery caller module itself from import: {file_path}')  # Otherwise importing this file would cause infinite circular imports.
                     continue
 
                 # module_name = Path(file_path).as_posix().replace('/', '.') + '.' + Path(file_path).stem
@@ -128,7 +129,7 @@ class BoosterDiscovery(FunboostFileLoggerMixin):
 
 
 if __name__ == '__main__':
-    # 指定文件夹路径
+    # Specify the folder path
     BoosterDiscovery(project_root_path='/codes/funboost',
                      booster_dirs=['test_frame/test_funboost_cli/test_find_boosters'],
                      max_depth=2, py_file_re_str='task').auto_discovery()

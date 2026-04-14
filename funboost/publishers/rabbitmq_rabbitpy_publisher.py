@@ -10,16 +10,16 @@ from funboost.utils.rabbitmq_factory import RabbitMqFactory
 
 class RabbitmqPublisherUsingRabbitpy(AbstractPublisher):
     """
-    使用rabbitpy包实现的。
+    Implemented using the rabbitpy package.
     """
 
     # noinspection PyAttributeOutsideInit
     def init_broker(self):
-        self.logger.warning(f'使用rabbitpy包 链接mq')
+        self.logger.warning(f'Connecting to MQ using rabbitpy package')
         self.rabbit_client = RabbitMqFactory(is_use_rabbitpy=1).get_rabbit_cleint()
         self.channel = self.rabbit_client.creat_a_channel()
         self.queue = self.channel.queue_declare(queue=self._queue_name, durable=True)
-        self.logger.critical('rabbitpy 快速发布 有问题会丢失大量任务，如果使用 rabbitmq 建议设置中间件为 BrokerEnum.RABBITMQ_AMQPSTORM')
+        self.logger.critical('rabbitpy fast publishing has issues and will lose a large number of tasks. If using rabbitmq, it is recommended to set the broker to BrokerEnum.RABBITMQ_AMQPSTORM')
         os._exit(444) # noqa
 
     # @decorators.tomorrow_threads(10)
@@ -39,7 +39,7 @@ class RabbitmqPublisherUsingRabbitpy(AbstractPublisher):
     @deco_mq_conn_error
     def clear(self):
         self.channel.queue_purge(self._queue_name)
-        self.logger.warning(f'清除 {self._queue_name} 队列中的消息成功')
+        self.logger.warning(f'Successfully cleared messages in queue {self._queue_name}')
 
     @deco_mq_conn_error
     def get_message_count(self):
@@ -51,4 +51,4 @@ class RabbitmqPublisherUsingRabbitpy(AbstractPublisher):
     def close(self):
         self.channel.close()
         self.rabbit_client.connection.close()
-        self.logger.warning('关闭rabbitpy包 链接mq')
+        self.logger.warning('Closing rabbitpy MQ connection')

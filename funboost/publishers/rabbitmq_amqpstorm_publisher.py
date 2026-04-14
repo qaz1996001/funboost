@@ -10,8 +10,8 @@ from funboost.utils import decorators
 
 
 class RabbitmqPublisherUsingAmqpStorm(AbstractPublisher):
-    # 使用amqpstorm包实现的mq操作。
-    # 实例属性没在__init__里面写，造成代码补全很麻烦，写在这里做类属性，方便pycharm补全
+    # MQ operations implemented using the amqpstorm package.
+    # Instance attributes not written in __init__ cause inconvenient code completion; written here as class attributes for PyCharm auto-completion
     connection : amqpstorm.UriConnection
     channel : amqpstorm.Channel
     channel_wrapper_by_ampqstormbaic : AmqpStormBasic
@@ -29,7 +29,7 @@ class RabbitmqPublisherUsingAmqpStorm(AbstractPublisher):
     # @decorators.synchronized
     def init_broker(self):
         # username=app_config.RABBITMQ_USER, password=app_config.RABBITMQ_PASS, host=app_config.RABBITMQ_HOST, port=app_config.RABBITMQ_PORT, virtual_host=app_config.RABBITMQ_VIRTUAL_HOST, heartbeat=60 * 10
-        self.logger.warning(f'使用AmqpStorm包 链接mq')
+        self.logger.warning(f'Connecting to MQ using AmqpStorm package')
         self.connection = amqpstorm.UriConnection(
             f'amqp://{BrokerConnConfig.RABBITMQ_USER}:{BrokerConnConfig.RABBITMQ_PASS}@{BrokerConnConfig.RABBITMQ_HOST}:{BrokerConnConfig.RABBITMQ_PORT}/{BrokerConnConfig.RABBITMQ_VIRTUAL_HOST}?heartbeat={60 * 10}&timeout=20000'
         )
@@ -50,7 +50,7 @@ class RabbitmqPublisherUsingAmqpStorm(AbstractPublisher):
     @deco_mq_conn_error
     def clear(self):
         self.queue.purge(self._queue_name)
-        self.logger.warning(f'清除 {self._queue_name} 队列中的消息成功')
+        self.logger.warning(f'Successfully cleared messages in queue {self._queue_name}')
 
     @deco_mq_conn_error
     def get_message_count(self):
@@ -61,4 +61,4 @@ class RabbitmqPublisherUsingAmqpStorm(AbstractPublisher):
     def close(self):
         self.channel.close()
         self.connection.close()
-        self.logger.warning('关闭amqpstorm包 链接mq')
+        self.logger.warning('Closing amqpstorm MQ connection')

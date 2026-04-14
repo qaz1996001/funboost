@@ -11,7 +11,7 @@ if BrokerConnConfig.DRAMATIQ_URL.startswith('redis'):
 elif BrokerConnConfig.DRAMATIQ_URL.startswith('amqp'):
     broker = RabbitmqBroker(url=BrokerConnConfig.DRAMATIQ_URL)
 else:
-    raise ValueError('DRAMATIQ_URL 配置错误，需要配置成url连接形式，例如 amqp://rabbitmq_user:rabbitmq_pass@127.0.0.1:5672/ 或者 redis://:passwd@192.168.64.151:6378/7 ')
+    raise ValueError('DRAMATIQ_URL configuration error, it needs to be configured as a URL connection string, e.g. amqp://rabbitmq_user:rabbitmq_pass@127.0.0.1:5672/ or redis://:passwd@192.168.64.151:6378/7 ')
 dramatiq.set_broker(broker)
 
 """
@@ -22,7 +22,7 @@ dramatiq.set_broker(broker)
 class DramatiqHelper(metaclass=FunboostMetaTypeFileLogger):
 
     broker = dramatiq.get_broker()
-    to_be_start_work_celery_queue_name_set = set()  # 存放需要worker运行的queue name。
+    to_be_start_work_celery_queue_name_set = set()  # Stores queue names that need to be run by the worker.
 
     queue_name__actor_map = {}
 
@@ -45,7 +45,7 @@ class DramatiqHelper(metaclass=FunboostMetaTypeFileLogger):
         pa.verbose = 0
         pa.pid_file = None
 
-        cls.logger.warning(f'dramatiq 命令行启动参数 {pa}')
+        cls.logger.warning(f'dramatiq command line startup parameters {pa}')
         main(pa)
 
 

@@ -1,7 +1,7 @@
-演示复杂用法。
+Demonstrates complex usage.
 
-一次性启动多个消费者。
+Starts multiple consumers at once.
 
-模拟单核cpu已达到100%，需要开启多进程的用法，演示使用多进程加多线程（协程）。
+Simulates a scenario where a single CPU core has reached 100% utilization and multi-processing is needed; demonstrates using multiple processes combined with multi-threading (or coroutines).
 
-这里使用redis作为中间件演示，需要安装redis。正式墙裂推荐安装mq。
+Redis is used as the middleware for this demonstration, so Redis must be installed. For production use, it is strongly recommended to install an MQ middleware.

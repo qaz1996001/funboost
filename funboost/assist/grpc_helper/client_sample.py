@@ -3,32 +3,32 @@
 
 import grpc
 
-# 导入生成的 protobuf 文件
+# Import generated protobuf files
 import funboost_grpc_pb2
 import funboost_grpc_pb2_grpc
 import time
 
 def run_client():
     """
-    运行 gRPC 客户端
+    Run gRPC client
     """
-    # 连接到服务器
+    # Connect to server
     with grpc.insecure_channel('localhost:50051') as channel:
-        # 创建 stub
+        # Create stub
         stub = funboost_grpc_pb2_grpc.FunboostBrokerServiceStub(channel)
         time_start = time.time()
         for i in range(10000):
-            # 创建请求
+            # Create request
             request = funboost_grpc_pb2.FunboostGrpcRequest(json_req='{"b":2}')
             
             try:
-                # 调用远程方法
+                # Call remote method
                 response = stub.Call(request)
-                print(f"服务器响应: {response.json_resp}")
+                print(f"Server response: {response.json_resp}")
             except grpc.RpcError as e:
-                print(f"gRPC 调用失败: {e}")
+                print(f"gRPC call failed: {e}")
         time_end = time.time()
-        print(f"gRPC 调用时间: {time_end - time_start} 秒")
+        print(f"gRPC call duration: {time_end - time_start} seconds")
 
 
 
@@ -37,10 +37,10 @@ def run_client():
 
 
 if __name__ == '__main__':
-    print("=== gRPC 客户端测试 ===")
-    print("1. 简单测试")
+    print("=== gRPC Client Test ===")
+    print("1. Simple test")
    
     run_client()
     
-    # print("\n2. 交互式测试")
+    # print("\n2. Interactive test")
     # interactive_client()

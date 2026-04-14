@@ -20,5 +20,5 @@ def add2(x, y):
 if __name__ == '__main__':
     add2.delay(1,2)
     '''
-    celery -A celery_asyncio_test worker -l info -P threads -Q '*' # chatgtp回答错误，celery 5.2.7 都不支持asyncio
+    celery -A celery_asyncio_test worker -l info -P threads -Q '*' # ChatGPT answered incorrectly; celery 5.2.7 does not support asyncio
     '''

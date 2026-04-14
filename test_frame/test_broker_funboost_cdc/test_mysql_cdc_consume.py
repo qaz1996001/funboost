@@ -2,24 +2,23 @@
 from typing import Dict, Any
 import dataset
 
-from funboost import boost, BrokerEnum, ConcurrentModeEnum, BoosterParams,BoostersManager,PublisherParams
+from funboost import boost, BrokerEnum, ConcurrentModeEnum, BoosterParams, BoostersManager, PublisherParams
 from pymysqlreplication.row_event import (DeleteRowsEvent, UpdateRowsEvent, WriteRowsEvent, )
 
-from funboost.contrib.cdc.mysql2mysql import MySql2Mysql # 从 funboost的额外贡献文件夹中导入 MySql2Mysql 类.
+from funboost.contrib.cdc.mysql2mysql import MySql2Mysql  # Import MySql2Mysql class from funboost's contrib folder.
 
 bin_log_stream_reader_config = dict(
-    # BinLogStreamReaderConfig 的所有入参都是 pymysqlreplication.BinLogStreamReader 的 原生入参
+    # All parameters of BinLogStreamReaderConfig are native parameters of pymysqlreplication.BinLogStreamReader
     connection_settings={"host": "127.0.0.1", "port": 3306, "user": "root", "passwd": "123456"},
     server_id=104,
     only_events=[DeleteRowsEvent, UpdateRowsEvent, WriteRowsEvent, ],
-    blocking=True,  # 1. 设置为阻塞模式，使其持续等待新事件
-    resume_stream=True,  # 2. (推荐) 允许在断线后自动从上次的位置恢复}},
-    only_schemas=['testdb6'],  # 3. 仅监听 testdb6 数据库
-    only_tables=['users'],  # 4. 仅监听 users 表
+    blocking=True,  # 1. Set to blocking mode to keep waiting for new events
+    resume_stream=True,  # 2. (Recommended) Allow automatic resumption from last position after disconnection
+    only_schemas=['testdb6'],  # 3. Only listen to the testdb6 database
+    only_tables=['users'],  # 4. Only listen to the users table
 )
 
-sink_db = dataset.connect('mysql+pymysql://root:123456@127.0.0.1:3306/testdb7')  # 使用cdc技术 ,把 testdb6.users 表数据同步到另外一个库testdb7中的user表
-
+sink_db = dataset.connect('mysql+pymysql://root:123456@127.0.0.1:3306/testdb7')  # Use CDC to sync testdb6.users table data to the users table in another database testdb7
 
 
 @boost(BoosterParams(
@@ -33,7 +32,7 @@ def consume_binlog(event_type: str,
                    **row_data: Any):
     full_cdc_msg = locals()
     print(full_cdc_msg)
-    # update 事件打印如下
+    # UPDATE event output looks like this:
     """
     {
     "event_type": "UPDATE",
@@ -42,13 +41,13 @@ def consume_binlog(event_type: str,
         "after_values": {
             "email": "wangshier@example.com",
             "id": 10,
-            "name": "王八蛋2b16"
+            "name": "wangbadan2b16"
         },
         "before_none_sources": {},
         "before_values": {
             "email": "wangshier@example.com",
             "id": 10,
-            "name": "王八蛋2b15"
+            "name": "wangbadan2b15"
         }
     },
     "schema": "testdb6",
@@ -56,25 +55,25 @@ def consume_binlog(event_type: str,
     "timestamp": 1756207785
 }
     """
-    # 演示 轻松搞定mysql2mysql 表同步,你也可以清洗数据再插入mysql,这里是演示整表原封不动同步, 可以不用搭建flinkcdc大数据集群,就能5行代码以内搞定 mysql2mysql
-    m2m = MySql2Mysql(primary_key='id',target_table_name='users', target_sink_db=sink_db, )
-    m2m.sync_data(event_type, schema, table, timestamp,row_data) # 只需要一行代码就能把cdc数据同步到另外一个数据库实例的表中.
+    # Demonstrates effortless mysql2mysql table synchronization; you can also clean data before inserting into MySQL.
+    # This example syncs the entire table as-is, without needing to set up a Flink CDC big data cluster — achievable in under 5 lines of code.
+    m2m = MySql2Mysql(primary_key='id', target_table_name='users', target_sink_db=sink_db, )
+    m2m.sync_data(event_type, schema, table, timestamp, row_data)  # Just one line of code to sync CDC data to a table in another database instance.
 
+    # You can also send messages to rabbitmq, kafka, redis — your choice. Use funboost's publisher.send_msg to publish raw content without adding extra keys like taskid.
+    # No need to wrap various message publishing tools yourself; use funboost's universal feature to publish to any message queue in one line of code.
 
-    # 你还可以吧消息发到 rabbitmq  kafka redis 随你喜欢,可以使用 funboost的 publisher.send_msg 来发布原始内容,不会添加extra taskid等额外key.,
-    # 不需要亲自封装各种消息发布工具,利用funboost的万能特性,发布到所有各种消息队列只需要一行代码.
-
-    # 演示把消息发到redis
-    pb_redis = BoostersManager.get_cross_project_publisher(PublisherParams(queue_name='test_queue_mysql_cdc_dest1',broker_kind=BrokerEnum.REDIS))
+    # Demonstrate sending messages to redis
+    pb_redis = BoostersManager.get_cross_project_publisher(PublisherParams(queue_name='test_queue_mysql_cdc_dest1', broker_kind=BrokerEnum.REDIS))
     pb_redis.send_msg(full_cdc_msg)
 
-    # 演示把消息发到kafka
+    # Demonstrate sending messages to kafka
     pb_kafka = BoostersManager.get_cross_project_publisher(PublisherParams(queue_name='test_queue_mysql_cdc_dest2', broker_kind=BrokerEnum.KAFKA,
-                                                                           broker_exclusive_config={'num_partitions':10,'replication_factor':1}))
+                                                                           broker_exclusive_config={'num_partitions': 10, 'replication_factor': 1}))
     pb_kafka.send_msg(full_cdc_msg)
 
 
 if __name__ == '__main__':
-    # MYSQL_CDC 作为funboost的broker时候, 所以禁止了 push 来人工发布消息, 自动监听binlog作为消息来源,所以不需要人工发消息.
-    # 任何对数据库的 insert delete update 都会触发binlog,间接的作为了 funboost 消费者的消息来源.
+    # When MYSQL_CDC is used as funboost's broker, manual push is disabled. It automatically listens to binlog as the message source, so no manual message publishing is needed.
+    # Any insert, delete, or update on the database will trigger binlog, which indirectly serves as the message source for the funboost consumer.
     consume_binlog.consume()

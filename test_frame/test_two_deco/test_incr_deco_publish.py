@@ -11,7 +11,7 @@ def incr_deco(redis_key):
         def __inner(*args, **kwargs):
             result = f(*args, **kwargs)
             RedisMixin().redis_db_frame.incr(redis_key)
-            # 创建索引
+            # Create index
 
             # MongoMixin().mongo_client.get_database('basea').get_collection('cola').insert({'result':result,'args':str(args),'kwargs':str(kwargs)})
             return result
@@ -22,7 +22,7 @@ def incr_deco(redis_key):
 
 
 @BoosterParams(queue_name='test_queue_23b',
-               should_check_publish_func_params=False,  # 这一行很重要，should_check_publish_func_params必须设置为False，如果你是直接把装饰器加到函数上了，funboost无法获取函数的入参名字，无法自动生成json消息，所以需要用户自己publish来发布入参字典。
+               should_check_publish_func_params=False,  # This line is important; should_check_publish_func_params must be set to False. When the decorator is applied directly to the function, funboost cannot obtain the function's parameter names and cannot auto-generate the JSON message, so the user must use publish to send the parameter dictionary.
                )
 @incr_deco('test_queue_23b_run_count')
 def fun(xxx, yyy):
@@ -33,6 +33,6 @@ def fun(xxx, yyy):
 if __name__ == '__main__':
 
     for i in range(20):
-        # fun.push(i, 2 * i) # 不可以fun.push这样发布
-        fun.publish({'xxx': 1, 'yyy': 2})  # 直接把装饰器写在消费函数上，那就用户需要使用publish发布，且boost装饰器设置should_check_publish_func_params=False
+        # fun.push(i, 2 * i) # Cannot publish this way with fun.push
+        fun.publish({'xxx': 1, 'yyy': 2})  # When the decorator is applied directly to the consumer function, the user must use publish to push and set should_check_publish_func_params=False in the boost decorator
     fun.consume()

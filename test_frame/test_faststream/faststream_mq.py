@@ -13,7 +13,7 @@ RABBITMQ_USER = 'admin'
 RABBITMQ_PASS = 'xxxx'
 RABBITMQ_HOST = '106.55.244.xxx'
 RABBITMQ_PORT = 5672
-RABBITMQ_VIRTUAL_HOST = ''  # my_host # 这个是rabbitmq的虚拟子host用户自己创建的，如果你想直接用rabbitmq的根host而不是使用虚拟子host，这里写 空字符串 即可。
+RABBITMQ_VIRTUAL_HOST = ''  # my_host # This is the RabbitMQ virtual host created by the user. If you want to use the root host directly instead of a virtual sub-host, set this to an empty string.
 RABBITMQ_URL = f'amqp://{RABBITMQ_USER}:{RABBITMQ_PASS}@{RABBITMQ_HOST}:{RABBITMQ_PORT}/{RABBITMQ_VIRTUAL_HOST}'
 
 # broker = RedisBroker("redis://localhost:6379/2")

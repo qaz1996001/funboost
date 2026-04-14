@@ -2,51 +2,52 @@
 # @Author  : AI Assistant
 # @Time    : 2026/3/15
 """
-告警通知消费者 Mixin (Alert Notifier Consumer Mixin)
+Alert Notifier Consumer Mixin
 
-功能：当消费函数失败达到阈值时自动发送告警通知，错误恢复后自动发送恢复通知。
-仅做告警，不实现熔断（不阻塞消费、不降级）。
+Functionality: Automatically sends alert notifications when the consuming function fails and reaches
+a threshold, and automatically sends recovery notifications when errors are resolved.
+Only performs alerting, does not implement circuit breaking (no consumption blocking, no degradation).
 
-=== 两种触发策略 ===
+=== Two Trigger Strategies ===
 
-1. consecutive（连续失败计数，默认）：
-   连续失败 >= failure_threshold 时触发告警，任何一次成功重置计数。
+1. consecutive (consecutive failure count, default):
+   Triggers alert when consecutive failures >= failure_threshold. Any single success resets the count.
 
-2. rate（错误率滑动窗口）：
-   在 period 秒的滑动窗口内，当调用次数 >= min_calls 且
-   错误率 >= errors_rate 时触发告警。
+2. rate (error rate sliding window):
+   Within a sliding window of `period` seconds, triggers alert when call count >= min_calls
+   and error rate >= errors_rate.
 
-=== 告警通道 ===
+=== Alert Channels ===
 
-支持五种告警通道（选其一）：
-- dingtalk:  钉钉机器人
-- wechat:    企业微信机器人
-- feishu:    飞书机器人
-- webhook:   自定义 Webhook（POST JSON: {"content": "消息内容"}）
-- custom:    用户自定义，继承 AlertNotifierConsumerMixin 并重写 custom_send_notification 方法
+Supports five alert channels (choose one):
+- dingtalk:  DingTalk robot
+- wechat:    WeChat Work robot
+- feishu:    Feishu (Lark) robot
+- webhook:   Custom Webhook (POST JSON: {"content": "message content"})
+- custom:    User-defined, inherit AlertNotifierConsumerMixin and override custom_send_notification method
 
-=== 去重与恢复 ===
+=== Deduplication and Recovery ===
 
-- alert_interval:  告警去重窗口秒数，同一队列在此时间内不重复告警
-- 错误恢复后（从告警状态变为正常状态）自动发送恢复通知
+- alert_interval:  Alert deduplication window in seconds; the same queue will not trigger repeated alerts within this time
+- After error recovery (transitioning from alerting state to normal state), a recovery notification is automatically sent
 
-=== user_options['alert_options'] 参数说明 ===
+=== user_options['alert_options'] Parameter Description ===
 
-    strategy:           'consecutive'(连续失败计数) 或 'rate'(错误率滑动窗口)，默认 'consecutive'
+    strategy:           'consecutive' (consecutive failure count) or 'rate' (error rate sliding window), default 'consecutive'
 
-    failure_threshold:  连续失败次数阈值（consecutive 策略），默认 5
-    errors_rate:        错误率阈值 0.0~1.0（rate 策略），默认 0.5
-    period:             统计窗口秒数（rate 策略），默认 60.0
-    min_calls:          窗口内最少调用数才评估（rate 策略），默认 5
+    failure_threshold:  Consecutive failure count threshold (consecutive strategy), default 5
+    errors_rate:        Error rate threshold 0.0~1.0 (rate strategy), default 0.5
+    period:             Statistics window in seconds (rate strategy), default 60.0
+    min_calls:          Minimum call count in window before evaluation (rate strategy), default 5
 
-    alert_app:          告警通道，可选值: 'dingtalk', 'wechat', 'feishu', 'webhook', 'custom'，默认 'wechat'
-                        设为 'custom' 时需继承 AlertNotifierConsumerMixin 并重写 custom_send_notification 方法
-    webhook_url:        对应告警通道的 Webhook 地址（必填）
+    alert_app:          Alert channel, options: 'dingtalk', 'wechat', 'feishu', 'webhook', 'custom', default 'wechat'
+                        When set to 'custom', inherit AlertNotifierConsumerMixin and override custom_send_notification method
+    webhook_url:        Webhook URL for the corresponding alert channel (required)
 
-    alert_interval:     告警去重间隔秒数，同一队列在此时间内不重复发送告警，默认 300（5分钟）
-    exceptions:         要跟踪的异常类型元组（None 跟踪所有），默认 None
+    alert_interval:     Alert deduplication interval in seconds; the same queue won't send repeated alerts within this time, default 300 (5 minutes)
+    exceptions:         Tuple of exception types to track (None tracks all), default None
 
-=== 用法示例 ===
+=== Usage Examples ===
 
     from funboost import boost, BoosterParams, BrokerEnum
     from funboost.contrib.override_publisher_consumer_cls.alert_notifier_mixin import (
@@ -54,7 +55,7 @@
         AlertNotifierBoosterParams,
     )
 
-    # 方式1：连续失败策略 + 企业微信告警（最简用法）
+    # Method 1: Consecutive failure strategy + WeChat Work alert (simplest usage)
     @boost(AlertNotifierBoosterParams(
         queue_name='my_task',
         broker_kind=BrokerEnum.REDIS,
@@ -69,7 +70,7 @@
     def my_task(x):
         return call_external_api(x)
 
-    # 方式2：错误率策略 + 钉钉告警
+    # Method 2: Error rate strategy + DingTalk alert
     @boost(BoosterParams(
         queue_name='my_task_rate',
         broker_kind=BrokerEnum.REDIS,
@@ -124,13 +125,13 @@ def _parse_exception_names(exceptions) -> typing.Optional[set]:
 
 class AlertTracker:
     """
-    线程安全的告警状态跟踪器（本地内存）
+    Thread-safe alert state tracker (local memory)
 
-    支持两种触发策略：
-    - consecutive: 连续失败 >= failure_threshold 时触发告警
-    - rate: 滑动窗口内错误率 >= errors_rate 且调用数 >= min_calls 时触发告警
+    Supports two trigger strategies:
+    - consecutive: Triggers alert when consecutive failures >= failure_threshold
+    - rate: Triggers alert when error rate >= errors_rate and call count >= min_calls within sliding window
 
-    成功时重置连续失败计数。当从 ALERTING 状态恢复到 NORMAL 时，通知上层。
+    Resets consecutive failure count on success. Notifies the upper layer when transitioning from ALERTING to NORMAL state.
     """
 
     def __init__(self,
@@ -178,7 +179,7 @@ class AlertTracker:
             return {'total': total, 'failures': failures, 'rate': failures / total}
 
     def record_success(self) -> typing.Tuple[str, str]:
-        """记录成功，返回 (old_state, new_state)"""
+        """Record success, returns (old_state, new_state)"""
         with self._lock:
             old_state = self._state
             self._consecutive_failure_count = 0
@@ -195,7 +196,7 @@ class AlertTracker:
             return old_state, self._state
 
     def record_failure(self) -> typing.Tuple[str, str]:
-        """记录失败，返回 (old_state, new_state)"""
+        """Record failure, returns (old_state, new_state)"""
         with self._lock:
             old_state = self._state
             self._consecutive_failure_count += 1
@@ -226,10 +227,10 @@ class AlertTracker:
 
 class AlertNotifierConsumerMixin(AbstractConsumer):
     """
-    告警通知消费者 Mixin
+    Alert Notifier Consumer Mixin
 
-    通过 user_options['alert_options'] 配置所有参数，详见模块文档。
-    仅监控并告警，不实现熔断逻辑。
+    All parameters are configured via user_options['alert_options']. See module docstring for details.
+    Only monitors and alerts; does not implement circuit breaking logic.
     """
 
     def custom_init(self):
@@ -283,7 +284,7 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
         return function_result_status.exception_type in self._alert_tracked_exception_names
 
     def _should_send_alert(self) -> bool:
-        """检查是否在去重窗口外，可以发送告警"""
+        """Check if outside the deduplication window and an alert can be sent"""
         with self._alert_time_lock:
             now = time.time()
             if now - self._last_alert_time < self._alert_interval:
@@ -292,7 +293,7 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
             return True
 
     def _should_send_recovery(self) -> bool:
-        """检查是否在去重窗口外，可以发送恢复通知"""
+        """Check if outside the deduplication window and a recovery notification can be sent"""
         with self._alert_time_lock:
             now = time.time()
             if now - self._last_recovery_time < self._alert_interval:
@@ -303,38 +304,38 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
     def _format_alert_message(self, info_dict: dict) -> str:
         now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         msg_lines = [
-            "🚨 [告警] 队列任务异常",
-            f"队列名: {info_dict['queue_name']}",
-            f"策略: {info_dict['strategy']}",
+            "🚨 [ALERT] Queue Task Exception",
+            f"Queue name: {info_dict['queue_name']}",
+            f"Strategy: {info_dict['strategy']}",
         ]
         if info_dict['strategy'] == 'consecutive':
-            msg_lines.append(f"连续失败次数: {info_dict['consecutive_failure_count']}")
+            msg_lines.append(f"Consecutive failures: {info_dict['consecutive_failure_count']}")
         if 'error_rate_info' in info_dict:
             ri = info_dict['error_rate_info']
-            msg_lines.append(f"错误率: {ri['rate']:.2%} ({ri['failures']}/{ri['total']})")
-        msg_lines.append(f"累计失败次数: {info_dict['total_failure_count']}")
-        msg_lines.append(f"告警时间: {now_str}")
+            msg_lines.append(f"Error rate: {ri['rate']:.2%} ({ri['failures']}/{ri['total']})")
+        msg_lines.append(f"Total failures: {info_dict['total_failure_count']}")
+        msg_lines.append(f"Alert time: {now_str}")
         return '\n'.join(msg_lines)
 
     def _format_recovery_message(self, info_dict: dict) -> str:
         now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         msg_lines = [
-            "✅ [恢复] 队列任务已恢复正常",
-            f"队列名: {info_dict['queue_name']}",
-            f"策略: {info_dict['strategy']}",
-            f"恢复时间: {now_str}",
+            "✅ [RECOVERY] Queue Task Has Recovered",
+            f"Queue name: {info_dict['queue_name']}",
+            f"Strategy: {info_dict['strategy']}",
+            f"Recovery time: {now_str}",
         ]
         return '\n'.join(msg_lines)
 
     def custom_send_notification(self, message: str):
         """
-        用户自定义告警发送钩子，当 alert_app='custom' 时自动调用。
-        继承 AlertNotifierConsumerMixin 并重写此方法，可实现任意告警方式（邮件、短信、企业内部系统等）。
+        User-defined alert sending hook, automatically called when alert_app='custom'.
+        Inherit AlertNotifierConsumerMixin and override this method to implement any alert method (email, SMS, internal systems, etc.).
 
-        示例：
+        Example:
             class EmailAlertConsumer(AlertNotifierConsumerMixin):
                 def custom_send_notification(self, message: str):
-                    send_email(to='ops@example.com', subject='任务告警', body=message)
+                    send_email(to='ops@example.com', subject='Task Alert', body=message)
 
             @boost(BoosterParams(
                 queue_name='my_task',
@@ -345,11 +346,11 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
                 ...
         """
         raise NotImplementedError(
-            "alert_app='custom' 时需要继承 AlertNotifierConsumerMixin 并重写 custom_send_notification 方法"
+            "When alert_app='custom', you need to inherit AlertNotifierConsumerMixin and override the custom_send_notification method"
         )
 
     def _send_notification(self, message: str):
-        """通过配置的告警通道发送通知"""
+        """Send notification via the configured alert channel"""
         try:
             if self._alert_app == 'dingtalk':
                 self._alert_notifier.send_dingtalk(message, add_caller_info=False)
@@ -380,7 +381,8 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
             current_function_result_status, kw)
         
         """
-        如果任务被 requeue、发到死信队列、或被远程 kill，这些不是真正的业务失败，可以不计入告警计数，否则会导致误告警。
+        If a task is requeued, sent to dead letter queue, or remotely killed, these are not real business failures
+        and should not be counted toward the alert threshold, otherwise it would cause false alerts.
         """
         if (current_function_result_status._has_requeue
                 or current_function_result_status._has_to_dlx_queue
@@ -403,7 +405,7 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
         if self._alert_tracker.strategy == 'rate':
             info_dict['error_rate_info'] = self._alert_tracker.get_error_rate_info()
 
-        # 进入告警状态 → 发送告警
+        # Entered alerting state -> send alert
         if new_state == AlertState.ALERTING:
             if self._should_send_alert():
                 msg = self._format_alert_message(info_dict)
@@ -419,7 +421,7 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
                     f"but suppressed by alert_interval={self._alert_interval}s"
                 )
 
-        # 从告警状态恢复 → 发送恢复通知
+        # Recovered from alerting state -> send recovery notification
         if old_state == AlertState.ALERTING and new_state == AlertState.NORMAL:
             if self._should_send_recovery():
                 msg = self._format_recovery_message(info_dict)
@@ -435,11 +437,11 @@ class AlertNotifierConsumerMixin(AbstractConsumer):
 
 class AlertNotifierBoosterParams(BoosterParams):
     """
-    预配置了告警通知的 BoosterParams
+    Pre-configured BoosterParams with alert notification
 
-    使用示例：
+    Usage examples:
 
-        # 连续失败5次告警 + 企业微信
+        # Alert after 5 consecutive failures + WeChat Work
         @boost(AlertNotifierBoosterParams(
             queue_name='my_task',
             broker_kind=BrokerEnum.REDIS,
@@ -454,7 +456,7 @@ class AlertNotifierBoosterParams(BoosterParams):
         def my_task(x):
             return call_external_api(x)
 
-        # 错误率策略 + 钉钉
+        # Error rate strategy + DingTalk
         @boost(AlertNotifierBoosterParams(
             queue_name='my_task_rate',
             broker_kind=BrokerEnum.REDIS,

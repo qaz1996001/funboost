@@ -24,9 +24,9 @@ has_patch_kombu_redis = False
 
 def patch_kombu_redis():
     """
-    给kombu的redis 模式打猴子补丁
-    kombu有bug，redis中间件 unnacked 中的任务即使客户端掉线了或者突然关闭脚本中正在运行的任务，也永远不会被重新消费。
-    这个很容易验证那个测试，把消费函数写成sleep 100秒，启动20秒后把脚本关掉，取出来的任务在 unacked 队列中那个永远不会被确认消费，也不会被重新消费。
+    Monkey-patch kombu's redis mode.
+    Kombu has a bug: tasks in the redis middleware's unacked queue will never be re-consumed even if the client disconnects or the script with running tasks is suddenly closed.
+    This is easily verified by making the consuming function sleep for 100 seconds, then closing the script after 20 seconds. The fetched tasks in the unacked queue will never be acknowledged or re-consumed.
     """
     global has_patch_kombu_redis
     if not has_patch_kombu_redis:
@@ -44,7 +44,7 @@ def patch_kombu_redis():
         has_patch_kombu_redis = True
 
 
-''' kombu 能支持的消息队列中间件有如下，可以查看 D:\ProgramData\Miniconda3\Lib\site-packages\kombu\transport\__init__.py 文件。
+''' The message queue middlewares supported by kombu are as follows. See the D:\ProgramData\Miniconda3\Lib\site-packages\kombu\transport\__init__.py file.
 
 TRANSPORT_ALIASES = {
     'amqp': 'kombu.transport.pyamqp:Transport',
@@ -78,7 +78,7 @@ TRANSPORT_ALIASES = {
 # noinspection PyAttributeOutsideInit
 class KombuConsumer(AbstractConsumer, ):
     """
-    使用kombu作为中间件,这个能直接一次性支持很多种小众中间件，但性能很差，除非是分布式函数调度框架没实现的中间件种类用户才可以用这种，用户也可以自己对比性能。
+    Uses kombu as middleware. This can support many niche middleware types at once, but performance is poor. Use this only for middleware types not implemented by the distributed function scheduling framework; users can also compare performance themselves.
     """
 
 
@@ -101,24 +101,24 @@ class KombuConsumer(AbstractConsumer, ):
             os.makedirs(processed_folder, exist_ok=True)
 
     # noinspection DuplicatedCode
-    def _dispatch_task(self):  # 这个倍while 1 启动的，会自动重连。
-        # patch_kombu_redis() # 不调用
+    def _dispatch_task(self):  # This is launched by while 1 and will auto-reconnect.
+        # patch_kombu_redis() # not called
 
         def callback(body: dict, message: Message):
             # print(type(body),body,type(message),message)
-            # self.logger.debug(f""" 从 kombu {self._middware_name} 中取出的消息是 {body}""")
+            # self.logger.debug(f""" Message fetched from kombu {self._middware_name}: {body}""")
             kw = {'body': body, 'message': message, }
             self._submit_task(kw)
 
         self.exchange = Exchange('funboost_exchange', 'direct', durable=True)
         self.queue = Queue(self._queue_name, exchange=self.exchange, routing_key=self._queue_name, auto_delete=False, no_ack=False)
-        # https://docs.celeryq.dev/projects/kombu/en/stable/reference/kombu.html?highlight=visibility_timeout#kombu.Connection 每种中间件的transport_options不一样。
+        # https://docs.celeryq.dev/projects/kombu/en/stable/reference/kombu.html?highlight=visibility_timeout#kombu.Connection transport_options differ for each middleware type.
         self.conn = Connection(self.kombu_url, transport_options=self.consumer_params.broker_exclusive_config['transport_options'])
         self.queue(self.conn).declare()
         with self.conn.Consumer(self.queue, callbacks=[callback], no_ack=False, prefetch_count=self.consumer_params.broker_exclusive_config['prefetch_count']) as consumer:
             # Process messages and handle events on all channels
             channel = consumer.channel  # type:Channel
-            channel.body_encoding = 'no_encode'  # 这里改了编码，存到中间件的参数默认把消息base64了，我觉得没必要不方便查看消息明文。
+            channel.body_encoding = 'no_encode'  # Changed encoding here; by default parameters stored in middleware are base64 encoded, which is unnecessary and inconvenient for viewing message plaintext.
             while True:
                 self.conn.drain_events()
 

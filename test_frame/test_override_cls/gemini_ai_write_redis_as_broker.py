@@ -7,7 +7,8 @@ from funboost import boost, BrokerEnum, BoosterParams, EmptyConsumer, EmptyPubli
 
 
 '''
-使用 redis 作为 消息队列的中间件 实现, 通过指定 consumer_override_cls 和 publisher_override_cls 为用户自定义的类来实现新增消息队列种类。
+Uses Redis as the message queue middleware implementation.
+By specifying consumer_override_cls and publisher_override_cls as user-defined classes, you can add new message queue types.
 '''
 
 
@@ -24,13 +25,13 @@ class MyRedisConsumer(EmptyConsumer):
                 self._submit_task({'body': msg})
             except redis.exceptions.ConnectionError as e:
                 print(f"Redis connection error: {e}")
-                time.sleep(5)  # 发生连接错误时等待一段时间后重试
+                time.sleep(5)  # Wait before retrying after a connection error
             except Exception as e:
                 print(f"Error during message consumption: {e}")
                 time.sleep(1)
 
     def _confirm_consume(self, kw):
-        """ 这里是演示,所以搞简单一点,不实现确认消费 """
+        """ For demonstration purposes, kept simple; does not implement consumption acknowledgment. """
         pass
 
     def _requeue(self, kw):
@@ -53,11 +54,11 @@ class MyRedisPublisher(EmptyPublisher):
         self.redis_client.connection_pool.disconnect()
 
 '''
-完全重新自定义增加中间件时候,broker_kind 建议指定为 BrokerEnum.EMPTY
+When completely customizing and adding new middleware, it is recommended to set broker_kind to BrokerEnum.EMPTY.
 '''
 
 @boost(BoosterParams(queue_name='test_define_redis_queue',
-                     broker_kind=BrokerEnum.REDIS,  # 使用 redis 作为中间件
+                     broker_kind=BrokerEnum.REDIS,  # Using Redis as middleware
                      concurrent_num=1, consumer_override_cls=MyRedisConsumer, publisher_override_cls=MyRedisPublisher,
                      is_show_message_get_from_broker=True))
 def cost_long_time_fun(x):

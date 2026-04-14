@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-测试 librabbitmq broker 的基本功能
+Test basic functionality of the librabbitmq broker
 
-注意：
-1. 需要先安装 librabbitmq: pip install librabbitmq
-2. librabbitmq 主要支持 Linux 环境，Windows 上编译安装可能有问题
-3. 需要确保 RabbitMQ 服务正在运行
+Notes:
+1. Need to install librabbitmq first: pip install librabbitmq
+2. librabbitmq primarily supports Linux; building and installing on Windows may have issues
+3. Ensure RabbitMQ service is running
 """
 from auto_run_on_remote import run_current_script_on_remote
-run_current_script_on_remote() 
+run_current_script_on_remote()
 from funboost import boost, BoosterParams, BrokerEnum
 
 
@@ -19,17 +19,17 @@ from funboost import boost, BoosterParams, BrokerEnum
     qps=5,
 ))
 def test_librabbitmq_task(x, y):
-    """测试任务函数"""
+    """Test task function"""
     print(f'{x} + {y} = {x + y}')
     return x + y
 
 
 if __name__ == '__main__':
-    # 发布5个测试任务
+    # Publish 5 test tasks
     for i in range(5):
         test_librabbitmq_task.push(i, i * 2)
-    
-    print("已发布5个任务到 test_librabbitmq_queue 队列")
-    
-    # 启动消费
+
+    print("Published 5 tasks to the test_librabbitmq_queue queue")
+
+    # Start consuming
     test_librabbitmq_task.consume()

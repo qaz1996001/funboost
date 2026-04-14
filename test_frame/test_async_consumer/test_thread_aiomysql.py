@@ -1,13 +1,16 @@
 
 
+
 """
-演示子线程中的loop怎么正确操作 异步aio连接池
+Demonstrates how child thread loops correctly operate async aio connection pools.
 
-正解就是子线程要使用 asyncio.run_coroutine_threadsafe(aio_do_select(1), 主线程的loop)
+The correct approach: child thread should use asyncio.run_coroutine_threadsafe(aio_do_select(1), main_thread_loop)
 
-错误做法就是,子线程生成自己的loop,却用主线程的aio连接池查询数据库,造成经典错误  RuntimeError:  attached to a different loop
+The wrong approach: child thread creates its own loop but uses the main thread's aio connection pool to query the database,
+causing the classic error RuntimeError: attached to a different loop.
 
-funboost的 AsyncPoolExecutor 就是在子线程运行的loop ,需要懂这个例子,才知道为什么操作aio连接池时候, funboost装饰器为什么要把主loop传给 specify_async_loop
+funboost's AsyncPoolExecutor runs a loop in a child thread. Understanding this example explains why,
+when operating aio connection pools, the funboost decorator needs to pass the main loop to specify_async_loop.
 """
 
 import threading
@@ -18,7 +21,7 @@ import aiomysql
 
 
 loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop) # 这是重点
+asyncio.set_event_loop(loop) # This is the key point
 
 DB_CONFIG = {
     'host': 'localhost',
@@ -32,8 +35,8 @@ DB_CONFIG = {
 
 g_aiomysql_pool : aiomysql.Pool
 async def create_pool():
-    print(f'主线程 threading id: {threading.get_ident()}')
-    pool = await aiomysql.create_pool(**DB_CONFIG, minsize=1, maxsize=10,) # 这些是重点.
+    print(f'Main thread threading id: {threading.get_ident()}')
+    pool = await aiomysql.create_pool(**DB_CONFIG, minsize=1, maxsize=10,) # These are key points.
     global g_aiomysql_pool
     g_aiomysql_pool = pool
     return pool
@@ -47,16 +50,16 @@ async def aio_do_select(i):
             print(res)
 
 def run_do_select_in_child_thread(loopx:asyncio.AbstractEventLoop):
-    """ 查询数据库争取的做法"""
-    print(f'子线程 threading id: {threading.get_ident()}')
-    asyncio.run_coroutine_threadsafe(aio_do_select(1), loopx)  # 这是正解
+    """ Correct way to query database from child thread"""
+    print(f'Child thread threading id: {threading.get_ident()}')
+    asyncio.run_coroutine_threadsafe(aio_do_select(1), loopx)  # This is the correct solution
 
 
 def run_do_select_in_child_thread_error():
-    """查询数据库错误的写法, 用子线程自己的loop去调用 主线程loop绑定的g_aiomysql_pool,
-     造成经典错误  RuntimeError:  attached to a different loop
+    """Wrong way to query database: child thread uses its own loop to call the main thread loop's bound g_aiomysql_pool,
+     causing the classic error RuntimeError: attached to a different loop
      """
-    print(f'子线程 threading id: {threading.get_ident()}')
+    print(f'Child thread threading id: {threading.get_ident()}')
     loop = asyncio.new_event_loop()
     loop.run_until_complete(aio_do_select(1))
 

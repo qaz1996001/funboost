@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-RocketMQ 5.x SimpleConsumer 消费者测试
+RocketMQ 5.x SimpleConsumer test.
 
-使用方法:
-1. 首先确保 RocketMQ 5.x 服务器已启动
-   默认 gRPC 端点地址为 127.0.0.1:8081
+Usage:
+1. First ensure the RocketMQ 5.x server is started.
+   Default gRPC endpoint address is 127.0.0.1:8081.
 
-2. 先运行发布者发布消息:
+2. Run the publisher to publish messages first:
    python test_rocketmq_publisher.py
 
-3. 然后运行消费者:
+3. Then run the consumer:
    python test_rocketmq_consumer.py
 
-安装依赖:
+Install dependencies:
     pip install rocketmq-python-client
 
-特性:
-    - SimpleConsumer 模式：支持单条消息乱序 ACK，不依赖 offset
-    - 基于 gRPC 协议，纯 Python 实现
-    - 支持 Windows / Linux / macOS
+Features:
+    - SimpleConsumer mode: supports out-of-order ACK for individual messages, does not depend on offset
+    - Based on gRPC protocol, pure Python implementation
+    - Supports Windows / Linux / macOS
 """
 from auto_run_on_remote import run_current_script_on_remote
 run_current_script_on_remote()
@@ -32,29 +32,29 @@ from funboost import boost, BoosterParams, BrokerEnum
     concurrent_num=5,
     log_level=10,  # DEBUG
     is_show_message_get_from_broker=True,
-    # RocketMQ 5.x 专有配置
+    # RocketMQ 5.x exclusive config
     broker_exclusive_config={
-        'endpoints': '127.0.0.1:8081',  # RocketMQ 5.x gRPC 端点
+        'endpoints': '127.0.0.1:8081',  # RocketMQ 5.x gRPC endpoint
         'consumer_group': 'funboost_test_group',
-        # 'access_key': 'your_access_key',  # 阿里云等需要 AK/SK
+        # 'access_key': 'your_access_key',  # Required for Alibaba Cloud etc. with AK/SK
         # 'secret_key': 'your_secret_key',
-        # 'namespace': 'your_namespace',  # 可选
-        'invisible_duration': 15,  # 消息不可见时间（秒）
-        'max_message_num': 32,  # 每次拉取最大消息数
-        'tag': '*',  # 消息过滤 tag，'*' 不过滤
+        # 'namespace': 'your_namespace',  # Optional
+        'invisible_duration': 15,  # Message invisibility duration (seconds)
+        'max_message_num': 32,  # Maximum number of messages to pull at a time
+        'tag': '*',  # Message filter tag; '*' means no filtering
     }
 ))
 def test_rocketmq_task(x, y):
-    """测试 RocketMQ 消费函数"""
+    """Test RocketMQ consumer function"""
     result = x + y
-    print(f'计算结果: {x} + {y} = {result}')
-    time.sleep(0.5)  # 模拟耗时操作
+    print(f'Calculation result: {x} + {y} = {result}')
+    time.sleep(0.5)  # Simulate time-consuming operation
     return result
 
 
 if __name__ == '__main__':
-    # 启动消费者
-    print('启动 RocketMQ 5.x SimpleConsumer...')
-    print('特性: 支持单条消息乱序 ACK，不依赖 offset')
-    print('按 Ctrl+C 停止')
+    # Start consumer
+    print('Starting RocketMQ 5.x SimpleConsumer...')
+    print('Feature: supports out-of-order ACK for individual messages, does not depend on offset')
+    print('Press Ctrl+C to stop')
     test_rocketmq_task.consume()

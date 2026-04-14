@@ -9,9 +9,9 @@ pool = ThreadPoolExecutorShrinkAble(200)
 @BoosterParams(queue_name='test_rabbit_queue71', broker_kind=BrokerEnum.RABBITMQ_AMQPSTORM, is_show_message_get_from_broker=True, specify_concurrent_pool=pool)
 def test_fun(x):
     # time.sleep(2.9)
-    # sleep时间随机从0.1毫秒到5秒任意徘徊,最小耗时和最大耗时差距达到了5万倍。
-    # 传统的恒定并发数量的线程池对未知的耗时任务且波动达到了5万倍，持续100次每秒的精确控频无能为力，
-    # 但此框架只要简单设置一个qps就自动达到了这个目的。
+    # Sleep time randomly ranges from 0.1ms to 5s; the ratio between min and max is 50,000x.
+    # A traditional fixed-size thread pool is powerless for unknown-duration tasks with 50,000x variance at 100 qps.
+    # But this framework achieves precise rate control with just a simple qps setting.
     # random_sleep = random.randrange(1,50000) / 10000
     # time.sleep(random_sleep)
     # print(x,random_sleep)
@@ -36,15 +36,15 @@ def test_fun(x):
        broker_exclusive_config={'x-max-priority':4,'no_ack':True})
 def test_fun2(x):
     # time.sleep(2.9)
-    # sleep时间随机从0.1毫秒到5秒任意徘徊,最小耗时和最大耗时差距达到了5万倍。
-    # 传统的恒定并发数量的线程池对未知的耗时任务且波动达到了5万倍，持续100次每秒的精确控频无能为力，
-    # 但此框架只要简单设置一个qps就自动达到了这个目的。
+    # Sleep time randomly ranges from 0.1ms to 5s; the ratio between min and max is 50,000x.
+    # A traditional fixed-size thread pool is powerless for unknown-duration tasks with 50,000x variance at 100 qps.
+    # But this framework achieves precise rate control with just a simple qps setting.
     # random_sleep = random.randrange(1,50000) / 10000
     # time.sleep(random_sleep)
     # print(x,random_sleep)
-    print(f'准备运行 {x}')
+    print(f'Ready to run {x}')
     time.sleep(30)
-    print(f'finish运行 {x}')
+    print(f'Finished running {x}')
 
     return x
 

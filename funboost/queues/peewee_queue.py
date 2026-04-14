@@ -21,7 +21,7 @@ class TaskStatus:
 
 class PeeweeQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
     """
-    使用peewee操作数据库模拟消息队列
+    Uses peewee to operate a database to simulate a message queue
     """
 
     def __init__(self, queue_name):
@@ -31,7 +31,7 @@ class PeeweeQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
 
     def _create_table(self):
         class FunboostMessage(PeeweeImporter().Model):
-            """数据库的一行模拟一条消息"""
+            """One database row simulates one message"""
             job_id = PeeweeImporter().BigAutoField(primary_key=True, )
             body = PeeweeImporter().CharField(max_length=10240, null=False)
             publish_timestamp = PeeweeImporter().DateTimeField(default=datetime.datetime.now)

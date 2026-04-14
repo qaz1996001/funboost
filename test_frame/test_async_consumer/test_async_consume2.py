@@ -1,6 +1,6 @@
 """
 
-这个脚本可以得出协程asyncio + aiohttp 比 threading + requests 多线程快70%
+This script demonstrates that coroutine asyncio + aiohttp is 70% faster than threading + requests multi-threading
 """
 
 
@@ -24,15 +24,15 @@ ss = aiohttp.ClientSession(loop=loop)
        specify_async_loop=loop
        )
 async def async_f1(x):
-    # 如果使使用了同一个session，async with ss.request，必须指定specify_async_loop的值和ClientSession的loop相同。
-    # 否则 如果使使用 async with aiohttp.request ，则无需指定specify_async_loop参数。
-    # async with aiohttp.request('get', url=url) as resp:  # 如果是这样请求，boost装饰器无需指定specify_async_loop
+    # If the same session is used with async with ss.request, specify_async_loop must match ClientSession's loop.
+    # Otherwise, if using async with aiohttp.request, specify_async_loop parameter is not needed.
+    # async with aiohttp.request('get', url=url) as resp:  # If making requests this way, boost decorator does not need to specify specify_async_loop
     #     text = await resp.text()
     # print(x,55555555555)
     # await asyncio.sleep(1,)
     # print(x,66666666666)
     # ss = aiohttp.ClientSession( )
-    async with ss.request('get', url=url) as resp:  # 如果是这样请求，boost装饰器必须指定specify_async_loop，
+    async with ss.request('get', url=url) as resp:  # If making requests this way, boost decorator must specify specify_async_loop,
         text = await resp.text()
         print('async_f1', x, resp.url, text[:10])
     await asyncio.sleep(5)
@@ -44,7 +44,7 @@ async def async_f1(x):
        specify_async_loop=loop
        )
 async def async_f2(x):
-    async with ss.request('get', url=url) as resp:  # 如果是这样请求，boost装饰器必须指定specify_async_loop，
+    async with ss.request('get', url=url) as resp:  # If making requests this way, boost decorator must specify specify_async_loop,
         text = await resp.text()
         print('async_f2', x, resp.url, text[:10])
     await asyncio.sleep(5)
@@ -58,9 +58,9 @@ def f(y):
     print(y, resp.text[:10])
 
 async def do_req(i):
-    async with ss.request('get', url=url) as resp:  # 如果是这样请求，boost装饰器必须指定specify_async_loop，
+    async with ss.request('get', url=url) as resp:  # If making requests this way, boost decorator must specify specify_async_loop,
         text = await resp.text()
-        print(f'主线程的loop运行的{i}:',text[:10])
+        print(f'Main thread loop running {i}:',text[:10])
     await asyncio.sleep(3)
 
 if __name__ == '__main__':

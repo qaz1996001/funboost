@@ -1,19 +1,19 @@
 from typing import Protocol, runtime_checkable
 
 
-# 假设我们有一个StringProtocol，但在这里我们不会列出str的所有方法
+# Suppose we have a StringProtocol, but we won't list all str methods here
 @runtime_checkable
 class StringProtocol(Protocol):
-    # 示例方法，实际StringProtocol会包含str的所有方法
+    # Example method; an actual StringProtocol would include all str methods
     def __str__(self) -> str:
         ...
 
     def upper(self) -> str:
         ...
-        # ... 其他str方法 ...
+        # ... other str methods ...
 
 
-# MyString类，它封装了一个str对象，并提供了一些额外的功能或属性
+# MyString class, which wraps a str object and provides some additional functionality or attributes
 class MyString:
     def __init__(self, value: str):
         self._value = value
@@ -22,19 +22,19 @@ class MyString:
         return self._value
 
     def __getattr__(self, name: str) -> any:
-        # 如果MyString没有该属性或方法，则尝试从_value（一个str对象）中获取
+        # If MyString doesn't have the attribute or method, try to get it from _value (a str object)
         return getattr(self._value, name)
 
-        # 添加其他自定义方法...
+        # Add other custom methods...
 
 
-# 示例使用
+# Example usage
 my_string = MyString("hello")
-print(my_string.upper())  # 输出: HELLO
+print(my_string.upper())  # Output: HELLO
 
 import queue
 
 
-# 注意：尽管MyString没有直接继承StringProtocol，但它通过__getattr__实现了类似的行为
-# 在静态类型检查器中（如mypy），如果使用了StringProtocol，MyString可能不会被识别为完全符合该协议
-# 除非使用了额外的类型注解或检查器配置来识别这种动态代理模式
+# Note: Although MyString doesn't directly inherit StringProtocol, it achieves similar behavior through __getattr__
+# In static type checkers (like mypy), if StringProtocol is used, MyString may not be recognized as fully conforming to the protocol
+# unless additional type annotations or checker configurations are used to recognize this dynamic proxy pattern

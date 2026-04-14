@@ -6,17 +6,17 @@ class PwdEnc:
     @classmethod
     def enc_broker_uri(cls, uri: str):
         """
-        对连接字符串中的密码进行脱敏处理
-        
-        支持两种格式：
-        1. URI 格式: protocol://user:password@host:port
-        2. libpq DSN 格式: host=xxx port=xxx password=xxx
+        Mask passwords in connection strings.
+
+        Supports two formats:
+        1. URI format: protocol://user:password@host:port
+        2. libpq DSN format: host=xxx port=xxx password=xxx
         """
-        # 尝试处理 libpq DSN 格式（如 PostgreSQL 的 password=xxx）
+        # Try to handle libpq DSN format (e.g. PostgreSQL's password=xxx)
         if 'password=' in uri.lower():
             return cls._enc_libpq_dsn(uri)
         
-        # 处理标准 URI 格式
+        # Handle standard URI format
         protocol_split_list = uri.split('://')
         if len(protocol_split_list) != 2:
             return uri
@@ -34,17 +34,17 @@ class PwdEnc:
     @classmethod
     def _enc_libpq_dsn(cls, dsn: str):
         """
-        处理 libpq DSN 格式的密码脱敏
-        例如: host=xxx port=xxx password=secret123 -> host=xxx port=xxx password=sec*******
+        Handle password masking for libpq DSN format.
+        Example: host=xxx port=xxx password=secret123 -> host=xxx port=xxx password=sec*******
         """
-        # 使用正则匹配 password=xxx 格式（支持带引号和不带引号）
+        # Use regex to match password=xxx format (supports quoted and unquoted)
         pattern = r'(password\s*=\s*)([\'"]?)([^\s\'"]+)([\'"]?)'
         
         def replace_pwd(match):
             prefix = match.group(1)  # password=
-            quote_start = match.group(2)  # 可能的引号
-            pwd = match.group(3)  # 密码值
-            quote_end = match.group(4)  # 可能的引号
+            quote_start = match.group(2)  # possible quote
+            pwd = match.group(3)  # password value
+            quote_end = match.group(4)  # possible quote
             pwd_enc = cls.enc_pwd(pwd)
             return f'{prefix}{quote_start}{pwd_enc}{quote_end}'
         
@@ -53,11 +53,11 @@ class PwdEnc:
     @staticmethod
     def enc_pwd(pwd: str, hide_prefix=3, hide_suffix=3):
         """
-        密码脱敏：前N位隐藏为***，后N位隐藏为***，中间显示
-        例如: abc12345def -> ***12345***
+        Password masking: hide first N chars as ***, last N chars as ***, show middle.
+        Example: abc12345def -> ***12345***
         """
         if len(pwd) <= hide_prefix + hide_suffix:
-            return '***'  # 太短则全部隐藏
+            return '***'  # Too short, hide entirely
         middle = pwd[hide_prefix:-hide_suffix] if hide_suffix > 0 else pwd[hide_prefix:]
         return f'***{middle}***'
 
@@ -77,21 +77,21 @@ class StrHelper:
 
 
 if __name__ == '__main__':
-    # 测试 URI 格式
+    # Test URI format
     str1 = "amqp://admin:abc234@108.55.33.99:5672/"
     str2 = "redis://:myRedisPass1234@127.0.0.1:6379/0"
-    print("URI 格式测试:")
+    print("URI format test:")
     print(f"  {str1} -> {PwdEnc.enc_broker_uri(str1)}")
     print(f"  {str2} -> {PwdEnc.enc_broker_uri(str2)}")
     
-    # 测试 libpq DSN 格式
+    # Test libpq DSN format
     str3 = "host=106.55.244.110 port=5432 dbname=testdb user=postgres password=postgres123"
     str4 = "dbname='mydb' user='admin' password='secret456' host='localhost'"
-    print("\nlibpq DSN 格式测试:")
+    print("\nlibpq DSN format test:")
     print(f"  {str3}")
     print(f"  -> {PwdEnc.enc_broker_uri(str3)}")
     print(f"  {str4}")
     print(f"  -> {PwdEnc.enc_broker_uri(str4)}")
     
-    # 测试密码加密
-    print(f"\n密码加密测试: 465460dsdsd -> {PwdEnc.enc_pwd('465460dsdsd')}")
+    # Test password masking
+    print(f"\nPassword masking test: 465460dsdsd -> {PwdEnc.enc_pwd('465460dsdsd')}")

@@ -3,32 +3,32 @@ import asyncio
 
 async def my_coroutine():
     try:
-        print("协程开始")
-        await asyncio.sleep(10)  # 模拟长时间运行的任务
-        print("协程完成")
+        print("Coroutine started")
+        await asyncio.sleep(10)  # Simulate a long-running task
+        print("Coroutine completed")
     except asyncio.CancelledError:
-        print("协程被取消")
+        print("Coroutine was cancelled")
     finally:
-        print("清理资源")
+        print("Cleaning up resources")
 
 
 async def main():
-    # 创建协程任务
+    # Create coroutine task
     task = asyncio.create_task(my_coroutine())
 
-    await asyncio.sleep(1)  # 等待一下，确保协程开始
-    print("准备取消协程")
+    await asyncio.sleep(1)  # Wait a moment to ensure the coroutine has started
+    print("Preparing to cancel coroutine")
 
-    # 取消协程
+    # Cancel coroutine
     task.cancel()
 
     try:
-        await task  # 等待任务被取消
+        await task  # Wait for the task to be cancelled
     except asyncio.CancelledError:
-        print("任务已被取消")
+        print("Task has been cancelled")
 
 
-# 运行主程序
+# Run main program
 
 asyncio.run(main())
 

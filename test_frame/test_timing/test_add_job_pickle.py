@@ -1,18 +1,20 @@
 
 """
-此脚本是演示,由于2025-08 Booster 对象支持了 pickle序列化后,
-可以支持
-aps_obj_sum_two_numbers2.add_job(
-        sum_two_numbers2.push,...)
-这种写法.
+This script demonstrates that, since the Booster object supports pickle serialization
+as of 2025-08, the following syntax is now supported:
 
-这样用户可以了解定时任的本质是 push到消息队列,而不是直接执行函数自身.
+  aps_obj_sum_two_numbers2.add_job(
+      sum_two_numbers2.push, ...)
 
-用户看这个脚本主要是需要对比 add_push_job 和 add_job 的区别.
+This allows users to understand that the essence of scheduled tasks is pushing to a
+message queue, not directly executing the function itself.
+
+Users looking at this script mainly need to understand the difference between
+add_push_job and add_job.
 """
 from funboost import boost, BrokerEnum,ctrl_c_recv,BoosterParams,ApsJobAdder
 
-# 定义任务处理函数
+# Define the task handler function
 @boost(BoosterParams(queue_name='sum_queue552', broker_kind=BrokerEnum.REDIS))
 def sum_two_numbers2(x, y):
     result = x + y
@@ -28,11 +30,11 @@ if __name__ == '__main__':
     # )
     aps_job_adder_sum_two_numbers2 = ApsJobAdder(sum_two_numbers2, job_store_kind='redis',is_auto_paused=False)
     aps_obj_sum_two_numbers2 =aps_job_adder_sum_two_numbers2.aps_obj
-    aps_obj_sum_two_numbers2.remove_all_jobs() # 可选,删除sum_two_numbers2所有已添加的定时任务
+    aps_obj_sum_two_numbers2.remove_all_jobs()  # Optional: remove all previously added scheduled tasks for sum_two_numbers2
 
-    # 原来推荐的添加定时任务方式 add_push_job
+    # The previously recommended way to add a scheduled task: add_push_job
     aps_job_adder_sum_two_numbers2.add_push_job(
-        # ApsJobAdder.add_push_job 不需要传递第一个入参func,job函数
+        # ApsJobAdder.add_push_job does not need the first argument func (the job function)
         trigger='interval',
         seconds=5,
         args=(4, 6),
@@ -42,18 +44,23 @@ if __name__ == '__main__':
 
 
     """
-    2025-08后 现在可以直接使用用户熟悉的 add_job ,第一个入参func传递 $消费函数.push
-    
-    当使用redis 这种数据库而非memory作为 apscheduler 的 jobstore 时候,apscheduler.add_job 需要pickle序列化 第一个入参 func,
-    sum_two_numbers2.push 是一个实例方法, Booster对象属性链路上有 threading.Lock 和socket 这些类型,
-    导致不可pickle序列化,所以原来需要使用 ApsJobAdder.add_push_job 曲线救国.
-    
-    由于现在新增添加了 booster 支持pickle 序列化和反序列化,所以可以支持 sum_two_numbers2.push 实例方法 作为job函数.
-    
-    (ps:有兴趣的可以看 funboost/core/booster.py 的 Booster 的 __getstate__ 和 __setstate__ 的实现方式,是怎么支持pickle的,很巧妙)
+    After 2025-08, you can now use the familiar add_job directly, passing $consumer_function.push
+    as the first argument func.
+
+    When using a database like Redis (rather than memory) as the apscheduler jobstore,
+    apscheduler.add_job needs to pickle-serialize the first argument func.
+    sum_two_numbers2.push is an instance method; the Booster object's attribute chain includes
+    threading.Lock and socket types, which are not pickle-serializable, so the original approach
+    required using ApsJobAdder.add_push_job as a workaround.
+
+    Since Booster now supports pickle serialization and deserialization, sum_two_numbers2.push
+    can be used as the job function directly.
+
+    (Note: For those interested, see the __getstate__ and __setstate__ implementation in
+    funboost/core/booster.py to understand how pickle support was achieved — it's quite clever.)
     """
     aps_obj_sum_two_numbers2.add_job(
-        func = sum_two_numbers2.push, # aps_obj.add_job 是 原生的,需要传递第一个入参func ,sum_two_numbers2.push
+        func = sum_two_numbers2.push,  # aps_obj.add_job is native; it requires the first argument func, i.e., sum_two_numbers2.push
         trigger='interval',
         seconds=5,
         args=(40, 60),

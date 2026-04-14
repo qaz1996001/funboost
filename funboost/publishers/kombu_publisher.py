@@ -17,10 +17,10 @@ from funboost.funboost_config_deafult import BrokerConnConfig, FunboostCommonCon
 """
 https://www.cnblogs.com/shenh/p/10497244.html
 
-rabbitmq  交换机知识。
+RabbitMQ exchange knowledge.
 
 https://docs.celeryproject.org/projects/kombu/en/stable/introduction.html
-kombu 教程
+Kombu tutorial
 """
 
 
@@ -35,13 +35,13 @@ class NoEncode():
         return s
 
 
-Channel.codecs['no_encode'] = NoEncode()  # 不使用base64更分方便查看内容
+Channel.codecs['no_encode'] = NoEncode()  # Not using base64 makes it easier to view content
 
 
 # noinspection PyAttributeOutsideInit
 class KombuPublisher(AbstractPublisher, ):
     """
-    使用kombu作为中间件,这个能直接一次性支持很多种小众中间件，但性能很差，除非是分布式函数调度框架没实现的中间件种类用户才可以用这种，用户也可以自己对比性能。
+    Uses kombu as the broker. This can support many niche brokers at once, but performance is poor. Only use this for broker types not implemented by the distributed function scheduling framework, or users can compare performance themselves.
     """
 
     def custom_init(self):
@@ -69,11 +69,11 @@ class KombuPublisher(AbstractPublisher, ):
         self.queue(self.conn).declare()
         self.producer = self.conn.Producer(serializer='json')
         self.channel = self.producer.channel  # type: Channel
-        self.channel.body_encoding = 'no_encode'  # 这里改了编码，存到中间件的参数默认把消息base64了，我觉得没必要不方便查看消息明文。
+        self.channel.body_encoding = 'no_encode'  # Changed encoding here; by default messages stored in the broker are base64 encoded, which is unnecessary and inconvenient for viewing plaintext messages.
         # self.channel = self.conn.channel()  # type: Channel
         # # self.channel.exchange_declare(exchange='distributed_framework_exchange', durable=True, type='direct')
         # self.queue = self.channel.queue_declare(queue=self._queue_name, durable=True)
-        self.logger.warning(f'使用 kombu 库 连接 {self._kombu_broker_url_prefix} 中间件')
+        self.logger.warning(f'Using kombu library to connect to {self._kombu_broker_url_prefix} broker')
 
     @deco_mq_conn_error
     def _publish_impl(self, msg):
@@ -81,7 +81,7 @@ class KombuPublisher(AbstractPublisher, ):
 
     @deco_mq_conn_error
     def clear(self):
-        self.logger.warning(f'kombu清空消息队列 {self.queue_name}')
+        self.logger.warning(f'Kombu clearing message queue {self.queue_name}')
         self.channel.queue_purge(self._queue_name)
 
     @deco_mq_conn_error
@@ -104,4 +104,4 @@ class KombuPublisher(AbstractPublisher, ):
     def close(self):
         self.channel.close()
         self.conn.close()
-        self.logger.warning('关闭 kombu 包 链接')
+        self.logger.warning('Closing kombu connection')

@@ -15,25 +15,25 @@ print(time.time() -t1)
 import funboost
 print(time.time() -t1)
 
-# 获取gevent模块的源文件路径
+# Get the source file path of the gevent module
 # gevent_path = inspect.getfile(gevent)
-# print("gevent 模块路径:", gevent_path)
+# print("gevent module path:", gevent_path)
 #
-# # 获取gevent模块的导入源码
+# # Get the gevent module import source code
 # gevent_source = inspect.getsource(gevent)
-# print("gevent 模块导入源码:")
+# print("gevent module import source code:")
 # print(gevent_source)
 
 
 # import inspect
 # import gevent
 #
-# # 查找导入gevent模块的具体位置
+# # Find the specific location where the gevent module is imported
 # source_lines, line_num = inspect.findsource(gevent)
-# print("gevent 模块导入位置：")
-# print("文件路径:", inspect.getfile(gevent))
-# print("行号:", line_num)
-# print("代码行内容:", source_lines[line_num - 1].strip())
+# print("gevent module import location:")
+# print("File path:", inspect.getfile(gevent))
+# print("Line number:", line_num)
+# print("Code line content:", source_lines[line_num - 1].strip())
 
 import sys
 # print(sys.modules)

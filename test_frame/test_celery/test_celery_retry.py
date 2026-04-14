@@ -6,13 +6,13 @@ import time
 app = Celery('tasks', broker='redis://localhost:6379/0')
 
 @app.task(bind=True,
-          autoretry_for=(ZeroDivisionError,),   # 遇到这些异常自动重试
+          autoretry_for=(ZeroDivisionError,),   # automatically retry on these exceptions
          retry_backoff=5,  # Factor in seconds (first retry: 5s, second: 10s, third: 20s, etc.)
     retry_jitter=False,  # Set False to disable randomization (use exact values: 5s, 10s, 20s)
     retry_kwargs={"max_retries": 3},
           )                   
 def my_task(self, some_arg):
-    # 可能会抛出 TemporaryError 的业务逻辑
+    # Business logic that may raise TemporaryError
     print(time.strftime("%H:%M:%S"))
     return 1/0
 

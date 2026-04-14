@@ -13,12 +13,11 @@ from PauseConsumer import PauseConsumer
                      broker_kind=BrokerEnum.RABBITMQ_AMQPSTORM, max_retry_times=0, consumer_override_cls=PauseConsumer,
                      is_show_message_get_from_broker=True))
 async def task_list(params):
-    print("消费flag")
+    print("Consumption flag")
 
-    
-    
 
-    print("让本机暂停消费")
+
+    print("Pausing consumption on this machine")
 
     await asyncio.sleep(3)
 
@@ -26,7 +25,7 @@ async def task_list(params):
 
     # task_list.consumer._rp.channel.stop_consuming()
     # task_list.consumer._rp.channel.close()
-    raise ExceptionForRequeue("重回队列")
+    raise ExceptionForRequeue("Requeue to queue")
     
 
 

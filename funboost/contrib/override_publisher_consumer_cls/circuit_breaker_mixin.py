@@ -2,69 +2,70 @@
 # @Author  : ydf
 # @Time    : 2026/3/8
 """
-熔断器消费者 Mixin (Circuit Breaker Consumer Mixin)
+Circuit Breaker Consumer Mixin
 
-功能：当消费函数失败达到阈值时自动熔断，熔断期间阻塞等待恢复或执行 fallback 降级函数。
+Functionality: Automatically trips the circuit breaker when the consuming function fails and reaches
+a threshold. During the circuit break period, it either blocks waiting for recovery or executes a fallback function.
 
-=== 三态状态机 ===
+=== Three-State State Machine ===
 
-CLOSED（关闭/正常）→ 触发条件满足 → OPEN（打开/熔断）
-OPEN → 经过 recovery_timeout 秒 → HALF_OPEN（半开/试探）
-HALF_OPEN → 连续成功 >= half_open_max_calls → CLOSED
-HALF_OPEN → 任意一次失败 → OPEN
-HALF_OPEN → 超过 half_open_ttl → OPEN（可选）
+CLOSED (normal) -> trigger condition met -> OPEN (tripped/circuit broken)
+OPEN -> after recovery_timeout seconds -> HALF_OPEN (probing)
+HALF_OPEN -> consecutive successes >= half_open_max_calls -> CLOSED
+HALF_OPEN -> any single failure -> OPEN
+HALF_OPEN -> exceeds half_open_ttl -> OPEN (optional)
 
-=== 两种触发策略 ===
+=== Two Trigger Strategies ===
 
-1. consecutive（连续失败计数，默认）：
-   连续失败 >= failure_threshold 时触发熔断，任何一次成功重置计数。
+1. consecutive (consecutive failure count, default):
+   Triggers circuit break when consecutive failures >= failure_threshold. Any single success resets the count.
 
-2. rate（错误率滑动窗口）：
-   在 period 秒的滑动窗口内，当调用次数 >= min_calls 且
-   错误率 >= errors_rate 时触发熔断。
+2. rate (error rate sliding window):
+   Within a sliding window of `period` seconds, triggers circuit break when call count >= min_calls
+   and error rate >= errors_rate.
 
-=== 两种计数后端 ===
+=== Two Counter Backends ===
 
-1. local（本地内存，默认）：
-   单进程内有效，使用 threading.Lock 保证线程安全。
+1. local (local memory, default):
+   Effective within a single process, uses threading.Lock for thread safety.
 
-2. redis（Redis 分布式）：
-   多进程/多机器共享熔断状态，同一队列的所有消费者共享计数。
+2. redis (Redis distributed):
+   Shared circuit breaker state across multiple processes/machines; all consumers of the same queue share counts.
 
-=== 两种熔断行为 ===
+=== Two Circuit Break Behaviors ===
 
-1. 阻塞模式（默认，无 fallback）：
-   熔断期间阻塞 _submit_task，消息留在中间件中等待恢复。
+1. Blocking mode (default, no fallback):
+   Blocks _submit_task during circuit break; messages remain in the broker waiting for recovery.
 
-2. Fallback 模式（指定 fallback）：
-   熔断期间用 fallback 函数替代原函数执行。
+2. Fallback mode (with fallback specified):
+   Executes the fallback function instead of the original function during circuit break.
 
-=== user_options['circuit_breaker_options'] 参数说明 ===
+=== user_options['circuit_breaker_options'] Parameter Description ===
 
-所有熔断器参数放在 user_options 的 'circuit_breaker_options' 字典中，
-避免与其他 mixin 的 user_options 一级 key 冲突（例如 period 可能与 PeriodicQuotaConsumerMixin 冲突）。
+All circuit breaker parameters are placed in the 'circuit_breaker_options' dict within user_options,
+to avoid key conflicts with other mixins' user_options (e.g. period may conflict with PeriodicQuotaConsumerMixin).
 
-    strategy:               'consecutive'(连续失败计数) 或 'rate'(错误率滑动窗口)，默认 'consecutive'
-    counter_backend:        'local'(本地内存) 或 'redis'(Redis 分布式)，默认 'local'
+    strategy:               'consecutive' (consecutive failure count) or 'rate' (error rate sliding window), default 'consecutive'
+    counter_backend:        'local' (local memory) or 'redis' (Redis distributed), default 'local'
 
-    failure_threshold:      连续失败次数阈值（consecutive 策略），默认 5
-    errors_rate:            错误率阈值 0.0~1.0（rate 策略），默认 0.5
-    period:                 统计窗口秒数（rate 策略），默认 60.0
-    min_calls:              窗口内最少调用数才评估（rate 策略），默认 5
+    failure_threshold:      Consecutive failure count threshold (consecutive strategy), default 5
+    errors_rate:            Error rate threshold 0.0~1.0 (rate strategy), default 0.5
+    period:                 Statistics window in seconds (rate strategy), default 60.0
+    min_calls:              Minimum call count in window before evaluation (rate strategy), default 5
 
-    recovery_timeout:       熔断后等待恢复秒数（= cashews 的 ttl），默认 60.0
-    half_open_max_calls:    半开状态需连续成功次数，默认 3
-    half_open_ttl:          半开状态超时秒数，超时后重新进入 OPEN（None 则不超时），默认 None
+    recovery_timeout:       Seconds to wait for recovery after circuit break (equivalent to cashews' ttl), default 60.0
+    half_open_max_calls:    Number of consecutive successes needed in half-open state, default 3
+    half_open_ttl:          Half-open state timeout in seconds; re-enters OPEN after timeout (None means no timeout), default None
 
-    exceptions:             要跟踪的异常类型元组（None 跟踪所有），默认 None
-    fallback:               降级函数（None 则阻塞模式），默认 None
+    exceptions:             Tuple of exception types to track (None tracks all), default None
+    fallback:               Fallback/degradation function (None means blocking mode), default None
 
-=== 钩子方法（子类重写） ===
+=== Hook Methods (override in subclass) ===
 
-    _on_circuit_open(self,info_dict):   熔断触发时调用，可发送微信/钉钉/邮件告警
-    _on_circuit_close(self,info_dict):  熔断恢复时调用，可发送恢复通知
+    _on_circuit_open(self,info_dict):   Called when circuit break triggers; can send WeChat/DingTalk/email alerts
+    _on_circuit_close(self,info_dict):  Called when circuit break recovers; can send recovery notifications
 
-=== 用法示例 ===
+=== Usage Examples ===
 
     from funboost import boost, BoosterParams, BrokerEnum
     from funboost.contrib.override_publisher_consumer_cls.circuit_breaker_mixin import (
@@ -72,7 +73,7 @@ HALF_OPEN → 超过 half_open_ttl → OPEN（可选）
         CircuitBreakerBoosterParams,
     )
 
-    # 方式1：连续失败策略 + 本地计数（最简用法）
+    # Method 1: Consecutive failure strategy + local counter (simplest usage)
     @boost(CircuitBreakerBoosterParams(
         queue_name='my_task',
         broker_kind=BrokerEnum.REDIS,
@@ -86,7 +87,7 @@ HALF_OPEN → 超过 half_open_ttl → OPEN（可选）
     def my_task(x):
         return call_external_api(x)
 
-    # 方式2：错误率策略 + Redis 分布式计数
+    # Method 2: Error rate strategy + Redis distributed counter
     @boost(BoosterParams(
         queue_name='my_task_rate',
         broker_kind=BrokerEnum.REDIS,
@@ -106,13 +107,13 @@ HALF_OPEN → 超过 half_open_ttl → OPEN（可选）
     def my_task_rate(x):
         return call_external_api(x)
 
-    # 方式3：继承重写钩子，熔断/恢复时发送告警
+    # Method 3: Inherit and override hooks to send alerts on circuit break/recovery
     class MyAlertCircuitBreakerMixin(CircuitBreakerConsumerMixin):
         def _on_circuit_open(self, info_dict):
-            send_dingtalk(f'[告警] 队列 {info_dict["queue_name"]} 已熔断! 失败{info_dict["failure_count"]}次')
+            send_dingtalk(f'[ALERT] Queue {info_dict["queue_name"]} circuit broken! {info_dict["failure_count"]} failures')
 
         def _on_circuit_close(self, info_dict):
-            send_wechat(f'[恢复] 队列 {info_dict["queue_name"]} 已恢复正常')
+            send_wechat(f'[RECOVERY] Queue {info_dict["queue_name"]} has recovered')
 
     @boost(BoosterParams(
         queue_name='my_task_alert',
@@ -128,7 +129,7 @@ HALF_OPEN → 超过 half_open_ttl → OPEN（可选）
     def my_task_alert(x):
         return call_external_api(x)
 
-    # 方式4：Fallback 降级
+    # Method 4: Fallback degradation
     def my_fallback(x):
         return {'status': 'degraded', 'x': x}
 
@@ -149,23 +150,25 @@ HALF_OPEN → 超过 half_open_ttl → OPEN（可选）
 """
 
 """
-Funboost 的熔断器实现达到了顶流熔断器框架的水平，它遵循了业界通用的三态状态机模型，支持两种触发策略，
-提供了完善的配置项和扩展钩子，并且额外支持分布式计数，非常适合构建高可用的分布式系统。
-配置方式清晰直观，开发者可以像使用 Hystrix 或 resilience4j 一样轻松驾驭它。
+Funboost's circuit breaker implementation reaches the level of top-tier circuit breaker frameworks.
+It follows the industry-standard three-state state machine model, supports two trigger strategies,
+provides comprehensive configuration options and extension hooks, and additionally supports distributed counting,
+making it well-suited for building highly available distributed systems.
+The configuration approach is clear and intuitive, allowing developers to use it as easily as Hystrix or resilience4j.
 """
 
 """
-funboost 支持自动熔断管理，也支持手动熔断管理
+funboost supports both automatic circuit breaker management and manual circuit breaker management.
 
-手动熔断管理:
-由你自己人工判断并且手动操作是需要否暂停和恢复消费。
-你主动发现大规模报错 或者通过promethus告警发现 大规模报错后，可以人工暂停某个队列的消费。
-- 就是可以通过对 redis的queue_name 设置 pause 标志，
-- 也可以通过faas接口 /funboost/pause_consume 和 /funboost/resume_consume 来暂停和恢复拉取消息
-- 也可以通过 funboost web manager 网页来设置暂停和恢复
+Manual circuit breaker management:
+You manually judge and operate whether to pause and resume consumption.
+When you proactively discover large-scale errors or detect them through Prometheus alerts, you can manually pause consumption of a specific queue.
+- You can set a pause flag on the Redis queue_name,
+- You can also use the FaaS endpoints /funboost/pause_consume and /funboost/resume_consume to pause and resume message pulling
+- You can also use the funboost web manager page to set pause and resume
 
-自动熔断管理：
-通过 CircuitBreakerConsumerMixin，智能自动进进入熔断和半开和恢复三种状态。
+Automatic circuit breaker management:
+Through CircuitBreakerConsumerMixin, it intelligently and automatically transitions between the three states: circuit broken, half-open, and recovered.
 """
 
 
@@ -191,7 +194,7 @@ class CircuitState:
 
 
 def _parse_exception_names(exceptions) -> typing.Optional[set]:
-    """将异常类型元组转换为异常类名字符串集合，None 表示跟踪所有异常"""
+    """Convert exception type tuple to a set of exception class name strings. None means track all exceptions"""
     if exceptions is None:
         return None
     names = set()
@@ -206,18 +209,18 @@ def _parse_exception_names(exceptions) -> typing.Optional[set]:
 
 
 # ================================================================
-# 本地内存熔断器
+# Local Memory Circuit Breaker
 # ================================================================
 
 class CircuitBreaker:
     """
-    线程安全的三态熔断器（本地内存计数）
+    Thread-safe three-state circuit breaker (local memory counter)
 
-    支持两种触发策略：
-    - consecutive: 连续失败 >= failure_threshold 时熔断
-    - rate: 滑动窗口内错误率 >= errors_rate 且调用数 >= min_calls 时熔断
+    Supports two trigger strategies:
+    - consecutive: Trips when consecutive failures >= failure_threshold
+    - rate: Trips when error rate >= errors_rate and call count >= min_calls within sliding window
 
-    HALF_OPEN 状态的逻辑与策略无关：连续成功 >= half_open_max_calls 则 CLOSED，任意失败则 OPEN。
+    HALF_OPEN state logic is independent of strategy: consecutive successes >= half_open_max_calls -> CLOSED, any failure -> OPEN.
     """
 
     def __init__(self,
@@ -246,7 +249,7 @@ class CircuitBreaker:
         self._last_half_open_time = 0.0
         self._lock = threading.Lock()
 
-        # rate 策略的滑动窗口：(timestamp, is_success)
+        # Sliding window for rate strategy: (timestamp, is_success)
         self._call_records: typing.Deque[typing.Tuple[float, bool]] = collections.deque()
 
     @property
@@ -280,7 +283,7 @@ class CircuitBreaker:
             return max(0.0, remaining)
 
     def get_error_rate_info(self) -> dict:
-        """获取当前滑动窗口的错误率信息（仅 rate 策略有意义）"""
+        """Get error rate info for the current sliding window (only meaningful for rate strategy)"""
         with self._lock:
             self._cleanup_old_records_unlocked()
             total = len(self._call_records)
@@ -344,18 +347,18 @@ class CircuitBreaker:
 
 
 # ================================================================
-# Redis 分布式熔断器
+# Redis Distributed Circuit Breaker
 # ================================================================
 
 class RedisCircuitBreaker:
     """
-    Redis 分布式三态熔断器
+    Redis distributed three-state circuit breaker
 
-    多进程/多机器共享熔断状态，同一 queue_name 的所有消费者共享计数。
-    使用 Redis hash 存储状态，sorted set 存储滑动窗口调用记录。
+    Shares circuit breaker state across multiple processes/machines; all consumers of the same queue_name share counts.
+    Uses Redis hash to store state and sorted set to store sliding window call records.
 
-    注意：Redis 操作不使用 Lua 脚本，在极高并发下存在微小的竞态窗口，
-    但对于熔断器来说这些竞态是良性的（最多延迟 1-2 次调用触发/恢复）。
+    Note: Redis operations do not use Lua scripts, so there is a small race condition window under extremely high concurrency,
+    but for a circuit breaker these races are benign (at most delayed by 1-2 calls for triggering/recovery).
     """
 
     HASH_KEY_PREFIX = 'funboost:circuit_breaker:'
@@ -391,7 +394,7 @@ class RedisCircuitBreaker:
         self._init_redis_state()
 
     def _hash_ttl_seconds(self) -> int:
-        """hash key 的最大 TTL：熔断恢复后一段时间没有流量则自动清理"""
+        """Maximum TTL for the hash key: automatically cleaned up if there's no traffic after circuit break recovery"""
         return int(self.recovery_timeout * 10 + self.period * 2 + 3600)
 
     def _init_redis_state(self):
@@ -404,12 +407,12 @@ class RedisCircuitBreaker:
         }
         for field, value in defaults.items():
             self._redis.hsetnx(self._hash_key, field, value)
-        # 设置兜底 TTL，防止进程异常退出后 key 永久残留
+        # Set a fallback TTL to prevent keys from remaining permanently after abnormal process exit
         self._redis.expire(self._hash_key, self._hash_ttl_seconds())
 
     def _get_hash_fields(self) -> dict:
         data = self._redis.hgetall(self._hash_key)
-        # hgetall 返回 {bytes: bytes}，需要先 decode
+        # hgetall returns {bytes: bytes}, need to decode first
         decoded = {
             k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v
             for k, v in data.items()
@@ -461,7 +464,7 @@ class RedisCircuitBreaker:
 
     @staticmethod
     def _is_failure_member(m) -> bool:
-        """判断 sorted set 成员是否为失败记录（兼容 bytes/str）"""
+        """Check if a sorted set member is a failure record (compatible with bytes/str)"""
         if isinstance(m, bytes):
             return m.endswith(b':0')
         return str(m).endswith(':0')
@@ -527,7 +530,7 @@ class RedisCircuitBreaker:
             'last_open_time': str(now),
         })
         self._redis.expire(self._hash_key, self._hash_ttl_seconds())
-        # 进入 OPEN 后清理 sorted set 中已过期的旧记录，释放内存
+        # After entering OPEN, clean up expired old records in the sorted set to free memory
         self._cleanup_old_calls()
 
     def _should_open_by_rate(self) -> bool:
@@ -543,7 +546,7 @@ class RedisCircuitBreaker:
     def _cleanup_old_calls(self):
         cutoff = time.time() - self.period
         self._redis.zremrangebyscore(self._calls_key, '-inf', cutoff)
-        # sorted set 的 TTL = period 的 2 倍兜底，防止极端情况下无人清理导致内存泄漏
+        # sorted set TTL = 2x period as fallback, to prevent memory leaks when no one cleans up in extreme cases
         self._redis.expire(self._calls_key, int(self.period * 2) + 60)
 
 
@@ -553,9 +556,9 @@ class RedisCircuitBreaker:
 
 class CircuitBreakerConsumerMixin(AbstractConsumer):
     """
-    熔断器消费者 Mixin
+    Circuit Breaker Consumer Mixin
 
-    通过 user_options['circuit_breaker_options'] 配置所有参数，详见模块文档。
+    All parameters are configured via user_options['circuit_breaker_options']. See module docstring for details.
     """
 
     def custom_init(self):
@@ -601,35 +604,35 @@ class CircuitBreakerConsumerMixin(AbstractConsumer):
 
     def _on_circuit_open(self, info_dict: dict):
         """
-        熔断触发时的钩子，子类可重写此方法来发送告警（微信/钉钉/邮件等）。
+        Hook called when circuit break triggers. Subclasses can override this method to send alerts (WeChat/DingTalk/email, etc.).
 
-        info_dict 包含:
-            old_state:       变化前状态
-            new_state:       变化后状态 (固定为 'open')
-            queue_name:      队列名
-            failure_count:   累计失败次数
-            strategy:        当前策略 ('consecutive' 或 'rate')
-            error_rate_info: 错误率详情 (仅 rate 策略, 含 total/failures/rate)
+        info_dict contains:
+            old_state:       State before transition
+            new_state:       State after transition (always 'open')
+            queue_name:      Queue name
+            failure_count:   Accumulated failure count
+            strategy:        Current strategy ('consecutive' or 'rate')
+            error_rate_info: Error rate details (rate strategy only, contains total/failures/rate)
 
-        用法示例::
+        Usage example::
 
             class MyCircuitBreakerMixin(CircuitBreakerConsumerMixin):
                 def _on_circuit_open(self, info_dict):
-                    send_dingtalk(f'队列 {info_dict["queue_name"]} 已熔断!')
+                    send_dingtalk(f'Queue {info_dict["queue_name"]} circuit broken!')
         """
         pass
 
     def _on_circuit_close(self, info_dict: dict):
         """
-        熔断恢复时的钩子，子类可重写此方法来发送恢复通知。
+        Hook called when circuit break recovers. Subclasses can override this method to send recovery notifications.
 
-        info_dict 内容同 _on_circuit_open，new_state 固定为 'closed'。
+        info_dict contents are the same as _on_circuit_open, with new_state always being 'closed'.
 
-        用法示例::
+        Usage example::
 
             class MyCircuitBreakerMixin(CircuitBreakerConsumerMixin):
                 def _on_circuit_close(self, info_dict):
-                    send_wechat(f'队列 {info_dict["queue_name"]} 已恢复正常')
+                    send_wechat(f'Queue {info_dict["queue_name"]} has recovered')
         """
         pass
 
@@ -708,7 +711,7 @@ class CircuitBreakerConsumerMixin(AbstractConsumer):
         return await super()._async_run_consuming_function_with_confirm_and_retry(kw, current_retry_times, function_result_status)
 
     def _is_tracked_exception(self, function_result_status: FunctionResultStatus) -> bool:
-        """判断该失败是否属于需要被熔断器跟踪的异常类型"""
+        """Check if this failure belongs to the exception types that should be tracked by the circuit breaker"""
         if self._tracked_exception_names is None:
             return True
         if not function_result_status.exception_type:
@@ -717,9 +720,9 @@ class CircuitBreakerConsumerMixin(AbstractConsumer):
 
     def _frame_custom_record_process_info_func(self, current_function_result_status: FunctionResultStatus, kw: dict):
         """
-        任务执行完成后（含重试耗尽），根据最终结果更新熔断器状态。
-        - fallback 执行的成功不计入恢复统计
-        - 不在 exceptions 列表中的异常不计入熔断器
+        After task execution completes (including retry exhaustion), update circuit breaker state based on the final result.
+        - Successful fallback executions are not counted toward recovery statistics
+        - Exceptions not in the exceptions list are not counted by the circuit breaker
         """
         super()._frame_custom_record_process_info_func(current_function_result_status, kw)
 
@@ -775,16 +778,16 @@ class CircuitBreakerConsumerMixin(AbstractConsumer):
 
 
 # ================================================================
-# 预配置 BoosterParams
+# Pre-configured BoosterParams
 # ================================================================
 
 class CircuitBreakerBoosterParams(BoosterParams):
     """
-    预配置了熔断器的 BoosterParams
+    Pre-configured BoosterParams with circuit breaker
 
-    使用示例：
+    Usage examples:
 
-        # 连续失败策略（默认）
+        # Consecutive failure strategy (default)
         @boost(CircuitBreakerBoosterParams(
             queue_name='my_task',
             broker_kind=BrokerEnum.REDIS,
@@ -798,7 +801,7 @@ class CircuitBreakerBoosterParams(BoosterParams):
         def my_task(x):
             return call_external_api(x)
 
-        # 错误率策略 + Redis 分布式
+        # Error rate strategy + Redis distributed
         @boost(CircuitBreakerBoosterParams(
             queue_name='my_task',
             broker_kind=BrokerEnum.REDIS,

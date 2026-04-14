@@ -1,7 +1,7 @@
 
 """
-这个pydantic 基类能兼容pydantic v1 和 v2 和v3
-使v2中不再警告用户使用过气的方法，使未来的v3中不报错v1的老方法不存在。
+This pydantic base class is compatible with pydantic v1, v2, and v3.
+It eliminates v2 deprecation warnings for old methods, and prevents v1-era method errors in future v3.
 """
 import datetime
 import functools
@@ -19,11 +19,11 @@ def _patch_for_pydantic_field_deepcopy():
     # noinspection PyUnusedLocal,PyDefaultArgument
     def __deepcopy__(self, memodict={}):
         """
-        pydantic 的默认值，需要deepcopy
+        pydantic default values need deepcopy.
         """
         return self
 
-    # pydantic 的类型需要用到
+    # pydantic types need this
     ThreadPoolExecutor.__deepcopy__ = __deepcopy__
     AbstractEventLoop.__deepcopy__ = __deepcopy__
     # BaseEventLoop.__deepcopy__ = __deepcopy__
@@ -63,7 +63,7 @@ elif get_pydantic_major_version() >= 2:
             extra="forbid",
         )
 
-        # pydantic v2 默认就能正确序列化 datetime，无需额外配置
+        # pydantic v2 correctly serializes datetime by default, no extra configuration needed
 
         def to_json(self, **kwargs):
             return self.model_dump_json(**kwargs)
@@ -72,15 +72,15 @@ elif get_pydantic_major_version() >= 2:
             return self.model_dump()
 
 
-# 统一兼容 root_validator / model_validator 的装饰器
+# Unified compatibility decorator for root_validator / model_validator
 def compatible_root_validator(*, skip_on_failure=True, mode="after"):
     """
-    统一 pydantic v1 和 v2 的校验器写法，让用户可以统一用 self.xxx 的方式访问和修改字段。
+    Unifies pydantic v1 and v2 validator syntax, allowing users to access and modify fields uniformly via self.xxx.
 
-    v1: root_validator(skip_on_failure=skip_on_failure) - 原本签名是 (cls, values: dict)
-    v2: model_validator(mode=mode) - 签名是 (self)
+    v1: root_validator(skip_on_failure=skip_on_failure) - original signature is (cls, values: dict)
+    v2: model_validator(mode=mode) - signature is (self)
 
-    用法:
+    Usage:
         @compatible_root_validator(skip_on_failure=True)
         def check_values(self):
             if self.qps and self.concurrent_num == 50:
@@ -92,17 +92,17 @@ def compatible_root_validator(*, skip_on_failure=True, mode="after"):
         if get_pydantic_major_version() == 1:
             from pydantic import root_validator
 
-            # 注意：不能使用 @functools.wraps(func)，否则 pydantic v1 会检查到原函数签名 (self) 而报错
+            # Note: cannot use @functools.wraps(func), otherwise pydantic v1 will detect the original signature (self) and raise an error.
             def v1_wrapper(cls, values: dict):
-                # 创建一个命名空间对象，让用户可以用 self.xxx 的方式访问字段
-                # 同时代理访问原始模型类的元信息（如 __fields__, model_fields）
+                # Create a namespace object so users can access fields via self.xxx
+                # Also proxies access to the original model class metadata (e.g. __fields__, model_fields)
                 class _ValuesNamespace:
-                    # 类属性：存储原始模型类的引用
+                    # Class attribute: stores a reference to the original model class
                     _model_cls = cls
                     _field_keys = set(values.keys())
 
                     def __init__(self, d: dict):
-                        # 将字段值存入实例
+                        # Store field values into the instance
                         for k, v in d.items():
                             object.__setattr__(self, k, v)
 
@@ -114,12 +114,12 @@ def compatible_root_validator(*, skip_on_failure=True, mode="after"):
 
                     @property
                     def model_fields(self):
-                        # 代理访问类的字段定义（兼容 v2 风格）
-                        # 在 v1 中返回 __fields__
+                        # Proxy access to the class field definitions (v2-style compatible)
+                        # In v1, returns __fields__
                         return self._model_cls.__fields__
 
                     def __getattr__(self, name):
-                        # 处理 __fields__ 等特殊属性的访问
+                        # Handle access to special attributes like __fields__
                         if name == "__fields__":
                             return self._model_cls.__fields__
                         raise AttributeError(
@@ -128,18 +128,18 @@ def compatible_root_validator(*, skip_on_failure=True, mode="after"):
 
                     @property
                     def __class__(self):
-                        # 让 self.__class__.__name__ 返回正确的类名
+                        # Make self.__class__.__name__ return the correct class name
                         return self._model_cls
 
                 ns = _ValuesNamespace(values)
                 result = func(ns)
-                # 把修改后的值同步回 values 字典
+                # Sync modified values back to the values dict
                 for k in values:
                     if hasattr(result, k):
                         values[k] = getattr(result, k)
                 return values
 
-            v1_wrapper.__name__ = func.__name__  # 手动设置函数名，用于调试
+            v1_wrapper.__name__ = func.__name__  # Manually set function name for debugging
             v1_wrapper.__doc__ = func.__doc__
             return root_validator(skip_on_failure=skip_on_failure, allow_reuse=True)(
                 v1_wrapper
@@ -147,7 +147,7 @@ def compatible_root_validator(*, skip_on_failure=True, mode="after"):
         else:
             from pydantic import model_validator
 
-            # v2 的 model_validator(mode='after') 直接接收 self
+            # v2's model_validator(mode='after') receives self directly
             @functools.wraps(func)
             def v2_wrapper(self):
                 return func(self)
@@ -159,7 +159,7 @@ def compatible_root_validator(*, skip_on_failure=True, mode="after"):
 
 class BaseJsonAbleModel(CompatibleModel):
     """
-    因为model字段包括了 函数和自定义类型的对象,无法直接json序列化,需要自定义json序列化
+    Since model fields include functions and custom-typed objects that cannot be directly JSON-serialized, custom JSON serialization is needed.
     """
 
     def get_str_dict(self):
@@ -171,7 +171,7 @@ class BaseJsonAbleModel(CompatibleModel):
             # elif k in ['specify_concurrent_pool', 'specify_async_loop'] and v is not None:
             elif (
                 type(v).__module__ != "builtins"
-            ):  # 自定义类型的对象,json不可序列化,需要转化下.
+            ):  # Custom type objects are not JSON-serializable and need conversion.
                 model_dict_copy[k] = str(v)
             else:
                 model_dict_copy[k] = v
@@ -216,20 +216,20 @@ class BaseJsonAbleModel(CompatibleModel):
         return model_type(**init_dict)
 
 
-# 缓存每个模型类型的不可序列化字段
+# Cache non-serializable fields per model type
 _model_non_serializable_fields_cache: typing.Dict[typing.Type, typing.Set[str]] = {}
 
 def get_cant_json_serializable_fields(model_type: typing.Type[BaseModel]) -> typing.Set[str]:
     """
-    获取 Pydantic 模型中所有不可JSON序列化的字段名列表
-    使用缓存，每个模型类型只在第一次调用时计算
-    
+    Get the list of all field names in a Pydantic model that are not JSON-serializable.
+    Uses a cache; each model type is only computed on the first call.
+
     Args:
-        model_type: Pydantic 模型类型
-        
+        model_type: Pydantic model type
+
     Returns:
-        不可JSON序列化的字段名集合
-        
+        Set of field names that are not JSON-serializable
+
     Example:
         >>> from funboost.core.func_params_model import BoosterParams
         >>> fields = get_cant_json_serializable_fields(BoosterParams)
@@ -238,7 +238,7 @@ def get_cant_json_serializable_fields(model_type: typing.Type[BaseModel]) -> typ
         >>> 'queue_name' in fields
         False
     """
-    # 如果已有缓存，直接返回
+    # If cache exists, return directly
     if model_type in _model_non_serializable_fields_cache:
         return _model_non_serializable_fields_cache[model_type]
     
@@ -247,61 +247,61 @@ def get_cant_json_serializable_fields(model_type: typing.Type[BaseModel]) -> typ
     
     non_serializable_fields = set()
     
-    # 获取模型的所有字段类型注解
-    # 兼容 pydantic v1 和 v2
+    # Get all field type annotations for the model
+    # Compatible with pydantic v1 and v2
     if hasattr(model_type, 'model_fields'):
         # pydantic v2
         fields_info = model_type.model_fields
     else:
         # pydantic v1
         fields_info = model_type.__fields__
-    
+
     for field_name, field_info in fields_info.items():
-        # 获取字段的类型注解
+        # Get the type annotation for the field
         if hasattr(field_info, 'annotation'):
             # pydantic v2
             field_type = field_info.annotation
         else:
             # pydantic v1
             field_type = field_info.outer_type_ if hasattr(field_info, 'outer_type_') else field_info.type_
-        
-        # 判断类型是否不可JSON序列化
-        # 使用 typing.get_origin 和 get_args 来准确判断类型
+
+        # Determine if the type is not JSON-serializable
+        # Use typing.get_origin and get_args for accurate type checking
         origin = typing.get_origin(field_type)
-        
-        # 处理 Optional[X] / Union[X, None] 类型，获取实际类型
+
+        # Handle Optional[X] / Union[X, None] types, get the actual type
         if origin is typing.Union:
             args = typing.get_args(field_type)
-            # 过滤掉 NoneType，获取实际类型
+            # Filter out NoneType to get the actual type
             non_none_types = [arg for arg in args if arg is not type(None)]
             if non_none_types:
                 field_type = non_none_types[0]
                 origin = typing.get_origin(field_type)
-        
-        # 判断是否是不可序列化的类型
-        # 1. typing.Callable - 函数类型
-        # 2. typing.Type - 类类型
-        # 3. 自定义类 - 实际的类对象（非基本类型）
+
+        # Determine if the type is non-serializable:
+        # 1. typing.Callable - function types
+        # 2. typing.Type - class types
+        # 3. Custom class - actual class objects (non-primitive types)
         is_callable = origin is AbcCallable or (hasattr(typing, 'Callable') and origin is getattr(typing, 'Callable', None))
         is_type = origin is type or str(field_type).startswith('typing.Type')
-        
-        # 检查是否是自定义类：
-        # - 必须是一个实际的类（继承自 type，即 inspect.isclass 为 True）
-        # - 不是基本类型（str, int, float, bool, list, dict）
-        # - 不是 typing 模块的泛型（Literal, Union, Optional 等已被 origin 处理）
+
+        # Check if it's a custom class:
+        # - Must be an actual class (inspect.isclass is True)
+        # - Not a primitive type (str, int, float, bool, list, dict)
+        # - Not a typing module generic (Literal, Union, Optional etc. are already handled via origin)
         is_custom_class = False
         if not is_callable and not is_type and origin is None:
-            # origin 为 None 说明不是泛型类型，可能是普通类
-            # 检查是否是实际的自定义类
+            # origin is None means it's not a generic type, might be a plain class
+            # Check if it's an actual custom class
             if inspect.isclass(field_type):
-                # 是一个类，检查是否是基本类型
+                # It's a class, check if it's a primitive type
                 if field_type not in (str, int, float, bool, list, dict):
                     is_custom_class = True
-        
+
         if is_callable or is_type or is_custom_class:
             non_serializable_fields.add(field_name)
-    
-    # 缓存结果
+
+    # Cache the result
     _model_non_serializable_fields_cache[model_type] = non_serializable_fields
     return non_serializable_fields
 

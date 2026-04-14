@@ -5,13 +5,13 @@ import time
 
 from funboost import boost, BrokerEnum, ConcurrentModeEnum, BoosterParams
 
-# 创建事件循环
+# Create event loop
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
 
 async def init():
-    # 一些异步操作
+    # Some async operations
     await asyncio.sleep(1)
     print('id loop:',id(asyncio.get_running_loop()))
 

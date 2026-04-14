@@ -6,29 +6,29 @@ import atexit
 
 class DynamicThreadPool:
     """
-    一个能根据负载自动伸缩线程数量的动态线程池。
+    A dynamic thread pool that automatically scales the number of threads based on load.
     """
 
     def __init__(self, min_workers=2, max_workers=10, idle_timeout=60):
         if min_workers <= 0 or max_workers < min_workers:
-            raise ValueError("不合理的线程数配置 (0 < min_workers <= max_workers)")
+            raise ValueError("Unreasonable thread count configuration (0 < min_workers <= max_workers)")
 
         self.min_workers = min_workers
         self.max_workers = max_workers
-        self.idle_timeout = idle_timeout  # 秒
+        self.idle_timeout = idle_timeout  # seconds
 
         self._task_queue = queue.Queue()
-        self._workers = set()  # 使用集合以方便快速增删
+        self._workers = set()  # Use a set for fast add/remove
         self._workers_lock = threading.Lock()
 
         self._is_shutdown = False
         self._shutdown_lock = threading.Lock()
 
-        # 初始化核心线程
+        # Initialize core threads
         for _ in range(self.min_workers):
             self._create_worker()
 
-        # 创建“经理”线程，负责监控和扩容
+        # Create a "manager" thread responsible for monitoring and scaling up
         self._manager_thread = threading.Thread(target=self._manager_loop)
         self._manager_thread.daemon = True
         self._manager_thread.start()
@@ -36,32 +36,32 @@ class DynamicThreadPool:
         atexit.register(self.shutdown)
 
     def _create_worker(self):
-        """安全地创建一个工作线程。"""
+        """Safely create a worker thread."""
         with self._workers_lock:
             if len(self._workers) >= self.max_workers:
-                return  # 已达到最大线程数
+                return  # Already at maximum thread count
 
             worker = threading.Thread(target=self._worker_loop)
             worker.daemon = True
             worker.start()
             self._workers.add(worker)
-            print(f"📈 池中线程数: {len(self._workers)}。创建了一个新线程: {worker.name}")
+            print(f"📈 Thread count in pool: {len(self._workers)}. Created a new thread: {worker.name}")
 
     def _remove_worker(self, worker):
-        """安全地移除一个工作线程，并确保不会低于核心数。"""
+        """Safely remove a worker thread, ensuring the count doesn't drop below core count."""
         with self._workers_lock:
-            # 增加安全检查，防止过度移除
+            # Add safety check to prevent over-removal
             if len(self._workers) <= self.min_workers:
                 return
             if worker in self._workers:
                 self._workers.remove(worker)
-                # 这行现在可以被触发了！
-                print(f"📉 池中线程数: {len(self._workers)}。移除了一个空闲线程: {worker.name}")
+                # This line can now be triggered!
+                print(f"📉 Thread count in pool: {len(self._workers)}. Removed an idle thread: {worker.name}")
 
     def _worker_loop(self):
         """
-        工作线程的循环。
-        核心线程会一直等待，临时线程在空闲超时后会退出。
+        Worker thread loop.
+        Core threads wait indefinitely; temporary threads exit after idle timeout.
         """
         while True:
             try:
@@ -74,51 +74,51 @@ class DynamicThreadPool:
                 try:
                     func(*args, **kwargs)
                 except Exception as e:
-                    print(f"任务执行时发生错误: {e}")
+                    print(f"Error occurred while executing task: {e}")
                 finally:
                     self._task_queue.task_done()
 
             except queue.Empty:
-                # 只有临时线程在超时后才会到达这里。
-                # 既然已经超时，就说明它应该被销毁。移除二次确认。
+                # Only temporary threads reach here after timeout.
+                # Since it timed out, it should be destroyed. Remove with double-check.
                 self._remove_worker(threading.current_thread())
-                return  # 线程自我终结
+                return  # Thread self-terminates
 
     def _manager_loop(self):
         """
-        “经理”线程的循环，负责按需扩容。
+        "Manager" thread loop, responsible for scaling up on demand.
         """
         while not self._is_shutdown:
-            time.sleep(1)  # 每秒检查一次
+            time.sleep(1)  # Check once per second
 
-            # 扩容策略：当等待的任务数 > 当前线程数时，且未达到最大线程数，就扩容
+            # Scale-up strategy: when pending tasks > current thread count and max not reached, scale up
             if self._task_queue.qsize() > len(self._workers) and len(self._workers) < self.max_workers:
-                print("🚀 任务积压，经理决定扩容...")
+                print("🚀 Task backlog detected, manager decided to scale up...")
                 self._create_worker()
 
     def submit(self, func, *args, **kwargs):
-        """向任务队列中提交一个任务。"""
+        """Submit a task to the task queue."""
         with self._shutdown_lock:
             if self._is_shutdown:
-                raise RuntimeError("线程池已关闭，无法提交新任务")
+                raise RuntimeError("Thread pool has been shut down, cannot submit new tasks")
             self._task_queue.put((func, args, kwargs))
 
     def shutdown(self, wait=True):
         """
-        优雅地关闭线程池，包括经理线程和所有工作线程。
+        Gracefully shut down the thread pool, including the manager thread and all worker threads.
         """
         with self._shutdown_lock:
             if self._is_shutdown:
                 return
-            print("\n--- atexit: 检测到程序退出，开始关闭线程池... ---")
+            print("\n--- atexit: Program exit detected, starting thread pool shutdown... ---")
             self._is_shutdown = True
 
         if wait:
             self._task_queue.join()
-            # 等待经理线程退出
-            # self._manager_thread.join() # 因为是守护线程，无需手动join
+            # Wait for manager thread to exit
+            # self._manager_thread.join() # No need to manually join since it's a daemon thread
 
-        print("--- atexit: 所有任务已完成，程序将干净地退出。 ---")
+        print("--- atexit: All tasks completed, program will exit cleanly. ---")
 
     def __enter__(self):
         return self
@@ -128,36 +128,36 @@ class DynamicThreadPool:
         return False
 
 
-# --- 测试代码 ---
+# --- Test code ---
 if __name__ == '__main__':
     import random
 
 
     def simple_task(task_id, duration):
-        print(f"线程 {threading.current_thread().name} 开始执行任务 {task_id}...")
+        print(f"Thread {threading.current_thread().name} starting task {task_id}...")
         time.sleep(duration)
-        print(f"✅ 线程 {threading.current_thread().name} 完成了任务 {task_id}。")
+        print(f"✅ Thread {threading.current_thread().name} completed task {task_id}.")
 
 
-    print("\n--- 测试动态线程池 DynamicThreadPool ---")
+    print("\n--- Testing Dynamic Thread Pool DynamicThreadPool ---")
 
-    # 创建一个核心2个，最多10个，空闲5秒就销毁的线程池
+    # Create a pool with 2 core threads, max 10, idle threads destroyed after 5 seconds
     pool = DynamicThreadPool(min_workers=1, max_workers=10, idle_timeout=5)
 
-    # 第一波：瞬间提交大量任务，触发扩容
-    print("\n>>> 第一波：提交15个任务，观察扩容...")
+    # First wave: submit a large number of tasks at once to trigger scale-up
+    print("\n>>> First wave: Submit 15 tasks, observe scale-up...")
     for i in range(15):
         pool.submit(simple_task, task_id=f"B1-{i}", duration=2)
 
-    # 等待一段时间，让任务被消耗，并观察线程因空闲而收缩
-    print("\n>>> 等待20秒，观察临时线程是否会自动销毁...")
+    # Wait for a while for tasks to be consumed, and observe threads shrinking due to idleness
+    print("\n>>> Wait 20 seconds, observe whether temporary threads will be automatically destroyed...")
     time.sleep(20)
 
-    # 第二波：再次提交少量任务
-    print("\n>>> 第二波：提交3个任务...")
+    # Second wave: submit a small number of tasks again
+    print("\n>>> Second wave: Submit 3 tasks...")
     for i in range(3):
         pool.submit(simple_task, task_id=f"B2-{i}", duration=1)
 
-    print("\n所有任务已提交。主线程即将结束，等待atexit自动清理...")
-    # 主线程结束后，atexit会调用shutdown，等待所有任务完成
-    # 你会看到线程数先增加，然后在空闲时减少到min_workers
+    print("\nAll tasks submitted. Main thread is about to end, waiting for atexit to auto-cleanup...")
+    # After the main thread ends, atexit calls shutdown, waiting for all tasks to complete
+    # You will see the thread count first increase, then decrease to min_workers when idle

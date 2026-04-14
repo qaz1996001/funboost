@@ -52,22 +52,22 @@
 from multiprocessing import Manager, Pool,Queue
 import time, random, os
 def writer(q):
-  print('writer启动%s,父进程为%s'%(os.getpid(),os.getppid()))
+  print('writer started %s, parent process %s'%(os.getpid(),os.getppid()))
   l1 = ['a','b','c','d','e']
   for value in l1:
     q.put(value)
 def reader(q):
-  print('reader启动%s，父进程为%s'%(os.getpid(),os.getppid()))
+  print('reader started %s, parent process %s'%(os.getpid(),os.getppid()))
   for i in range(q.qsize()):
-    print('reader从Queue获取到消息：%s'%q.get(True))
+    print('reader got message from Queue: %s'%q.get(True))
 if __name__ == "__main__":
-  print('父进程%s启动．．．'%os.getpid())
-  q = Manager().Queue() #使用Manager中的Queue来初始化
+  print('Parent process %s starting...'%os.getpid())
+  q = Manager().Queue() # Use Queue from Manager to initialize
   # q = Queue(10)
   po = Pool()
-  # 使用阻塞模式创建进程，这样就不需要在reader中使用死循环了，可以让writer完全执行完成后，再用reader去读取
+  # Use blocking mode to create processes so writer fully completes before reader reads
   po.apply(writer, (q,))
   po.apply(reader, (q,))
   po.close()
   po.join()
-  print('%s结束'%os.getpid())
+  print('%s ended'%os.getpid())

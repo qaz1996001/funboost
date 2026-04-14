@@ -4,9 +4,11 @@ import sys
 os.environ['path'] = os.path.dirname(sys.executable) + os.pathsep + os.environ['PATH']
 
 """
-此demo演示funboost新增支持了pickle序列化,
-当用户的消费函数入参不是基本类型,而是自定义类型时候,funboost能自动识别,并将相关字段使用pickle序列化成字符串.
-当消费函数运行时,funboost能自动将pickle字符串反序列化成对象,并赋值给消费函数入参.
+This demo demonstrates funboost's new support for pickle serialization.
+When the consuming function's parameters are not basic types but custom types, funboost can automatically detect this
+and serialize the relevant fields to strings using pickle.
+When the consuming function runs, funboost automatically deserializes the pickle strings back to objects
+and assigns them to the consuming function parameters.
 """
 
 from pydantic import BaseModel
@@ -35,7 +37,7 @@ class MyPydanticModel(BaseModel):
 
 @boost(BoosterParams(queue_name='queue_json_test',concurrent_num=10,is_using_rpc_mode=True,
                      broker_kind=BrokerEnum.REDIS_ACK_ABLE))
-def func0(m:str,n:int,q:dict,r:list): # 以前只支持这样的入参,入参必须是简单基本类型
+def func0(m:str,n:int,q:dict,r:list): # Previously only supported this type of parameter; parameters had to be simple basic types.
     print(f'm:{m},n:{n}')
     print(f'q:{q},r:{r}')
    
@@ -43,7 +45,7 @@ def func0(m:str,n:int,q:dict,r:list): # 以前只支持这样的入参,入参必
 
 @boost(BoosterParams(queue_name='queue_pickle_test',concurrent_num=10,is_using_rpc_mode=True,
                      broker_kind=BrokerEnum.REDIS_ACK_ABLE))
-def func1(a:MyClass,b:str,c:MyPydanticModel): # 现在支持这样的自定义类型对象的入参
+def func1(a:MyClass,b:str,c:MyPydanticModel): # Now supports custom type objects as parameters.
     # print(fct.full_msg) # 可以查看原始消息
     print(f'a:{a}')
     print(f'b:{b}')
@@ -56,12 +58,12 @@ if __name__ == '__main__':
     func1.consume()
 
     obj1 = MyClass(1,2)
-    func1.push(obj1,'hello',MyPydanticModel(str1='hello',num1=1)) # 现在支持发布不可json序列化的对象
+    func1.push(obj1,'hello',MyPydanticModel(str1='hello',num1=1))  # Now supports publishing objects that cannot be JSON-serialized.
 
     obj1.change(10)
     func1.push(obj1,'hello',MyPydanticModel(str1='world',num1=100))
 
-    func0.push('hello',100,{'a':1,'b':2},[1,2,3]) # 以前只允许发布这样基本类型入参的消息
+    func0.push('hello',100,{'a':1,'b':2},[1,2,3])  # Previously only allowed publishing messages with basic type parameters.
    
     ctrl_c_recv()
 

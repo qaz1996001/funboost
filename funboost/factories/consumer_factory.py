@@ -12,16 +12,16 @@ from funboost.core.func_params_model import BoosterParams
 
 def get_consumer(boost_params: BoosterParams) -> AbstractConsumer:
     """
-    :param args: 入参是AbstractConsumer的入参
+    :param args: Parameters are the same as AbstractConsumer's parameters
     :param broker_kind:
     :param kwargs:
     :return:
     """
     from funboost.factories.broker_kind__publsiher_consumer_type_map import broker_kind__publsiher_consumer_type_map, regist_to_funboost
-    regist_to_funboost(boost_params.broker_kind)  # 动态注册中间件到框架是为了延迟导入，用户没安装不需要的第三方包不报错。
+    regist_to_funboost(boost_params.broker_kind)  # Dynamically register brokers into the framework using lazy imports, so users won't get errors for uninstalled third-party packages they don't need.
 
     if boost_params.broker_kind not in broker_kind__publsiher_consumer_type_map:
-        raise ValueError(f'设置的中间件种类不正确,你设置的值是 {boost_params.broker_kind} ')
+        raise ValueError(f'The specified broker kind is invalid, the value you set is {boost_params.broker_kind} ')
     consumer_cls = broker_kind__publsiher_consumer_type_map[boost_params.broker_kind][1]
     if not boost_params.consumer_override_cls:
         return consumer_cls(boost_params)
@@ -43,7 +43,7 @@ class ConsumerCacheProxy:
     @property
     def consumer(self) ->AbstractConsumer:
         pid = os.getpid()
-        # 加入 booster_registry_name 作为命名空间隔离，支持不同 registry 使用相同的 queue_name 而不冲突
+        # Include booster_registry_name as namespace isolation, allowing different registries to use the same queue_name without conflicts
         key = (pid, self.boost_params.booster_registry_name, self.boost_params.queue_name)
         if key not in self.pid_registry_queue_name__consumer_map:
             with self._lock:

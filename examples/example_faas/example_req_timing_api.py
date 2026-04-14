@@ -1,11 +1,11 @@
 """
-这个是演示funboost.faas 的定时任务管理
+This demonstrates the funboost.faas scheduled task management.
 """
 
 
 import requests
 
-# 添加每10秒执行一次的任务
+# Add a task that runs every 10 seconds
 resp = requests.post("http://127.0.0.1:8000/funboost/add_timing_job", json={
     "queue_name": "test_funboost_faas_queue",
     "trigger": "interval",
@@ -17,16 +17,16 @@ resp = requests.post("http://127.0.0.1:8000/funboost/add_timing_job", json={
 })
 print('add_timing_job',resp.json())
 
-# 获取所有任务
+# Get all jobs
 resp = requests.get("http://127.0.0.1:8000/funboost/get_timing_jobs")
 print('get_timing_jobs',resp.json())
 
-# 暂停任务
-resp = requests.post("http://127.0.0.1:8000/funboost/pause_timing_job", 
+# Pause a job
+resp = requests.post("http://127.0.0.1:8000/funboost/pause_timing_job",
     params={"job_id": "my_job", "queue_name": "test_funboost_faas_queue"})
 print('pause_timing_job',resp.json())
 
-# # 恢复任务
+# # Resume a job
 # resp = requests.post("http://127.0.0.1:8000/funboost/resume_timing_job",
 #     params={"job_id": "my_job", "queue_name": "test_funboost_faas_queue"})
 # print('resume_timing_job',resp.json())

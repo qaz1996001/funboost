@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Funboost Workflow - 声明式任务编排模块
+Funboost Workflow - Declarative Task Orchestration Module
 
-提供类似 Celery Canvas 的声明式任务编排 API，让用户可以用简洁的语法定义工作流。
+Provides a declarative task orchestration API similar to Celery Canvas, allowing users to define workflows with concise syntax.
 
-核心概念：
-- Signature: 任务签名，表示一个待执行的任务及其参数
-- Chain: 链式执行，顺序执行多个任务，上游结果自动传给下游
-- Group: 并行执行，同时执行多个任务，收集所有结果
-- Chord: 并行 + 汇总，header 并行执行，结果列表传给 body
+Core concepts:
+- Signature: Task signature, representing a pending task and its parameters
+- Chain: Sequential execution, executes multiple tasks in order, upstream results automatically passed to downstream
+- Group: Parallel execution, executes multiple tasks simultaneously, collects all results
+- Chord: Parallel + aggregation, header executes in parallel, result list passed to body
 
-用法示例：
+Usage example:
 ```python
 from funboost.workflow import chain, group, chord, WorkflowBoosterParams
 
@@ -18,18 +18,18 @@ from funboost.workflow import chain, group, chord, WorkflowBoosterParams
 def my_task(x):
     return x * 2
 
-# 定义工作流
+# Define workflow
 workflow = chain(
     task1.s(input_data),
     group(task2.s(), task3.s()),
     task4.s()
 )
 
-# 执行
+# Execute
 result = workflow.apply()
 ```
 
-详细文档见 funboost/workflow/examples/
+See funboost/workflow/examples/ for detailed documentation.
 """
 
 from .signature import Signature, signature
@@ -39,29 +39,29 @@ from .params import WorkflowBoosterParams
 
 
 # ============================================================
-# 猴子补丁：为 Booster 类添加 .s() 和 .si() 方法
-# 这样所有 @boost 装饰的消费函数自动拥有签名创建方法
+# Monkey patch: Add .s() and .si() methods to the Booster class
+# This way all @boost decorated consumer functions automatically have signature creation methods
 # ============================================================
 
 def _patch_booster_with_signature_methods():
     """
-    为 Booster 类打补丁，添加 .s() 和 .si() 方法
-    
-    这样用户无需手动为每个 booster 添加 .s() 方法：
-    
-    Before (需要手动添加):
+    Patch the Booster class to add .s() and .si() methods
+
+    This way users don't need to manually add .s() method for each booster:
+
+    Before (manual addition required):
         download_video.s = lambda *args, **kw: Signature(download_video, args, kw)
-    
-    After (自动拥有):
-        sig = download_video.s(url)  # 直接可用
+
+    After (automatically available):
+        sig = download_video.s(url)  # Directly usable
     """
     from funboost.core.booster import Booster
     
     def s(self, *args, **kwargs) -> Signature:
         """
-        创建任务签名（类似 Celery 的 .s() 方法）
-        
-        用法：
+        Create a task signature (similar to Celery's .s() method)
+
+        Usage:
             sig = my_task.s(1, 2, name='test')
             workflow = chain(task1.s(), task2.s())
         """
@@ -69,21 +69,21 @@ def _patch_booster_with_signature_methods():
     
     def si(self, *args, **kwargs) -> Signature:
         """
-        创建不可变任务签名（忽略上游结果）
-        
-        在 chain 中使用时，不会将上游任务的结果作为第一个参数传入。
-        
-        用法：
-            sig = my_task.si(1, 2)  # 忽略上游结果
+        Create an immutable task signature (ignores upstream results)
+
+        When used in a chain, the upstream task's result will not be passed as the first argument.
+
+        Usage:
+            sig = my_task.si(1, 2)  # Ignores upstream results
         """
         return Signature(self, args, kwargs, immutable=True)
     
-    # 打补丁
+    # Apply patches
     Booster.s = s
     Booster.si = si
 
 
-# 模块导入时自动执行补丁
+# Automatically apply patches on module import
 _patch_booster_with_signature_methods()
 
 

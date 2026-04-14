@@ -33,7 +33,7 @@ class AioFutureStatusResult:
 
 class HTTPConsumer(AbstractConsumer, ):
     """
-    aiohttp 实现消息队列，不支持持久化，但不需要安装软件。
+    Message queue implemented with aiohttp, does not support persistence, but requires no software installation.
     """
 
 
@@ -43,7 +43,7 @@ class HTTPConsumer(AbstractConsumer, ):
         #     self._ip, self._port = self.queue_name.split(':')
         #     self._port = int(self._port)
         # except BaseException as e:
-        #     self.logger.critical(f'http作为消息队列时候,队列名字必须设置为 例如 192.168.1.101:8200  这种,  ip:port')
+        #     self.logger.critical(f'When using http as a message queue, the queue name must be set like: 192.168.1.101:8200  format:  ip:port')
         #     raise e
         self._ip = self.consumer_params.broker_exclusive_config['host']
         self._port = self.consumer_params.broker_exclusive_config['port']
@@ -107,7 +107,7 @@ class HTTPConsumer(AbstractConsumer, ):
     #         aio_future_status_result.set_finish()
     #         self.logger.info(f'aio_future_status_result.set_finish()')
     def _confirm_consume(self, kw):
-        pass  # 没有确认消费的功能。
+        pass  # No consumption confirmation functionality.
 
     def _requeue(self, kw):
         pass

@@ -1,23 +1,23 @@
 # run_background_worker.py
 import time
 from funboost import ApsJobAdder, ctrl_c_recv
-from tasks import dynamic_task # 导入任务函数
+from tasks import dynamic_task  # Import the task function
 
 if __name__ == '__main__':
 
-    print("--- 后台 Worker 和 定时调度器 ---")
-    print("正在启动...")
+    print("--- Background Worker and Scheduled Dispatcher ---")
+    print("Starting...")
 
-    # 1. 启动消费者，使其开始监听 'web_dynamic_task_queue' 队列
+    # 1. Start the consumer to begin listening on the 'web_dynamic_task_queue' queue
     dynamic_task.consume()
-    print("[Worker] 消费者已启动，正在等待任务...")
+    print("[Worker] Consumer started, waiting for tasks...")
 
-    # 2. 创建 ApsJobAdder 实例并启动它
-    #    - job_store_kind='redis' 确保它能读取到 Web 端添加的计划。
-    #    - is_auto_start=True (或不传，默认为True) 会自动启动 apscheduler 的后台调度循环。
-    # 这个实例会不断扫描 Redis，发现到期的任务就 push 到消息队列。
+    # 2. Create an ApsJobAdder instance and start it.
+    #    - job_store_kind='redis' ensures it can read the plans added by the Web side.
+    #    - is_auto_start=True (or omitted; default is True) automatically starts the apscheduler background loop.
+    # This instance continuously scans Redis and pushes due tasks to the message queue.
     ApsJobAdder(dynamic_task, job_store_kind='redis')
-    print("[Scheduler] 定时任务调度器已启动，正在扫描任务计划...")
+    print("[Scheduler] Scheduled task dispatcher started, scanning task plans...")
 
-    print("\n后台服务已准备就绪，按 Ctrl+C 退出。")
+    print("\nBackground service is ready. Press Ctrl+C to exit.")
     ctrl_c_recv()

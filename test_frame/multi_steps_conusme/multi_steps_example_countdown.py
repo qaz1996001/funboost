@@ -9,14 +9,14 @@ from logging_tree import printout
 @BoosterParams(queue_name='queue_test_step1b', qps=0.5, broker_kind=BrokerEnum.REDIS_ACK_ABLE, 
                concurrent_mode=ConcurrentModeEnum.THREADING)
 def step1(x):
-    print(f'x 的值是 {x}')
+    print(f'x value is {x}')
     time.sleep(10)
     step2.publish({'y':x*10},task_options=TaskOptions(countdown=5))
 
 
 @Booster(BoosterParams(queue_name='queue_test_step2b', qps=3, broker_kind=BrokerEnum.REDIS_ACK_ABLE))
 def step2(y):
-    print(f'y 的值是 {y}')
+    print(f'y value is {y}')
     time.sleep(20)
 
 
@@ -34,12 +34,13 @@ if __name__ == '__main__':
     """
     step1.consume()
     step2.consume()
-    启动consume()都是在子线程运行的，
-    代码主线程会很快结束，只有子线程在运行，需要防止 RuntimeError: cannot schedule new futures after interpreter shutdown
-    
-    因为用户主线程很快结束了， 定时任务用的aps的 backgroubsheduler 类型， 用户如果用定时，就在代码最末尾加个阻止主线程退出就可以了。
+    All consume() calls run in child threads.
+    The main thread will finish quickly, with only the child threads running. Need to prevent RuntimeError: cannot schedule new futures after interpreter shutdown.
+
+    Since the user's main thread finishes quickly, the scheduled tasks use apscheduler's BackgroundScheduler type.
+    If users use scheduling, just add a statement at the end of the code to prevent the main thread from exiting.
     """
-    # while 1: # 这一行是阻止主线程退出，解决RuntimeError: cannot schedule new futures after interpreter shutdown
+    # while 1: # This line prevents the main thread from exiting, solving RuntimeError: cannot schedule new futures after interpreter shutdown
     #     time.sleep(100)
     ctrl_c_recv()
 

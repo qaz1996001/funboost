@@ -1,5 +1,5 @@
 '''
-基于程序内存的过期锁。
+In-memory expiring lock.
 '''
 
 import copy
@@ -34,7 +34,7 @@ class LockStore:
                 for lock_key, info in lock_key__info_map_copy.items():
                     if time.time() - info['set_time'] > info['ex']:
                         cls.lock_key__info_map.pop(lock_key)
-                        cls.logger.warning(f'''自动删除占用耗时长的锁 {lock_key} {time_util.DatetimeConverter(info['set_time'])} {info['ex']}''')
+                        cls.logger.warning(f'''Auto-deleting long-held lock {lock_key} {time_util.DatetimeConverter(info['set_time'])} {info['ex']}''')
                         lock_key__event_is_free_map[lock_key].set()
             time.sleep(cls.DELETE_INTERVAL)
 
@@ -76,7 +76,7 @@ class ExpireLockConf:
 
 class ExpireLockContextManager:
     """
-    分布式redis锁上下文管理.
+    Expiring lock context manager.
     """
 
     def __init__(self, lock_expire_conf: ExpireLockConf):
@@ -86,8 +86,8 @@ class ExpireLockContextManager:
         self.has_aquire_lock = False
 
     def acquire(self):
-        # self._line = sys._getframe().f_back.f_lineno  # noqa 调用此方法的代码的函数
-        # self._file_name = sys._getframe(1).f_code.co_filename  # noqa 哪个文件调了用此方法
+        # self._line = sys._getframe().f_back.f_lineno  # noqa Line number of the code calling this method
+        # self._file_name = sys._getframe(1).f_code.co_filename  # noqa Which file called this method
 
         while 1:
             # print(self.lock_key)

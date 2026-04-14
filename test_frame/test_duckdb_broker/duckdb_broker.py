@@ -2,26 +2,27 @@
 # @Author  : AI Assistant
 # @Time    : 2026/1/4
 """
-此文件最重要的目的是演示 register_custom_broker 来如何扩展一个全新的broker中间件。
+The most important purpose of this file is to demonstrate how to use register_custom_broker
+to extend a brand new broker middleware.
 
-DuckDB 消息队列中间件实现
+DuckDB Message Queue Middleware Implementation
 
-DuckDB 特点：
-1. 嵌入式数据库，无需额外部署服务，开箱即用
-2. 列式存储，高性能 OLAP 查询
-3. 支持标准 SQL，易于使用
-4. 单机场景非常适合，性能优异
-5. 文件存储或内存模式灵活选择
+DuckDB features:
+1. Embedded database, no need to deploy additional services, works out of the box
+2. Columnar storage, high-performance OLAP queries
+3. Supports standard SQL, easy to use
+4. Very suitable for single-machine scenarios, excellent performance
+5. Flexible choice between file storage or in-memory mode
 
-使用场景：
-- 单机开发测试
-- 轻量级任务队列
-- 不想部署 Redis/RabbitMQ 等外部服务的场景
-- 需要持久化但不想使用重量级数据库的场景
+Use cases:
+- Single-machine development and testing
+- Lightweight task queues
+- Scenarios where you don't want to deploy external services like Redis/RabbitMQ
+- Scenarios that need persistence but don't want a heavyweight database
 
-使用方式：
+Usage:
     from funboost.contrib.register_custom_broker_contrib.duckdb_broker import BROKER_KIND_DUCKDB
-    
+
     @boost(BoosterParams(queue_name='my_queue', broker_kind=BROKER_KIND_DUCKDB))
     def my_func(x):
         print(x)
@@ -36,7 +37,7 @@ from typing import Optional
 try:
     import duckdb
 except ImportError:
-    raise ImportError("请安装 duckdb: pip install duckdb")
+    raise ImportError("Please install duckdb: pip install duckdb")
 
 from funboost import register_custom_broker, AbstractConsumer, AbstractPublisher
 from funboost.core.loggers import FunboostFileLoggerMixin, LoggerLevelSetterMixin
@@ -44,20 +45,20 @@ from funboost.utils import decorators
 
 
 class TaskStatus:
-    """任务状态常量"""
-    TO_BE_CONSUMED = 'to_be_consumed'  # 待消费
-    PENDING = 'pending'                 # 消费中
-    SUCCESS = 'success'                 # 消费成功
-    REQUEUE = 'requeue'                 # 重新入队
+    """Task status constants"""
+    TO_BE_CONSUMED = 'to_be_consumed'  # Pending consumption
+    PENDING = 'pending'                 # Being consumed
+    SUCCESS = 'success'                 # Consumed successfully
+    REQUEUE = 'requeue'                 # Re-queued
 
 
-# 全局锁，保证 DuckDB 单文件并发安全
+# Global lock to ensure concurrent safety for DuckDB single-file access
 _duckdb_locks = {}
 _lock_for_locks = threading.Lock()
 
 
 def _get_lock(db_path: str) -> threading.Lock:
-    """获取指定数据库文件的锁"""
+    """Get the lock for the specified database file"""
     with _lock_for_locks:
         if db_path not in _duckdb_locks:
             _duckdb_locks[db_path] = threading.Lock()
@@ -67,37 +68,37 @@ def _get_lock(db_path: str) -> threading.Lock:
 @decorators.flyweight
 class DuckDBQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
     """
-    DuckDB 队列实现
-    
-    特点：
-    1. 使用文件存储，消息持久化
-    2. 支持内存模式，性能更高
-    3. 线程安全，使用锁保护并发操作
-    4. 支持优先级队列
-    5. 支持消息确认和重入队
+    DuckDB queue implementation
+
+    Features:
+    1. Uses file storage, messages are persistent
+    2. Supports in-memory mode for higher performance
+    3. Thread-safe, uses locks to protect concurrent operations
+    4. Supports priority queues
+    5. Supports message acknowledgment and re-queuing
     """
 
-    def __init__(self, queue_name: str, db_path: str = ':memory:', 
+    def __init__(self, queue_name: str, db_path: str = ':memory:',
                  wal_autocheckpoint: int = 1000):
         """
-        :param queue_name: 队列名称
-        :param db_path: 数据库文件路径，':memory:' 表示内存模式
-        :param wal_autocheckpoint: WAL 自动检查点阈值（已废弃，DuckDB 不使用此参数）
+        :param queue_name: Queue name
+        :param db_path: Database file path, ':memory:' for in-memory mode
+        :param wal_autocheckpoint: WAL auto-checkpoint threshold (deprecated, DuckDB does not use this parameter)
         """
         self.queue_name = queue_name
         self._db_path = db_path
         self._table_name = f"funboost_queue_{queue_name.replace('-', '_').replace('.', '_')}"
         self._lock = _get_lock(db_path)
-        
-        # 创建连接
+
+        # Create connection
         self._conn = duckdb.connect(db_path)
-        
-        # 创建表
+
+        # Create table
         self._create_table()
-        self.logger.info(f"DuckDB 队列 [{queue_name}] 初始化完成，数据库: {db_path}")
+        self.logger.info(f"DuckDB queue [{queue_name}] initialized, database: {db_path}")
 
     def _create_table(self):
-        """创建队列表"""
+        """Create queue table"""
         with self._lock:
             self._conn.execute(f"""
                 CREATE TABLE IF NOT EXISTS {self._table_name} (
@@ -109,36 +110,36 @@ class DuckDBQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
                     consume_start_time TIMESTAMP
                 )
             """)
-            # 创建序列（如果不存在）
+            # Create sequence (if not exists)
             try:
                 self._conn.execute(f"CREATE SEQUENCE IF NOT EXISTS seq_{self._table_name}")
             except Exception:
-                pass  # DuckDB 可能不支持 IF NOT EXISTS 对于 SEQUENCE
-            
-            # 创建索引
+                pass  # DuckDB may not support IF NOT EXISTS for SEQUENCE
+
+            # Create index
             try:
                 self._conn.execute(f"""
-                    CREATE INDEX IF NOT EXISTS idx_{self._table_name}_status 
+                    CREATE INDEX IF NOT EXISTS idx_{self._table_name}_status
                     ON {self._table_name} (status, priority DESC, publish_time ASC)
                 """)
             except Exception:
-                pass  # 索引可能已存在
+                pass  # Index may already exist
 
     def _next_job_id(self) -> int:
-        """生成下一个 job_id"""
+        """Generate next job_id"""
         try:
             result = self._conn.execute(f"SELECT nextval('seq_{self._table_name}')").fetchone()
             return result[0]
         except Exception:
-            # 如果序列不存在，使用时间戳 + 随机数
+            # If sequence does not exist, use timestamp + random number
             import random
             return int(time.time() * 1000000) + random.randint(0, 999999)
 
     def push(self, body: str, priority: int = 0) -> int:
         """
-        发布消息到队列
-        :param body: 消息体（JSON 字符串）
-        :param priority: 优先级（越大越优先）
+        Publish message to queue
+        :param body: Message body (JSON string)
+        :param priority: Priority (higher value = higher priority)
         :return: job_id
         """
         with self._lock:
@@ -151,9 +152,9 @@ class DuckDBQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
 
     def bulk_push(self, items: list) -> list:
         """
-        批量发布消息
-        :param items: [{'body': str, 'priority': int}, ...] 或 [str, ...]
-        :return: job_id 列表
+        Bulk publish messages
+        :param items: [{'body': str, 'priority': int}, ...] or [str, ...]
+        :return: list of job_ids
         """
         job_ids = []
         with self._lock:
@@ -164,7 +165,7 @@ class DuckDBQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
                 else:
                     body = item
                     priority = 0
-                
+
                 job_id = self._next_job_id()
                 self._conn.execute(f"""
                     INSERT INTO {self._table_name} (job_id, body, status, priority, publish_time)
@@ -175,14 +176,14 @@ class DuckDBQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
 
     def get(self, timeout: float = None) -> Optional[dict]:
         """
-        获取一条待消费的消息
-        :param timeout: 超时时间（秒），None 表示一直等待
-        :return: {'job_id': int, 'body': str, 'priority': int} 或 None
+        Get one pending message
+        :param timeout: Timeout in seconds, None means wait indefinitely
+        :return: {'job_id': int, 'body': str, 'priority': int} or None
         """
         start_time = time.time()
         while True:
             with self._lock:
-                # 查找待消费的消息（按优先级降序、发布时间升序）
+                # Find pending messages (sorted by priority descending, publish time ascending)
                 result = self._conn.execute(f"""
                     SELECT job_id, body, priority, publish_time
                     FROM {self._table_name}
@@ -190,10 +191,10 @@ class DuckDBQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
                     ORDER BY priority DESC, publish_time ASC
                     LIMIT 1
                 """).fetchone()
-                
+
                 if result:
                     job_id, body, priority, publish_time = result
-                    # 更新状态为处理中
+                    # Update status to processing
                     self._conn.execute(f"""
                         UPDATE {self._table_name}
                         SET status = ?, consume_start_time = current_timestamp
@@ -205,19 +206,19 @@ class DuckDBQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
                         'priority': priority,
                         'publish_time': publish_time,
                     }
-            
-            # 没有消息，检查超时
+
+            # No messages, check timeout
             if timeout is not None and (time.time() - start_time) >= timeout:
                 return None
-            
-            # 短暂等待后重试
+
+            # Wait briefly before retrying
             time.sleep(0.05)
 
     def ack(self, job_id: int, delete: bool = True):
         """
-        确认消费成功
-        :param job_id: 任务 ID
-        :param delete: 是否删除消息（True 删除，False 更新状态为成功）
+        Acknowledge successful consumption
+        :param job_id: Task ID
+        :param delete: Whether to delete the message (True = delete, False = update status to success)
         """
         with self._lock:
             if delete:
@@ -228,7 +229,7 @@ class DuckDBQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
                 """, [TaskStatus.SUCCESS, job_id])
 
     def requeue(self, job_id: int):
-        """消息重新入队"""
+        """Re-queue a message"""
         with self._lock:
             self._conn.execute(f"""
                 UPDATE {self._table_name}
@@ -237,12 +238,12 @@ class DuckDBQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
             """, [TaskStatus.REQUEUE, job_id])
 
     def clear(self):
-        """清空队列"""
+        """Clear the queue"""
         with self._lock:
             self._conn.execute(f"DELETE FROM {self._table_name}")
 
     def get_message_count(self) -> int:
-        """获取待消费消息数量"""
+        """Get the number of pending messages"""
         with self._lock:
             result = self._conn.execute(f"""
                 SELECT COUNT(*) FROM {self._table_name}
@@ -252,20 +253,20 @@ class DuckDBQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
 
     def recover_timeout_tasks(self, timeout_minutes: int = 10) -> int:
         """
-        恢复超时未确认的任务
-        :param timeout_minutes: 超时阈值（分钟）
-        :return: 恢复的任务数量
+        Recover tasks that timed out without acknowledgment
+        :param timeout_minutes: Timeout threshold (minutes)
+        :return: Number of recovered tasks
         """
         with self._lock:
-            # DuckDB 的时间计算语法
+            # DuckDB time calculation syntax
             self._conn.execute(f"""
                 UPDATE {self._table_name}
                 SET status = ?, consume_start_time = NULL
                 WHERE status = ?
                 AND consume_start_time < current_timestamp - INTERVAL '{timeout_minutes} minutes'
             """, [TaskStatus.TO_BE_CONSUMED, TaskStatus.PENDING])
-            
-            # 由于 DuckDB 不直接返回更新行数，这里查询一下
+
+            # Since DuckDB doesn't directly return updated row count, query it here
             result = self._conn.execute(f"""
                 SELECT COUNT(*) FROM {self._table_name}
                 WHERE status = '{TaskStatus.TO_BE_CONSUMED}'
@@ -273,35 +274,35 @@ class DuckDBQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
             return result[0] if result else 0
 
     def close(self):
-        """关闭连接"""
+        """Close connection"""
         if self._conn:
             self._conn.close()
             self._conn = None
 
 
 # ============================================================================
-# Publisher 和 Consumer 实现
+# Publisher and Consumer implementations
 # ============================================================================
 
 class DuckDBPublisher(AbstractPublisher):
-    """DuckDB 消息发布者"""
-    
+    """DuckDB message publisher"""
+
     def custom_init(self):
-        # 从 broker_exclusive_config 获取配置
+        # Get configuration from broker_exclusive_config
         db_path = self.publisher_params.broker_exclusive_config['db_path']
         priority = self.publisher_params.broker_exclusive_config['priority']
-        
+
         self._priority = priority
         self._queue = DuckDBQueue(
             queue_name=self._queue_name,
             db_path=db_path,
         )
-        self.logger.info(f"DuckDB Publisher 初始化完成，队列: {self._queue_name}, 数据库: {db_path}")
+        self.logger.info(f"DuckDB Publisher initialized, queue: {self._queue_name}, database: {db_path}")
 
     def _publish_impl(self, msg: str):
-        """发布消息"""
+        """Publish message"""
         priority = self._priority
-        # 尝试从消息中获取优先级
+        # Try to get priority from message
         try:
             msg_dict = json.loads(msg)
             if 'extra' in msg_dict:
@@ -315,47 +316,47 @@ class DuckDBPublisher(AbstractPublisher):
         self._queue.push(msg, priority=priority)
 
     def clear(self):
-        """清空队列"""
+        """Clear the queue"""
         self._queue.clear()
 
     def get_message_count(self):
-        """获取待消费消息数量"""
+        """Get the number of pending messages"""
         return self._queue.get_message_count()
 
     def close(self):
-        """关闭连接"""
+        """Close connection"""
         self._queue.close()
 
 
 class DuckDBConsumer(AbstractConsumer):
-    """DuckDB 消息消费者"""
-    
-    BROKER_KIND = None  # 会被框架自动设置
+    """DuckDB message consumer"""
+
+    BROKER_KIND = None  # Will be automatically set by the framework
 
     def custom_init(self):
-        # 从 broker_exclusive_config 获取配置
+        # Get configuration from broker_exclusive_config
         db_path = self.consumer_params.broker_exclusive_config['db_path']
         self._poll_interval = self.consumer_params.broker_exclusive_config['poll_interval']
         self._timeout_minutes = self.consumer_params.broker_exclusive_config['timeout_minutes']
         self._delete_after_ack = self.consumer_params.broker_exclusive_config['delete_after_ack']
-        
+
         self._queue = DuckDBQueue(
             queue_name=self._queue_name,
             db_path=db_path,
         )
         self.logger.info(
-            f"DuckDB Consumer 初始化完成，队列: {self._queue_name}, "
-            f"数据库: {db_path}, 轮询间隔: {self._poll_interval}s, 确认后删除: {self._delete_after_ack}"
+            f"DuckDB Consumer initialized, queue: {self._queue_name}, "
+            f"database: {db_path}, poll interval: {self._poll_interval}s, delete after ack: {self._delete_after_ack}"
         )
 
     def _dispatch_task(self):
         """
-        核心调度方法
-        循环从 DuckDB 获取消息并提交执行
+        Core dispatch method
+        Loops to fetch messages from DuckDB and submit for execution
         """
-        # 启动超时任务恢复线程
+        # Start timeout task recovery thread
         self._start_timeout_recovery()
-        
+
         while True:
             try:
                 task = self._queue.get(timeout=self._poll_interval)
@@ -368,89 +369,89 @@ class DuckDBConsumer(AbstractConsumer):
                     }
                     self._submit_task(kw)
             except Exception as e:
-                self.logger.error(f"获取消息异常: {e}", exc_info=True)
+                self.logger.error(f"Exception fetching message: {e}", exc_info=True)
                 time.sleep(1)
 
     def _start_timeout_recovery(self):
-        """启动超时任务恢复后台线程"""
+        """Start background thread for timeout task recovery"""
         def recovery_loop():
             while True:
                 try:
                     recovered = self._queue.recover_timeout_tasks(self._timeout_minutes)
                     if recovered:
-                        self.logger.info(f"恢复了 {recovered} 个超时任务")
+                        self.logger.info(f"Recovered {recovered} timed-out tasks")
                 except Exception as e:
-                    self.logger.error(f"恢复超时任务异常: {e}")
-                time.sleep(60)  # 每分钟检查一次
+                    self.logger.error(f"Exception recovering timed-out tasks: {e}")
+                time.sleep(60)  # Check every minute
 
         t = threading.Thread(
-            target=recovery_loop, 
-            daemon=True, 
+            target=recovery_loop,
+            daemon=True,
             name=f"duckdb_recovery_{self._queue_name}"
         )
         t.start()
 
     def _confirm_consume(self, kw):
-        """确认消费成功，根据配置决定删除消息还是更新状态"""
+        """Acknowledge successful consumption, delete message or update status based on configuration"""
         self._queue.ack(kw['job_id'], delete=self._delete_after_ack)
 
     def _requeue(self, kw):
-        """消息重新入队"""
+        """Re-queue message"""
         self._queue.requeue(kw['job_id'])
 
 
 # ============================================================================
-# 注册 Broker
+# Register Broker
 # ============================================================================
 
-# 定义 broker kind（使用字符串，更易识别）
+# Define broker kind (use string for easy identification)
 BROKER_KIND_DUCKDB = 'duckdb'
 
-# 注册默认配置
+# Register default configuration
 from funboost.core.broker_kind__exclusive_config_default_define import register_broker_exclusive_config_default
 
 register_broker_exclusive_config_default(
     BROKER_KIND_DUCKDB,
     {
-        'db_path': 'funboost_duckdb.db',  # 数据库文件路径，':memory:' 为内存模式
-        'poll_interval': 1.0,              # 轮询间隔（秒）
-        'timeout_minutes': 10,             # 超时恢复阈值（分钟）
-        'priority': 0,                     # 默认消息优先级
-        'delete_after_ack': True,          # 确认消费后是否删除消息，False 则更新状态为 success
+        'db_path': 'funboost_duckdb.db',  # Database file path, ':memory:' for in-memory mode
+        'poll_interval': 1.0,              # Poll interval (seconds)
+        'timeout_minutes': 10,             # Timeout recovery threshold (minutes)
+        'priority': 0,                     # Default message priority
+        'delete_after_ack': True,          # Whether to delete message after ack, False = update status to success
     }
 )
 
-# 注册到 funboost
+# Register with funboost
 register_custom_broker(BROKER_KIND_DUCKDB, DuckDBPublisher, DuckDBConsumer)
 
 
 # ============================================================================
-# 测试代码
+# Test code
 # ============================================================================
 
 if __name__ == '__main__':
     from funboost import boost, BoosterParams
-    
+
     @boost(BoosterParams(
         queue_name='test_duckdb_queue',
         broker_kind=BROKER_KIND_DUCKDB,
         qps=5,
         concurrent_num=3,
         broker_exclusive_config={
-            'db_path': Path(__file__).parent / 'test_funboost_duckdb.db',  # 使用文件存储
-            # 'db_path': ':memory:',        # 或使用内存模式
+            'db_path': Path(__file__).parent / 'test_funboost_duckdb.db',  # Use file storage
+            # 'db_path': ':memory:',        # Or use in-memory mode
         }
     ))
     def test_func(x, y):
-        print(f"计算: {x} + {y} = {x + y}")
+        print(f"Calculating: {x} + {y} = {x + y}")
         time.sleep(0.5)
         return x + y
-    
-    # 发布消息
+
+    # Publish messages
     for i in range(20):
         test_func.push(i, y=i * 2)
-    
-    print(f"队列消息数量: {test_func.publisher.get_message_count()}")
-    
-    # 启动消费
+
+    print(f"Queue message count: {test_func.publisher.get_message_count()}")
+
+    # Start consuming
     test_func.consume()

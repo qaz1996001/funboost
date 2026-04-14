@@ -26,9 +26,9 @@ def f2(x, y):
 
 
 if __name__ == '__main__':
-    # 用户可以使用nameko的 ServiceContainer ,直接启动每个nameko的service类，语法和funboost使用其他中间件语法一样。
+    # Users can use nameko's ServiceContainer to directly start each nameko service class; syntax is the same as using other middleware in funboost.
     f.consume()
     f2.consume()
 
-    # 也可以批量启动，使用nameko的 ServiceRunner 批量启动多个 nameko的service类。这个函数专门为nameko 中间件而写的。
+    # Can also start in bulk using nameko's ServiceRunner to start multiple nameko service classes. This function is specifically written for nameko middleware.
     batch_start_nameko_consumers([f, f2])

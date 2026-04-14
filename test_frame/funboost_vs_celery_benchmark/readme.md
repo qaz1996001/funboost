@@ -1,43 +1,43 @@
-**`funboost` vs `celery` 性能对比测试结论**
+**`funboost` vs `celery` Performance Benchmark Conclusions**
 
-### 2.6.1 `funboost` vs `celery` 控制变量法说明
+### 2.6.1 `funboost` vs `celery` Controlled Variable Methodology
 
-使用经典的控制变量法测试
+Using the classic controlled variable method for testing.
 
-共同点是：
+Common conditions:
 
-在win11 + python3.9 +  本机redis 中间件 + amd r7 5800h cpu 环境下测试 + 选择单线程并发模式 + 相同逻辑消费函数
+Tested on win11 + python3.9 + local Redis middleware + AMD R7 5800H CPU + single-thread concurrency mode + identical consumer function logic.
 
-区别点是：
+Difference:
 
-`funboost` 和 `celery 5.xx`
-
-
-### 2.6.2 `funboost` vs `celery` 发布性能对比
-
-`funboost`:  发布10万条消息耗时5秒，每隔0.05秒发布1000条,平均每秒发布20000条         
-
-`celery`: 发布10万条消息耗时110秒，每隔1.1秒发布1000条，平均每秒发布900条
-
-对比结果: `funboost`发布性能约为`celery`的22倍
-
-### 2.6.3 `funboost` vs `celery` 消费性能对比
-
-`funboost`: 平均每隔0.07秒消费1000条消息，每秒消费约14000条
-
-`celery`: 平均每隔3.6秒消费1000条消息，每秒消费约300条
-
-对比结果: `funboost`消费性能约为`celery`的46倍
-
-### 2.6.4 `funboost` vs `celery` 总体性能对比
-
-`funboost`在同样的硬件环境和测试条件下（win11 + python3.9 + 本机redis中间件 + AMD R7 5800H CPU + 单线程并发模式 + 相同消费函数），\
-无论是在消息发布还是消费方面都大幅优于`celery`，`funboost`是`celery`的发布性能是`22`倍，`funboost` 消费性能是`celery`的`46`倍 ，\
-所以`funboost`性能不是比`celery`高百分之多少这种级别,而是高了一个数量级，`funboost`性能是毫无争议的绝对的遥遥领先。
+`funboost` vs `celery 5.xx`
 
 
-### 2.6.5 2026-01月 最新性能对比
+### 2.6.2 `funboost` vs `celery` Publishing Performance Comparison
 
-运行 `def  fun(x):pass`   的函数,    
-funboost消费性能是celery的100倍,  
-发布性能是celery的50倍  
+`funboost`: Published 100,000 messages in 5 seconds, publishing 1,000 messages every 0.05 seconds, averaging 20,000 messages per second.
+
+`celery`: Published 100,000 messages in 110 seconds, publishing 1,000 messages every 1.1 seconds, averaging 900 messages per second.
+
+Result: `funboost` publishing performance is approximately **22x** that of `celery`.
+
+### 2.6.3 `funboost` vs `celery` Consumption Performance Comparison
+
+`funboost`: Consumed 1,000 messages every 0.07 seconds on average, approximately 14,000 messages per second.
+
+`celery`: Consumed 1,000 messages every 3.6 seconds on average, approximately 300 messages per second.
+
+Result: `funboost` consumption performance is approximately **46x** that of `celery`.
+
+### 2.6.4 `funboost` vs `celery` Overall Performance Comparison
+
+Under identical hardware and test conditions (win11 + python3.9 + local Redis middleware + AMD R7 5800H CPU + single-thread concurrency mode + same consumer function), \
+`funboost` significantly outperforms `celery` in both message publishing and consumption. `funboost` publishing performance is `22`x that of `celery`, and `funboost` consumption performance is `46`x that of `celery`. \
+Therefore, `funboost` does not merely beat `celery` by some percentage — it outperforms by a full order of magnitude. `funboost`'s performance lead is absolute and unquestionable.
+
+
+### 2.6.5 Latest Performance Comparison — January 2026
+
+Running the function `def fun(x): pass`,
+funboost consumption performance is 100x that of celery,
+and publishing performance is 50x that of celery.

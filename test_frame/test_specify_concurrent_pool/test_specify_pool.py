@@ -3,12 +3,13 @@ from funboost.concurrent_pool.custom_threadpool_executor import ThreadPoolExecut
 from funboost.concurrent_pool.custom_gevent_pool_executor import GeventPoolExecutor
 
 """
-这个是演示多个不同的函数消费者，使用同一个全局的并发池。
-如果一次性启动的函数过多，使用这种方式避免每个消费者创建各自的并发池，减少线程/协程资源浪费。
+This demonstrates multiple different function consumers sharing the same global concurrent pool.
+If too many functions are started at once, use this approach to avoid each consumer creating
+its own concurrent pool, reducing thread/coroutine resource waste.
 """
 
-# 总共那个有5种并发池，用户随便选。
-pool = ThreadPoolExecutorShrinkAble(300)  # 指定多个消费者使用同一个线程池，
+# There are 5 types of concurrent pools in total; users can choose freely.
+pool = ThreadPoolExecutorShrinkAble(300)  # Specify multiple consumers to share the same thread pool
 
 
 # pool = GeventPoolExecutor(200)

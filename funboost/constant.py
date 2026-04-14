@@ -4,190 +4,190 @@
 
 class BrokerEnum:
     """
-    在funboost中万物皆可为消息队列broker,funboost内置了所有 知名的正经经典消息队列作为broker,
-    也支持了基于 内存 各种数据库 文件系统 tcp/udp/http这些socket 模拟作为broker.
-    funboost也内置支持了各种python三方包和消费框架作为broker,例如 sqlachemy kombu celery rq dramtiq huey nameko 等等
+    In funboost, anything can serve as a message queue broker. funboost has built-in support for all well-known classic message queues as brokers,
+    as well as brokers based on memory, various databases, file systems, and tcp/udp/http sockets.
+    funboost also has built-in support for various Python third-party packages and consumer frameworks as brokers, such as sqlalchemy, kombu, celery, rq, dramatiq, huey, nameko, etc.
 
-    用户也可以按照文档4.21章节,轻松扩展任何物质概念作为funboost的broker.
+    Users can also easily extend any concept as a funboost broker following the documentation section 4.21.
     """
     
-    # funboost框架能轻松兼容消息队列各种工作模式, 拉模式/推模式/轮询模式，单条获取 批量获取
+    # funboost framework easily supports various message queue working modes: pull/push/polling, single message fetch, batch fetch
     """
-    funboost 的 consumer的 _dispatch_task 非常灵活，用户实现把从消息队列取出的消息通过_submit_task方法
-    丢到并发池，他不是强制用户重写实现怎么取一条消息，例如强制你实现一个 _get_one_message的法，
-    那就不灵活和限制扩展任意东西作为broker了，而是用户完全自己来写灵活代码。
-    所以无论获取消息是 拉模式 还是推模式 还是轮询模式，是单条获取 还是多条批量获取，
-    不管你的新中间件和rabbitmq api用法差别有多么巨大，都能轻松扩展任意东西作为funboost的中间件。 
-    所以你能看到funboost源码中能轻松实现任物质概念作为funboost的broker。
+    funboost's consumer _dispatch_task is very flexible. Users submit messages fetched from the queue to the
+    concurrency pool via the _submit_task method. It does not force users to implement a _get_one_message method,
+    which would be inflexible and limit extending arbitrary things as brokers. Instead, users write fully flexible code.
+    So whether fetching messages uses pull mode, push mode, or polling mode, whether single or batch fetch,
+    no matter how different your new broker's API is from RabbitMQ's, you can easily extend anything as a funboost broker.
+    That's why you can see in funboost's source code that virtually anything can be implemented as a funboost broker.
     """
 
 
-    EMPTY = 'EMPTY'  # 空的实现，需要搭配 boost入参的 consumer_override_cls 和 publisher_override_cls使用，或者被继承。
+    EMPTY = 'EMPTY'  # Empty implementation, needs to be used with boost's consumer_override_cls and publisher_override_cls parameters, or be subclassed.
 
-    RABBITMQ_AMQPSTORM = 'RABBITMQ_AMQPSTORM'  # 使用 amqpstorm 包操作rabbitmq  作为 分布式消息队列，支持消费确认.强烈推荐这个作为funboost中间件。
+    RABBITMQ_AMQPSTORM = 'RABBITMQ_AMQPSTORM'  # Uses the amqpstorm package to operate RabbitMQ as a distributed message queue with consumer acknowledgment support. Strongly recommended as a funboost broker.
     RABBITMQ = RABBITMQ_AMQPSTORM
 
-    # 2025-10 内置新增, 支持rabbitmq 所有路由模式,包括 fanout,direct,topic,headers. 使用概念更复杂
-    # 用法见 test_frame/test_broker_rabbitmq/test_rabbitmq_complex_routing 中的demo代码.
+    # 2025-10 newly built-in, supports all RabbitMQ routing modes including fanout, direct, topic, headers. More complex usage concepts.
+    # See demo code in test_frame/test_broker_rabbitmq/test_rabbitmq_complex_routing.
     RABBITMQ_COMPLEX_ROUTING = 'RABBITMQ_COMPLEX_ROUTING'
 
-    RABBITMQ_RABBITPY = 'RABBITMQ_RABBITPY'  # 使用 rabbitpy 包操作rabbitmq  作为 分布式消息队列，支持消费确认，不建议使用
+    RABBITMQ_RABBITPY = 'RABBITMQ_RABBITPY'  # Uses the rabbitpy package to operate RabbitMQ as a distributed message queue with consumer acknowledgment support. Not recommended.
 
-    RABBITMQ_AMQP = 'RABBITMQ_AMQP'  # 使用 amqp 包操作 rabbitmq，Celery/Kombu 底层客户端，性能比 pika 更好
+    RABBITMQ_AMQP = 'RABBITMQ_AMQP'  # Uses the amqp package to operate RabbitMQ. Celery/Kombu's underlying client with better performance than pika.
 
-    """
-    以下是各种redis数据结构和各种方式来实现作为消息队列的,redis简直被作者玩出花来了.
-    因为redis本身是缓存数据库,不是消息队列,redis没有实现经典AMQP协议,所以redis是模拟消息队列不是真消息队列.
-    例如要实现消费确认,随意重启但消息万无一失,你搞个简单的 redis.blpop 弹出删除消息,那就压根不行.重启就丢失了,但消息可能还没开始运行或者正在运行中.
+    “””
+    Below are various Redis data structures and methods used to implement message queues. The author has explored Redis in every possible way.
+    Since Redis is fundamentally a cache/database and not a message queue (it doesn't implement the classic AMQP protocol), Redis only simulates message queues rather than being a true MQ.
+    For example, to implement consumer acknowledgment where messages are safe through arbitrary restarts, a simple redis.blpop that pops and deletes messages simply won't work — messages are lost on restart even if they haven't started or are still running.
+
+    The challenge of implementing ACK in Redis is not how to implement the acknowledgment itself, but rather when to return orphaned unacknowledged messages from crashed/stopped consumer processes back to the queue.
+    The real difficulty of implementing ACK on Redis is not the “acknowledge” action itself, but building a reliable distributed failure detection mechanism that can accurately determine “when it is safe and timely to recover tasks.”
+    So if you think simply using brpoplpush or REDIS_STREAM will easily solve the ACK problem, that's too naive — Redis server doesn't natively have the automatic message recovery mechanism for crashed consumers like RabbitMQ does. You need to maintain this mechanism on the Redis client side.
+    “””
+    REDIS = 'REDIS'  # Uses Redis list structure with brpop as a distributed message queue. Arbitrary restarts will lose many messages. No consumer acknowledgment support. Choose this for performance when message loss is acceptable.
+    REDIS_ACK_ABLE = 'REDIS_ACK_ABLE'  # Based on Redis list + temporary unack set. Uses Lua scripts for atomic task fetch and pending addition. Detects disconnected processes via heartbeat loss. No task loss on restarts or disconnections.
+    REIDS_ACK_USING_TIMEOUT = 'reids_ack_using_timeout'  # Based on Redis list + temporary unack set. Messages automatically return to queue if not acknowledged within timeout seconds. Be careful with ack_timeout vs function duration to avoid repeated re-queuing. Set ack timeout via broker_exclusive_config={'ack_timeout': 1800}. Drawback: cannot distinguish slow execution from actual crashes.
+    REDIS_PRIORITY = 'REDIS_PRIORITY'  # Based on Redis multiple lists + temporary unack set, blpop monitors multiple keys. Like RabbitMQ's x-max-priority, supports task priority. See documentation section 4.29 for priority queue details.
+    REDIS_STREAM = 'REDIS_STREAM'  # Based on Redis 5.0+, uses stream data structure as distributed message queue. Supports consumer acknowledgment, persistence, and consumer groups. Redis officially recommended queue form, more suitable than list structure.
+    REDIS_BRPOP_LPUSH = 'RedisBrpopLpush'  # Based on Redis list structure using brpoplpush dual-queue pattern. Similar to redis_ack_able but uses native commands instead of Lua scripts for fetch and unack operations.
+    REDIS_PUBSUB = 'REDIS_PUBSUB'  # Based on Redis pub/sub. Publishing a message allows multiple consumers to receive the same message, but does not support persistence.
     
-    redis做ack挑战难点不是怎么实现确认消费本身,而是何时应该把关闭或宕机进程的消费者的待确认消费的孤儿消息重回队列.  
-    在 Redis 上实现 ACK 的真正难点，根本不在于“确认”这个动作本身，而在于建立一套可靠的、能够准确判断“何时可以安全地及时地进行任务恢复”的分布式故障检测机制。
-    所以你以为只要使用 brpoplpush 或者 REDIS_STREAM 就能自动轻易解决ack问题,那就太天真了,因为redis服务端不能像rabbitmq服务端那样天生自带自动重回宕机消费者的消息机制,需要你在redis客户端来维护实现这套机制.
     """
-    REDIS = 'REDIS'  # 使用 redis 的 list结构，brpop 作为分布式消息队列。随意重启和关闭会丢失大量消息，不支持消费确认。注重性能不在乎丢失消息可以选这个redis方案。
-    REDIS_ACK_ABLE = 'REDIS_ACK_ABLE'  # 基于redis的 list + 临时unack的set队列，采用了 lua脚本操持了取任务和加到pengding为原子性，,基于进程心跳消失判断消息是否为掉线进程的，随意重启和掉线不会丢失任务。
-    REIDS_ACK_USING_TIMEOUT = 'reids_ack_using_timeout'  # 基于redis的 list + 临时unack的set队列，使用超时多少秒没确认消费就自动重回队列，请注意 ack_timeout的设置值和函数耗时大小，否则会发生反复重回队列的后果,boost可以设置ack超时，broker_exclusive_config={'ack_timeout': 1800}.缺点是无法区分执行太慢还是真宕机
-    REDIS_PRIORITY = 'REDIS_PRIORITY'  # # 基于redis的多 list + 临时unack的set队列，blpop监听多个key，和rabbitmq的x-max-priority属性一样，支持任务优先级。看文档4.29优先级队列说明。
-    REDIS_STREAM = 'REDIS_STREAM'  # 基于redis 5.0 版本以后，使用 stream 数据结构作为分布式消息队列，支持消费确认和持久化和分组消费，是redis官方推荐的消息队列形式，比list结构更适合。
-    REDIS_BRPOP_LPUSH = 'RedisBrpopLpush'  # 基于redis的list结构但是采用 brpoplpush 双队列形式，和 redis_ack_able的实现差不多，实现上采用了原生命令就不需要lua脚本来实现取出和加入unack了。
-    REDIS_PUBSUB = 'REDIS_PUBSUB'  # 基于redis 发布订阅的，发布一个消息多个消费者都能收到同一条消息，但不支持持久化
+    MEMORY_QUEUE: (The absolute most core broker in funboost, bar none)
+    Python in-memory queue. Although it doesn't support cross-process, cross-script, or cross-machine task sharing, nor persistence,
+    MEMORY_QUEUE is the most important broker in funboost — far from being a toy or only suitable for simple scenarios. Its versatility in funboost far exceeds that of traditional server-side MQs.
+    MEMORY_QUEUE's importance in funboost is SSS-tier, far exceeding Redis, Kafka, RabbitMQ, etc. as brokers.
+    Main reasons:
+    1. queue.Queue has ultra-high performance with no socket I/O.
+    2. When queue.Queue is used as a message queue, serialization/deserialization is skipped,
+       meaning any type that cannot be JSON-serialized or pickle-serialized can be sent as function parameters to the in-memory Queue. Its compatibility and flexibility far surpass other brokers.
+    3. Not all users/scenarios need distributed persistence. In-memory queues are frequently used for backpressure, decoupling, rate limiting, callbacks, etc.
+       For example, ThreadPoolExecutor has an unbounded _work_queue attribute — in-memory queues are used everywhere.
+    4. With in-memory queue, you can use the @boost decorator like the tomorrow package or a thread pool/asyncio coroutine pool. But funboost's @boost decorator
+       far surpasses concurrency pools and the tomorrow decorator, because @boost not only provides one-click multiple concurrency modes, but also qps control, retries, timeout killing, function parameter cache filtering, and 30+ other features.
+       With in-memory queue, @boost acts as a super decorator — one @boost covers all common decorator functionalities, equivalent to 10 regular decorators stacked together.
+    5. Why doesn't Celery recommend memory as a broker? Because Celery workers are typically started separately via CLI, making them cross-process/cross-interpreter from the publishing scripts, unable to share in-memory queue tasks.
+       funboost starts consumers as regular Python programs — publishing and consuming happen in the same process, so they can share an in-memory queue.
+       Due to this difference in how the two frameworks start consumers, memory queue is a sixth-class citizen in Celery, but a super-first-class citizen in funboost.
+    6. Special feature support:
+     - Supports result retrieval in RPC mode without relying on external storage like Redis
+     - Can retrieve results via get_future() and get_aio_future() methods without Redis RPC
+     - High-performance micro-batch processing mode for improved throughput
+    """
+    MEMORY_QUEUE = 'MEMORY_QUEUE'  # Uses Python queue.Queue for an in-process message queue. Does not support cross-process, cross-script, or cross-machine task sharing. No persistence. Suitable for one-time short-lived simple tasks.
+    LOCAL_PYTHON_QUEUE = MEMORY_QUEUE  # Alias. Python local queue is based on Python's built-in queue.Queue. Messages are stored in the Python program's memory. Does not support restart/resume.
     
-    """
-    MEMORY_QUEUE: （funboost中最最最核心的broker，没有之一）
-    python内存队列,虽然不支持跨进程 跨脚本 跨机器共享任务，不支持持久化，
-    但是 MEMORY_QUEUE 作为broker 是funboost最最最重要的broker，绝非玩具和只适合简单场景使用，其在funboost中的用途广泛性远超那些正经服务端mq。
-    MEMORY_QUEUE 在 funboost 中的重要性是 sss级，重要性远超 redis kafka rabbbitmq等作为broker.
-    主要原因有：
-    1.queue.Queue超高的性能，没有socket io
-    2.queue.Queue作为消息队列时候，单独做了判断，不进行序列化和反序列化，
-      好处是可以将任何不可json序列化，不可pickle序列化的类型作为函数入参发送到内存Queue中，兼容性灵活性吊打其他broker。
-    3.不是所有人 所有场景都需要分布式 持久化，很多时候都需要使用到内存queue，内存queue经常作为背压、解耦、限流、回调等场景，
-      例如用户经常使用的ThreadpoolExecutor，里面就有一个无界队列的 _work_queue属性，内存queue的使用无处不在。
-    4.使用内存queue，你可以把@boost装饰器当做 tomorrow包或者线程池/asyncio协程池来使用。但是此时funboost的@boost装饰器，
-       吊打并发池和tomorrow装饰器，因为@boost装饰器不仅提供一键多种并发方式，还提供了qps 重试 超时杀死 函数入参缓存过滤等30多种功能，
-       你使用内存queue，可以把@boost当做一个超级装饰器，一个@boost涵盖了所有常见常用的装饰器的功能，一个@boost装饰器抵得上10个常规装饰器叠加使用。
-    5.celery为什么不推荐把memory作为broker？因为celery worker通常在控制台用命令行单独启动，和普通的python脚本中发布任务压根是跨进程跨python解释器了，无法跨程序共享内存队列任务。
-      而funboost启动消费就是普通的python程序，业务脚本发送消息和启动消费就是处在一个进程中，所以可以共享一个内存queue。
-      由于2个框架启动消费方式的区别，memory queue在 celery中是六等公民，但在 funboost 中是超一等公民。
-    6.特殊功能支持
-     - 支持RPC模式下的结果获取，不依赖Redis等外部存储
-     - 可以通过 get_future() 和 get_aio_future() 方法实现结果获取，不依赖redis rpc获取结果
-     - 高性能配合微批处理模式，提高吞吐量
-    """
-    MEMORY_QUEUE = 'MEMORY_QUEUE'  # 使用python queue.Queue实现的基于当前python进程的消息队列，不支持跨进程 跨脚本 跨机器共享任务，不支持持久化，适合一次性短期简单任务。
-    LOCAL_PYTHON_QUEUE = MEMORY_QUEUE  # 别名，python本地queue就是基于python自带的语言的queue.Queue，消息存在python程序的内存中，不支持重启断点接续。
-    
-    # 高性能内存队列，使用 collections.deque 代替 queue.Queue，去除不必要的 task_done/join 开销
-    # 性能比 MEMORY_QUEUE 提升 2-5 倍，支持批量拉取消息（通过 broker_exclusive_config={'pull_msg_batch_size': 1000}）
+    # High-performance in-memory queue using collections.deque instead of queue.Queue, eliminating unnecessary task_done/join overhead.
+    # 2-5x performance improvement over MEMORY_QUEUE. Supports batch message fetching (via broker_exclusive_config={'pull_msg_batch_size': 1000}).
     FASTEST_MEM_QUEUE = 'FASTEST_MEM_QUEUE'
 
-    RABBITMQ_PIKA = 'RABBITMQ_PIKA'  # 使用pika包操作rabbitmq  作为 分布式消息队列。，不建议使用
+    RABBITMQ_PIKA = 'RABBITMQ_PIKA'  # Uses the pika package to operate RabbitMQ as a distributed message queue. Not recommended.
 
-    MONGOMQ = 'MONGOMQ'  # 使用mongo的表中的行模拟的 作为分布式消息队列，支持消费确认。
+    MONGOMQ = 'MONGOMQ'  # Uses MongoDB collection rows to simulate a distributed message queue. Supports consumer acknowledgment.
 
-    SQLITE_QUEUE = 'sqlite3'  # 使用基于sqlite3模拟消息队列，支持消费确认和持久化，但不支持跨机器共享任务，可以基于本机单机跨脚本和跨进程共享任务，好处是不需要安装中间件。
-    PERSISTQUEUE = SQLITE_QUEUE  # PERSISTQUEUE的别名
+    SQLITE_QUEUE = 'sqlite3'  # Uses sqlite3 to simulate a message queue. Supports consumer acknowledgment and persistence but not cross-machine task sharing. Supports cross-script and cross-process task sharing on the same machine. No middleware installation required.
+    PERSISTQUEUE = SQLITE_QUEUE  # Alias for PERSISTQUEUE
 
-    NSQ = 'NSQ'  # 基于nsq作为分布式消息队列，支持消费确认。
+    NSQ = 'NSQ'  # Uses NSQ as a distributed message queue. Supports consumer acknowledgment.
 
-    KAFKA = 'KAFKA'  # 基于kafka作为分布式消息队列，如果随意重启会丢失消息，建议使用BrokerEnum.CONFLUENT_KAFKA。
+    KAFKA = 'KAFKA'  # Uses Kafka as a distributed message queue. Messages may be lost on arbitrary restarts. Recommended to use BrokerEnum.CONFLUENT_KAFKA instead.
 
-    """基于confluent-kafka包，包的性能比kafka-python提升10倍。同时应对反复随意重启部署消费代码的场景，此消费者实现至少消费一次，第8种BrokerEnum.KAFKA是最多消费一次。"""
+    """Based on the confluent-kafka package, which is 10x faster than kafka-python. Also handles scenarios with frequent arbitrary restarts/deployments. This consumer implements at-least-once delivery, while BrokerEnum.KAFKA implements at-most-once delivery."""
     KAFKA_CONFLUENT = 'KAFKA_CONFLUENT'
     CONFLUENT_KAFKA = KAFKA_CONFLUENT
 
-    KAFKA_CONFLUENT_SASlPlAIN = 'KAFKA_CONFLUENT_SASlPlAIN'  # 可以设置账号密码的kafka
+    KAFKA_CONFLUENT_SASlPlAIN = 'KAFKA_CONFLUENT_SASlPlAIN'  # Kafka with username/password authentication support
 
-    SQLACHEMY = 'SQLACHEMY'  # 基于SQLACHEMY 的连接作为分布式消息队列中间件支持持久化和消费确认。支持mysql oracle sqlserver等5种数据库。
+    SQLACHEMY = 'SQLACHEMY'  # Uses SQLAlchemy connections as a distributed message queue broker. Supports persistence and consumer acknowledgment. Supports MySQL, Oracle, SQL Server, and 5 other databases.
 
-    ROCKETMQ = 'ROCKETMQ'  # 基于 rocketmq 作为分布式消息队列，这个中间件必须在linux下运行，win不支持。
-    ROCKETMQ5 = 'ROCKETMQ5'  # 基于 rocketmq 5.x 作为分布式消息队列，使用SimpleConsumer类，适合独立单条ack
-    
-    ZEROMQ = 'ZEROMQ'  # 基于zeromq作为分布式消息队列，不需要安装中间件，可以支持跨机器但不支持持久化。
+    ROCKETMQ = 'ROCKETMQ'  # Uses RocketMQ as a distributed message queue. This broker must run on Linux; Windows is not supported.
+    ROCKETMQ5 = 'ROCKETMQ5'  # Uses RocketMQ 5.x as a distributed message queue with SimpleConsumer class, suitable for individual message acknowledgment.
+
+    ZEROMQ = 'ZEROMQ'  # Uses ZeroMQ as a distributed message queue. No middleware installation required. Supports cross-machine but not persistence.
 
 
-    """
-    kombu 和 celery 都是 funboost中的神级别broker_kind。
-    使得funboost以逸待劳，支持kombu的所有现有和未来的消息队列。
-    通过直接支持 kombu，funboost 相当于一瞬间就继承了 `kombu` 支持的所有现有和未来的消息队列能力。无论 kombu 社区未来增加了对哪种新的云消息服务（如 Google
-    Pub/Sub、Azure Service Bus）或小众 MQ 的支持，funboost 无需修改自身代码，就能自动获得这种能力。这
-    是一种“以逸待劳”的策略，极大地扩展了 funboost 的适用范围。
+    “””
+    Both kombu and celery are god-tier broker_kinds in funboost.
+    They allow funboost to effortlessly support all current and future message queues supported by kombu.
+    By directly supporting kombu, funboost instantly inherits all current and future message queue capabilities of kombu. Regardless of what new cloud messaging services (e.g., Google
+    Pub/Sub, Azure Service Bus) or niche MQs the kombu community adds support for in the future, funboost automatically gains that capability without modifying its own code.
+    This is a “wait at ease for the exhausted enemy” strategy that greatly expands funboost's applicability.
 
-    kombu 包可以作为funboost的broker，这个包也是celery的中间件依赖包，这个包可以操作10种中间件(例如rabbitmq redis)，但没包括分布式函数调度框架的kafka nsq zeromq 等。
-    同时 kombu 包的性能非常差，可以用原生redis的lpush和kombu的publish测试发布，使用brpop 和 kombu 的 drain_events测试消费，对比差距相差了5到10倍。
-    由于性能差，除非是分布式函数调度框架没实现的中间件才选kombu方式(例如kombu支持亚马逊队列  qpid pyro 队列)，否则强烈建议使用此框架的操作中间件方式而不是使用kombu。
-    """
+    The kombu package can serve as a funboost broker. This package is also Celery's middleware dependency and can operate 10+ types of middleware (e.g., RabbitMQ, Redis), but does not include Kafka, NSQ, ZeroMQ, etc.
+    However, kombu's performance is very poor — comparing native Redis lpush vs kombu publish, and brpop vs kombu drain_events, the difference is 5-10x.
+    Due to poor performance, only choose kombu for brokers not natively implemented in funboost (e.g., kombu supports Amazon SQS, Qpid, Pyro queues). Otherwise, strongly recommended to use funboost's native broker implementations instead of kombu.
+    “””
     KOMBU = 'KOMBU'
 
-    """ 基于emq作为中间件的。这个和上面的中间件有很大不同，服务端不存储消息。所以不能先发布几十万个消息，然后再启动消费。mqtt优点是web前后端能交互，
-    前端不能操作redis rabbitmq kafka，但很方便操作mqtt。这种使用场景是高实时的互联网接口。
+    """ Based on EMQ as the broker. This is very different from the brokers above — the server does not store messages. So you cannot publish hundreds of thousands of messages first and then start consuming. MQTT's advantage is that web frontend and backend can interact —
+    the frontend cannot operate Redis/RabbitMQ/Kafka, but can easily operate MQTT. This is suitable for high-real-time internet interfaces.
     """
     MQTT = 'MQTT'
 
-    HTTPSQS = 'HTTPSQS'  # httpsqs中间件实现的，基于http协议操作，dcoker安装此中间件简单。
+    HTTPSQS = 'HTTPSQS'  # Uses HTTPSQS broker, operated via HTTP protocol. Easy Docker installation.
 
-    PULSAR = 'PULSAR'  # 最有潜力的下一代分布式消息系统。5年后会同时取代rabbitmq和kafka。
+    PULSAR = 'PULSAR'  # The most promising next-generation distributed messaging system. Expected to replace both RabbitMQ and Kafka in 5 years.
 
-    UDP = 'UDP'  # 基于socket udp 实现的，需要先启动消费端再启动发布，支持分布式但不支持持久化，好处是不需要安装消息队列中间件软件。
+    UDP = 'UDP'  # Based on socket UDP. Consumer must be started before publisher. Supports distributed but not persistence. No middleware installation required.
 
-    TCP = 'TCP'  # 基于socket tcp 实现的，需要先启动消费端再启动发布，支持分布式但不支持持久化，好处是不需要安装消息队列中间件软件。
+    TCP = 'TCP'  # Based on socket TCP. Consumer must be started before publisher. Supports distributed but not persistence. No middleware installation required.
 
-    HTTP = 'HTTP'  # 基于http实现的，发布使用的urllib3，消费服务端使用的aiohttp.server实现的，支持分布式但不支持持久化，好处是不需要安装消息队列中间件软件。
+    HTTP = 'HTTP'  # Based on HTTP. Publishing uses urllib3, consuming server uses aiohttp.server. Supports distributed but not persistence. No middleware installation required.
 
-    GRPC = 'GRPC' # 使用知名grpc作为broker,可以使用 sync_call 方法同步获取grpc的结果, 简单程度暴击用户手写原生的 grpc客户端 服务端
+    GRPC = 'GRPC'  # Uses the well-known gRPC as a broker. Can use sync_call method to synchronously get gRPC results. Far simpler than hand-writing native gRPC client/server code.
 
-    NATS = 'NATS'  # 高性能中间件nats,中间件服务端性能很好,。
+    NATS = 'NATS'  # High-performance NATS broker. The broker server has excellent performance.
 
-    TXT_FILE = 'TXT_FILE'  # 磁盘txt文件作为消息队列，支持单机持久化，不支持多机分布式。不建议这个，用sqlite。
+    TXT_FILE = 'TXT_FILE'  # Uses disk txt files as a message queue. Supports single-machine persistence but not multi-machine distributed. Not recommended; use sqlite instead.
 
-    PEEWEE = 'PEEWEE'  # peewee包操作mysql，使用表模拟消息队列
+    PEEWEE = 'PEEWEE'  # Uses peewee package to operate MySQL, simulating a message queue with database tables.
 
-    CELERY = 'CELERY'  # funboost支持celery框架来发布和消费任务，由celery框架来调度执行任务，但是写法简单远远暴击用户亲自使用celery的麻烦程度，
-    # 用户永无无需关心和操作Celery对象实例,无需关心celery的task_routes和includes配置,funboost来自动化设置这些celery配置。
-    # funboost将Celery本身纳入了自己的Broker体系。能“吞下”另一个大型框架，简直太妙了。本身就证明了funboost架构的包容性和精妙性和复杂性。
+    CELERY = 'CELERY'  # funboost supports Celery framework for publishing and consuming tasks, with Celery handling task scheduling/execution. The usage is far simpler than using Celery directly.
+    # Users never need to worry about Celery object instances, task_routes, or includes configuration — funboost automatically sets up all Celery configurations.
+    # funboost incorporates Celery itself into its broker system. Being able to “absorb” another major framework is brilliant and demonstrates funboost's architectural inclusiveness, elegance, and sophistication.
 
-    DRAMATIQ = 'DRAMATIQ'  # funboost使用 dramatiq 框架作为消息队列，dramatiq类似celery也是任务队列框架。用户使用funboost api来操作dramatiq核心调度。
+    DRAMATIQ = 'DRAMATIQ'  # funboost uses the Dramatiq framework as a message queue. Dramatiq is a task queue framework similar to Celery. Users operate Dramatiq's core scheduling through the funboost API.
 
-    HUEY = 'HUEY'  # huey任务队列框架作为funboost调度核心
+    HUEY = 'HUEY'  # Huey task queue framework as funboost's scheduling core.
 
-    RQ = 'RQ'  # rq任务队列框架作为funboost调度核心
+    RQ = 'RQ'  # RQ task queue framework as funboost's scheduling core.
 
-    NAMEKO = 'NAMEKO'  # funboost支持python微服务框架nameko，用户无需掌握nameko api语法，就玩转python nameko微服务
+    NAMEKO = 'NAMEKO'  # funboost supports the Python microservice framework Nameko. Users can work with Python Nameko microservices without learning the Nameko API syntax.
 
     
     """
-    MYSQL_CDC 是 funboost 中 神奇 的 与众不同的 broker 中间件
-    mysql binlog cdc 自动作为消息,用户无需手动发布消息,只需要写处理binlog内容的逻辑, 
-    一行代码就能轻量级实现 mysql2mysql mysql2kafka mysql2rabbitmq 等等.
-    这个是与其他中间件不同,不需要手工发布消息, 任何对数据库的 insert update delete 会自动作为 funboost 的消息.
-    几乎是轻量级平替 canal  flinkcdc 的作用.
-    
-    以此类推, 日志文件也能扩展作为broker,只要另外一个程序写入了文件日志,就能触发funboost消费,
-    然后自己在函数逻辑把消息发到kafka,(虽然是已经有大名鼎鼎elk,这只是举个场景例子,说明funboost broker的灵活性)
+    MYSQL_CDC is a unique and extraordinary broker in funboost.
+    MySQL binlog CDC automatically becomes messages — users don't need to manually publish messages, just write the logic to process binlog content.
+    One line of code can achieve lightweight mysql2mysql, mysql2kafka, mysql2rabbitmq, etc.
+    Unlike other brokers, no manual message publishing is needed — any database insert, update, or delete automatically becomes a funboost message.
+    This is essentially a lightweight replacement for Canal and Flink CDC.
 
-    日志文件、文件系统变更（inotify）、甚至是硬件传感器的信号，按照4.21章节文档，都可以被封装成一个 funboost 的 Broker。
+    By extension, log files can also serve as brokers — whenever another program writes to a log file, it can trigger funboost consumption.
+    You can then send messages to Kafka in your function logic (although ELK already exists for this, this is just an example scenario demonstrating funboost broker flexibility).
 
-    充分说明 funboost 有能力化身为 通用的、事件驱动的函数调度平台,而非仅仅是celery这种传统的消息驱动.
+    Log files, file system changes (inotify), and even hardware sensor signals can all be wrapped as funboost Brokers following documentation section 4.21.
+
+    This fully demonstrates that funboost can transform into a universal, event-driven function scheduling platform, not just a traditional message-driven system like Celery.
     """
     """
-    funboost 有能力消费canal发到kafka的binlog消息,也能不依赖canal,自己捕获cdc数据
+    funboost can consume binlog messages sent to Kafka by Canal, and can also capture CDC data independently without relying on Canal.
     """
     MYSQL_CDC = 'MYSQL_CDC'
     
-    SQS = 'SQS' # aws sqs ，虽然 funboost 支持 kombu ，kombu支持sqs，所以 funboost间接支持了sqs，但原生实现逻辑更清晰，比kombu性能更强
+    SQS = 'SQS'  # AWS SQS. Although funboost supports kombu which supports SQS (so funboost indirectly supports SQS), the native implementation has clearer logic and better performance than kombu.
     
     """
-    原生 PostgreSQL 中间件，充分利用 PostgreSQL 独有特性：
-    1. FOR UPDATE SKIP LOCKED - 高并发无锁竞争，多消费者不阻塞
-    2. LISTEN/NOTIFY - 原生发布订阅机制，实时推送无需轮询
-    3. 支持任务优先级
-    相比 SQLACHEMY 通用实现性能更好，实时性更强
+    Native PostgreSQL broker, fully utilizing PostgreSQL-specific features:
+    1. FOR UPDATE SKIP LOCKED - Lock-free high concurrency, multiple consumers don't block each other
+    2. LISTEN/NOTIFY - Native pub/sub mechanism, real-time push without polling
+    3. Supports task priority
+    Better performance and real-time capability compared to the generic SQLAlchemy implementation
     """
     POSTGRES = 'POSTGRES'
     
-    WATCHDOG = 'WATCHDOG' # 使用python watchdog 库监控文件夹文件变更事件,自动触发python函数消费。支持已存在文件和防抖，原生watchdog不支持。
-    
-    WEBSOCKET = 'WEBSOCKET' # 使用websocket作为broker,支持实时双向通信  
+    WATCHDOG = 'WATCHDOG'  # Uses Python watchdog library to monitor file/folder change events and automatically trigger Python function consumption. Supports existing files and debouncing, which native watchdog does not.
+
+    WEBSOCKET = 'WEBSOCKET'  # Uses WebSocket as a broker, supports real-time bidirectional communication.
 
     
 
@@ -195,16 +195,16 @@ class BrokerEnum:
 
 class ConcurrentModeEnum:
     """
-    funboost 支持多线程、gevent、eventlet、asyncio 单线程 并发模式。
-    这里没有多进程枚举，是因为funboost 希望多进程和这些模式叠加并发，
-    booster.mp_consume(8) 就是8进程叠加 n个线程或协程并发，
-    funboost的多进程和多线程 asyncio是叠加的，不是互斥的。
+    funboost supports threading, gevent, eventlet, asyncio, and single-thread concurrency modes.
+    There is no multiprocessing enum here because funboost intends multiprocessing to be stacked with these modes.
+    booster.mp_consume(8) means 8 processes stacked with n threads or coroutines concurrently.
+    funboost's multiprocessing and threading/asyncio are additive, not mutually exclusive.
     """
-    THREADING = 'threading'  # 线程方式运行，兼容支持 async def 的异步函数。
+    THREADING = 'threading'  # Runs in threading mode. Also compatible with async def functions.
     GEVENT = 'gevent'
     EVENTLET = 'eventlet'
-    ASYNC = 'async'  # asyncio并发，适用于async def定义的函数。
-    SINGLE_THREAD = 'single_thread'  # 如果你不想并发，不想预先从消息队列中间件拉取消息到python程序的内存queue队列缓冲中，那么就适合使用此并发模式。
+    ASYNC = 'async'  # asyncio concurrency, suitable for functions defined with async def.
+    SINGLE_THREAD = 'single_thread'  # If you don't want concurrency and don't want to pre-fetch messages from the broker into Python's in-memory queue buffer, this concurrency mode is suitable.
     SOLO = SINGLE_THREAD
     
 
@@ -213,8 +213,8 @@ class ConcurrentModeEnum:
 
 class FunctionKind:
     """
-    funboost 比celery更强，funboost不仅支持函数和静态方法
-    funboost也能直接支持@boost加到 类方法和实例方法上（但这需要按教程方式做，不能想当然的写）
+    funboost is more powerful than Celery. funboost not only supports functions and static methods,
+    but also directly supports applying @boost to class methods and instance methods (though this requires following the tutorial, not guessing).
     """
     CLASS_METHOD = 'CLASS_METHOD'
     INSTANCE_METHOD = 'INSTANCE_METHOD'
@@ -285,13 +285,13 @@ class RedisKeys:
 
     @staticmethod
     def gen_funboost_unack_registry_key_by_queue_name(queue_name):
-        """
-        方案C:
-        单独维护一个 unack key 的 registry(set)，只负责“全量索引”，不会被心跳线程清理。
-        registry 中存放的是具体的 unack redis key 名称，例如:
+        “””
+        Approach C:
+        Maintain a separate unack key registry (set) solely responsible for “full indexing”, not cleaned up by heartbeat threads.
+        The registry stores the specific unack Redis key names, e.g.:
         - redis_ack_able:  {queue_name}__unack_id_{consumer_id}
         - brpoplpush:      unack_{queue_name}_{consumer_id}
-        """
+        “””
         return f'{RedisKeys.FUNBOOST_UNACK_REGISTRY_PREFIX}{queue_name}'
 
 class ConsumingFuncInputParamsCheckerField:

@@ -2,7 +2,7 @@
 # @Author  : ydf
 # @Time    : 2022/1/10 0010 18:42
 """
-使用sqlachemy来使5种关系型数据库模拟消息队列。
+Uses SQLAlchemy to simulate message queues with 5 types of relational databases.
 """
 import datetime
 import json
@@ -37,9 +37,9 @@ class SqlaBase(Base):
     __abstract__ = True
     job_id = Column(Integer, primary_key=True, autoincrement=True)
     body = Column(String(10240))
-    publish_timestamp = Column(DateTime, default=datetime.datetime.now, comment='发布时间')
+    publish_timestamp = Column(DateTime, default=datetime.datetime.now, comment='publish time')
     status = Column(String(20), index=True, nullable=True)
-    consume_start_timestamp = Column(DateTime, default=None, comment='消费时间', index=True)
+    consume_start_timestamp = Column(DateTime, default=None, comment='consume time', index=True)
 
     def __init__(self, job_id=None, body=None, publish_timestamp=None, status=None, consume_start_timestamp=None):
         self.job_id = job_id
@@ -83,9 +83,9 @@ class SqlaQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
             # __abstract__ = True
             job_id = Column(Integer, primary_key=True, autoincrement=True)
             body = Column(String(10240))
-            publish_timestamp = Column(DateTime, default=datetime.datetime.now, comment='发布时间')
+            publish_timestamp = Column(DateTime, default=datetime.datetime.now, comment='publish time')
             status = Column(String(20), index=False, nullable=True)
-            consume_start_timestamp = Column(DateTime, default=None, comment='消费时间', index=False)
+            consume_start_timestamp = Column(DateTime, default=None, comment='consume time', index=False)
 
             def __init__(self, job_id=None, body=None, publish_timestamp=None, status=None, consume_start_timestamp=None):
                 self.job_id = job_id
@@ -114,10 +114,10 @@ class SqlaQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
                                    )
         else:
             engine = create_engine(sqla_conn_url, echo=False,
-                                   max_overflow=30,  # 超过连接池大小外最多创建的连接
-                                   pool_size=20,  # 连接池大小
-                                   pool_timeout=300,  # 池中没有线程最多等待的时间，否则报错
-                                   pool_recycle=-1  # 多久之后对线程池中的线程进行一次连接的回收（重置）
+                                   max_overflow=30,  # Maximum connections to create beyond pool size
+                                   pool_size=20,  # Connection pool size
+                                   pool_timeout=300,  # Maximum wait time when no connections available in pool, otherwise raises error
+                                   pool_recycle=-1  # Time interval to recycle (reset) connections in the pool
                                    )
 
         try:
@@ -183,7 +183,7 @@ class SqlaQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
                 query = ss.query(self.SqlaQueueModel).filter(or_(self.SqlaQueueModel.status.in_([TaskStatus.TO_BE_CONSUMED, TaskStatus.REQUEUE]),
                                                                  and_(self.SqlaQueueModel.status == TaskStatus.PENGDING,
                                                                       self.SqlaQueueModel.consume_start_timestamp < ten_minitues_ago_datetime)))
-                # print(str(query))  # 打印原始语句。
+                # print(str(query))  # Print the raw SQL statement.
                 task = query.first()
                 if task:
                     task.status = task.status = TaskStatus.PENGDING
@@ -199,7 +199,7 @@ class SqlaQueue(FunboostFileLoggerMixin, LoggerLevelSetterMixin):
             if is_delete_the_task:
                 sqla_task = ss.query(self.SqlaQueueModel).filter_by(job_id=sqla_task_dict['job_id']).first()
                 # print(sqla_task)
-                if sqla_task:  # REMIND 如果中途把表清空了，则不会查找到。
+                if sqla_task:  # REMIND If the table was truncated midway, it won't be found.
                     ss.delete(sqla_task)
             else:
                 sqla_task = ss.query(self.SqlaQueueModel).filter(self.SqlaQueueModel.job_id == sqla_task_dict['job_id']).first()

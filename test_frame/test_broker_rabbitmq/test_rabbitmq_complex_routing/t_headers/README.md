@@ -1,123 +1,123 @@
-# RabbitMQ Headers 路由模式示例
+# RabbitMQ Headers Routing Mode Example
 
-本示例演示了如何使用 funboost 框架实现 RabbitMQ 的 Headers 路由模式。
+This example demonstrates how to implement RabbitMQ's Headers routing mode using the funboost framework.
 
-## Headers 路由模式特点
+## Headers Routing Mode Characteristics
 
-Headers 路由模式是 RabbitMQ 中最灵活的路由方式，具有以下特点：
+Headers routing is the most flexible routing method in RabbitMQ and has the following characteristics:
 
-- 🏷️ **基于消息头属性**：完全根据消息的头部属性进行路由，忽略路由键
-- 🎯 **灵活的匹配规则**：支持 `all`（全匹配）和 `any`（任意匹配）两种策略
-- 🔧 **复杂条件路由**：可以实现复杂的业务逻辑路由条件
-- 📊 **多维度匹配**：支持多个头属性的组合匹配
+- 🏷️ **Based on message header attributes**: Routing is determined entirely by the header attributes of the message, ignoring the routing key
+- 🎯 **Flexible matching rules**: Supports both `all` (full match) and `any` (any match) strategies
+- 🔧 **Complex conditional routing**: Can implement complex business logic routing conditions
+- 📊 **Multi-dimensional matching**: Supports combined matching of multiple header attributes
 
-## 文件说明
+## File Descriptions
 
-- `t_headers_consume.py`: 消费者示例，展示不同的头属性绑定规则
-- `t_headers_pub.py`: 发布者示例，展示如何使用动态消息头发布消息
+- `t_headers_consume.py`: Consumer example, showing different header attribute binding rules
+- `t_headers_pub.py`: Publisher example, showing how to publish messages with dynamic message headers
 
-## 业务场景示例
+## Business Scenario Example
 
-本示例模拟了一个智能通知系统，根据消息的不同属性将通知路由到相应的处理服务：
+This example simulates an intelligent notification system that routes notifications to the appropriate handling service based on different message attributes:
 
-### 消费者服务及绑定规则
+### Consumer Services and Binding Rules
 
-1. **🚨 紧急通知服务** (`q_urgent_notifications`)
-   - 绑定条件: `priority=high` **AND** `urgent=true`
-   - 匹配策略: `all` (必须同时满足所有条件)
-   - 处理: 最高优先级的紧急通知
+1. **🚨 Urgent Notification Service** (`q_urgent_notifications`)
+   - Binding condition: `priority=high` **AND** `urgent=true`
+   - Match strategy: `all` (must satisfy all conditions simultaneously)
+   - Handles: highest priority urgent notifications
 
-2. **⚡ 高优先级通知服务** (`q_high_priority_notifications`)
-   - 绑定条件: `priority=high`
-   - 匹配策略: `all`
-   - 处理: 所有高优先级通知
+2. **⚡ High-Priority Notification Service** (`q_high_priority_notifications`)
+   - Binding condition: `priority=high`
+   - Match strategy: `all`
+   - Handles: all high-priority notifications
 
-3. **📱 移动端通知服务** (`q_mobile_notifications`)
-   - 绑定条件: `platform=mobile` **OR** `device_type=phone`
-   - 匹配策略: `any` (满足任意一个条件即可)
-   - 处理: 移动端相关通知
+3. **📱 Mobile Notification Service** (`q_mobile_notifications`)
+   - Binding condition: `platform=mobile` **OR** `device_type=phone`
+   - Match strategy: `any` (satisfying any one condition is sufficient)
+   - Handles: mobile-related notifications
 
-4. **🔧 系统管理通知服务** (`q_system_admin_notifications`)
-   - 绑定条件: `category=system` **AND** `role=admin`
-   - 匹配策略: `all`
-   - 处理: 系统管理员专用通知
+4. **🔧 System Admin Notification Service** (`q_system_admin_notifications`)
+   - Binding condition: `category=system` **AND** `role=admin`
+   - Match strategy: `all`
+   - Handles: notifications exclusive to system administrators
 
-5. **📢 营销通知服务** (`q_marketing_notifications`)
-   - 绑定条件: `category=marketing` **OR** `priority=low`
-   - 匹配策略: `any`
-   - 处理: 营销推广相关通知
+5. **📢 Marketing Notification Service** (`q_marketing_notifications`)
+   - Binding condition: `category=marketing` **OR** `priority=low`
+   - Match strategy: `any`
+   - Handles: marketing and promotional notifications
 
-6. **📋 审计通知服务** (`q_audit_all_notifications`)
-   - 绑定条件: `has_user_id=true`
-   - 匹配策略: `all`
-   - 处理: 所有需要审计的通知记录
+6. **📋 Audit Notification Service** (`q_audit_all_notifications`)
+   - Binding condition: `has_user_id=true`
+   - Match strategy: `all`
+   - Handles: all notification records that require auditing
 
-## 运行示例
+## Running the Example
 
-### 1. 启动消费者
+### 1. Start the Consumers
 
 ```bash
 cd test_frame/test_broker_rabbitmq/test_rabbitmq_complex_routing/t_headers
 python t_headers_consume.py
 ```
 
-### 2. 发布消息
+### 2. Publish Messages
 
-在另一个终端中运行：
+In another terminal, run:
 
 ```bash
 cd test_frame/test_broker_rabbitmq/test_rabbitmq_complex_routing/t_headers
 python t_headers_pub.py
 ```
 
-## 消息路由示例
+## Message Routing Example
 
-| 消息类型 | 消息头属性 | 匹配的消费者 |
+| Message Type | Message Header Attributes | Matching Consumers |
 |---------|-----------|-------------|
-| 系统严重故障 | `priority=high, urgent=true, category=system, role=admin` | 🚨紧急 + ⚡高优先级 + 🔧系统管理 + 📋审计 |
-| 订单支付成功 | `priority=high, platform=mobile` | ⚡高优先级 + 📱移动端 + 📋审计 |
-| 新功能上线 | `priority=low, category=marketing` | 📢营销通知 + 📋审计 |
-| 账户安全提醒 | `priority=high, urgent=true, device_type=phone` | 🚨紧急 + ⚡高优先级 + 📱移动端 + 📋审计 |
-| 系统维护通知 | `category=system, role=admin, priority=medium` | 🔧系统管理 + 📋审计 |
+| Critical System Failure | `priority=high, urgent=true, category=system, role=admin` | 🚨Urgent + ⚡High Priority + 🔧System Admin + 📋Audit |
+| Order Payment Success | `priority=high, platform=mobile` | ⚡High Priority + 📱Mobile + 📋Audit |
+| New Feature Launch | `priority=low, category=marketing` | 📢Marketing + 📋Audit |
+| Account Security Alert | `priority=high, urgent=true, device_type=phone` | 🚨Urgent + ⚡High Priority + 📱Mobile + 📋Audit |
+| System Maintenance Notice | `category=system, role=admin, priority=medium` | 🔧System Admin + 📋Audit |
 
-## 核心配置说明
+## Core Configuration Notes
 
-### 消费者配置
+### Consumer Configuration
 
 ```python
 @BoosterParams(
-    queue_name='队列名称',
+    queue_name='queue_name',
     broker_kind=BrokerEnum.RABBITMQ_COMPLEX_ROUTING,
     broker_exclusive_config={
         'exchange_name': 'headers_notification_exchange',
         'exchange_type': 'headers',
         'headers_for_bind': {
-            'priority': 'high',      # 头属性匹配条件
-            'urgent': 'true'         # 可以设置多个条件
+            'priority': 'high',      # header attribute matching condition
+            'urgent': 'true'         # multiple conditions can be set
         },
-        'x_match_for_bind': 'all',   # 'all' 或 'any'
+        'x_match_for_bind': 'all',   # 'all' or 'any'
     })
 def consumer_function(user_id: str, title: str, content: str, timestamp: str):
-    # 消费者函数的参数名必须与发布的字典 keys 完全一致
+    # The parameter names of the consumer function must exactly match the published dictionary keys
     pass
 ```
 
-### 发布者配置
+### Publisher Configuration
 
 ```python
 headers_publisher = BoostersManager.get_cross_project_publisher(PublisherParams(
-    queue_name='发布者实例名',
+    queue_name='publisher_instance_name',
     broker_kind=BrokerEnum.RABBITMQ_COMPLEX_ROUTING,
     broker_exclusive_config={
         'exchange_name': 'headers_notification_exchange',
         'exchange_type': 'headers',
-        # headers 模式不使用路由键
+        # headers mode does not use routing keys
     }
 ))
 
-# 发布消息时指定头属性
+# Publish a message with specified header attributes
 headers_publisher.publish(
-    {'user_id': 'user001', 'title': '标题', 'content': '内容', 'timestamp': '时间'},
+    {'user_id': 'user001', 'title': 'Title', 'content': 'Content', 'timestamp': 'Timestamp'},
     task_options=TaskOptions(
         other_extra_params={
             'headers_for_publish': {
@@ -130,50 +130,50 @@ headers_publisher.publish(
 )
 ```
 
-## 匹配策略说明
+## Match Strategy Explanation
 
-### `x_match_for_bind: 'all'` (全匹配)
-- 消息头必须包含**所有**指定的属性，且值完全匹配
-- 适用于需要严格条件控制的场景
+### `x_match_for_bind: 'all'` (Full Match)
+- The message headers must include **all** specified attributes with exact value matches
+- Suitable for scenarios requiring strict condition control
 
-### `x_match_for_bind: 'any'` (任意匹配)  
-- 消息头只需包含**任意一个**指定的属性匹配即可
-- 适用于多种条件都可以触发的场景
+### `x_match_for_bind: 'any'` (Any Match)
+- The message headers only need to match **any one** of the specified attributes
+- Suitable for scenarios where multiple conditions can each trigger routing
 
-## 使用场景
+## Use Cases
 
-Headers 路由模式特别适合以下场景：
+Headers routing mode is especially suited for the following scenarios:
 
-1. **智能通知系统**: 根据优先级、平台、用户角色等多维度路由
-2. **多租户系统**: 根据租户ID、权限级别等属性路由
-3. **内容分发系统**: 根据内容类型、地区、语言等属性路由
-4. **监控告警系统**: 根据告警级别、服务类型、责任人等路由
-5. **工作流系统**: 根据任务类型、处理人、优先级等路由
-6. **API网关**: 根据请求来源、认证级别、API版本等路由
+1. **Intelligent notification systems**: Route based on priority, platform, user role, and other dimensions
+2. **Multi-tenant systems**: Route based on tenant ID, permission level, and other attributes
+3. **Content distribution systems**: Route based on content type, region, language, and other attributes
+4. **Monitoring and alerting systems**: Route based on alert level, service type, responsible party, and other attributes
+5. **Workflow systems**: Route based on task type, handler, priority, and other attributes
+6. **API gateways**: Route based on request origin, authentication level, API version, and other attributes
 
-## 与其他路由模式的对比
+## Comparison with Other Routing Modes
 
-| 路由模式 | 路由依据 | 灵活性 | 复杂度 | 适用场景 |
+| Routing Mode | Routing Basis | Flexibility | Complexity | Use Cases |
 |---------|---------|--------|--------|---------|
-| **Headers** | 消息头属性 | 最高 | 最复杂 | 复杂的多维度路由 |
-| **Topic** | 通配符路由键 | 高 | 中等 | 层次化的消息分类 |
-| **Direct** | 精确路由键 | 中等 | 简单 | 点对点或简单分组 |
-| **Fanout** | 无条件广播 | 最低 | 最简单 | 广播通知 |
+| **Headers** | Message header attributes | Highest | Most complex | Complex multi-dimensional routing |
+| **Topic** | Wildcard routing key | High | Medium | Hierarchical message classification |
+| **Direct** | Exact routing key | Medium | Simple | Point-to-point or simple grouping |
+| **Fanout** | Unconditional broadcast | Lowest | Simplest | Broadcast notifications |
 
-## 注意事项
+## Important Notes
 
-1. **参数匹配规则**: 发布者发布的字典 keys 必须与消费者函数的参数名完全一致
-   - 发布: `{'user_id': '...', 'title': '...', 'content': '...', 'timestamp': '...'}`
-   - 消费: `def consumer(user_id: str, title: str, content: str, timestamp: str):`
+1. **Parameter matching rule**: The dictionary keys published by the publisher must exactly match the parameter names of the consumer function
+   - Published: `{'user_id': '...', 'title': '...', 'content': '...', 'timestamp': '...'}`
+   - Consumed: `def consumer(user_id: str, title: str, content: str, timestamp: str):`
 
-2. **头属性类型**: 所有头属性值都是字符串类型，需要注意类型转换
+2. **Header attribute types**: All header attribute values are strings; be mindful of type conversion
 
-3. **性能考虑**: Headers 路由比其他模式稍慢，因为需要检查多个头属性
+3. **Performance consideration**: Headers routing is slightly slower than other modes because multiple header attributes must be checked
 
-4. **路由键被忽略**: Headers 模式完全忽略路由键，只基于头属性路由
+4. **Routing key ignored**: Headers mode completely ignores the routing key and routes solely based on header attributes
 
-5. **匹配策略选择**: 
-   - 使用 `all` 时要确保消息头包含所有必需属性
-   - 使用 `any` 时要注意可能的意外匹配
+5. **Match strategy selection**:
+   - When using `all`, ensure the message headers contain all required attributes
+   - When using `any`, be aware of potential unexpected matches
 
-6. **调试建议**: 建议在开发阶段添加审计队列来观察所有消息的路由情况
+6. **Debugging tip**: It is recommended to add an audit queue during development to observe the routing of all messages

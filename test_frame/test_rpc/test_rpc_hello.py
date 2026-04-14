@@ -17,7 +17,8 @@ def fun(x):
 
 def show_result(status_and_result: dict):
     """
-    :param status_and_result: 一个字典包括了函数入参、函数结果、函数是否运行成功、函数运行异常类型
+    :param status_and_result: A dictionary containing the function arguments, result,
+                              whether the function ran successfully, and the exception type.
     """
     print(status_and_result)
 
@@ -39,6 +40,6 @@ if __name__ == '__main__':
 
     # for i in range(100):
     #     async_result = fun.push(i)
-    #     print(async_result.result) # print(async_result.get()) 用法相等
+    #     print(async_result.result) # print(async_result.get()) usage is equivalent
 
-    #     async_result.set_callback(show_result) # thread_pool.submit(wait_msg_result,async_result) 等效
+    #     async_result.set_callback(show_result) # equivalent to thread_pool.submit(wait_msg_result,async_result)

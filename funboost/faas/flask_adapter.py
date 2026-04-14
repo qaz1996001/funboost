@@ -1,14 +1,13 @@
 """
-Flask 开箱即用，作者自带贡献，只需要用户的 app.register_blueprint(flask_blueprint)
-即可自动给用户的Flask应用添加常用路由
-包括发布消息， 根据task_id获取结果， 获取队列消息数量
+Flask out-of-the-box: simply use app.register_blueprint(flask_blueprint) to automatically add common routes
+to the user's Flask application, including publishing messages, getting results by task_id, and getting queue message counts.
 
 
 
-使用说明:
-    在用户自己的 Flask 项目中:
+Usage:
+    In the user's own Flask project:
        app.register_blueprint(flask_blueprint)
-    
+
 
 
 """
@@ -25,17 +24,17 @@ from funboost.core.loggers import get_funboost_file_logger
 
 logger = get_funboost_file_logger(__name__)
 
-# 创建 Blueprint 实例，方便用户 register 到自己的 app 中
-# 用户可以使用 app.register_blueprint(flask_blueprint)
+# Create Blueprint instance for users to register into their own app
+# Users can use app.register_blueprint(flask_blueprint)
 flask_blueprint = Blueprint('funboost', __name__, url_prefix='/funboost')
 
 
 @flask_blueprint.route("/publish", methods=['POST'])
 def publish_msg():
     """
-    发布消息接口
-    
-    请求体示例:
+    Publish message endpoint.
+
+    Request body example:
     {
         "queue_name": "test_queue",
         "msg_body": {"x": 1, "y": 2},
@@ -45,83 +44,83 @@ def publish_msg():
     """
     status_and_result = None
     task_id = None
-    
+
     try:
-        # 获取 JSON 数据
+        # Get JSON data
         data = request.get_json()
         if not data:
             return jsonify({
                 "succ": False,
-                "msg": "请求体必须是 JSON 格式",
+                "msg": "Request body must be in JSON format",
                 "data": {
                     "task_id": None,
                     "status_and_result": None
                 }
             }), 400
-        
+
         queue_name = data.get('queue_name')
         msg_body = data.get('msg_body')
         need_result = data.get('need_result', False)
         timeout = data.get('timeout', 60)
-        task_id_param = data.get('task_id')  # 可选：指定 task_id
-        
-        # 验证必填字段
+        task_id_param = data.get('task_id')  # Optional: specify task_id
+
+        # Validate required fields
         if not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "queue_name 字段必填",
+                "msg": "queue_name field is required",
                 "data": {
                     "task_id": None,
                     "status_and_result": None
                 }
             }), 400
-        
+
         if not msg_body or not isinstance(msg_body, dict):
             return jsonify({
                 "succ": False,
-                "msg": "msg_body 字段必填且必须是字典类型",
+                "msg": "msg_body field is required and must be a dict",
                 "data": {
                     "task_id": None,
                     "status_and_result": None
                 }
             }), 400
-        
-        # BoostersManager.get_or_create_booster_by_queue_name 是通过queue_name反向得到或创建booster。
-        # 不需要用户亲自判断queue_name，然后精确使用某个非常具体的消费函数，
+
+        # BoostersManager.get_or_create_booster_by_queue_name obtains or creates a booster by queue_name in reverse.
+        # No need for the user to manually determine the queue_name and then precisely use a specific consumer function.
         publisher = SingleQueueConusmerParamsGetter(queue_name).gen_publisher_for_faas()
         booster_params_by_redis = SingleQueueConusmerParamsGetter(queue_name).get_one_queue_params_use_cache()
 
-        # 检查是否需要 RPC 模式
+        # Check if RPC mode is needed
         if need_result:
-            # 开启 RPC 模式发布（同步方式）
+            # Publish with RPC mode enabled (synchronous)
             async_result = publisher.publish(
                 msg_body,
-                task_id=task_id_param,  # 可选：指定 task_id（用于重试失败任务）
+                task_id=task_id_param,  # Optional: specify task_id (for retrying failed tasks)
                 task_options=TaskOptions(is_using_rpc_mode=True)
             )
             task_id = async_result.task_id
-            
-            # 等待结果（同步方式）
-            print(async_result.task_id,timeout)
+
+            # Wait for result (synchronous)
+            print(async_result.task_id, timeout)
             status_and_result = AsyncResult(async_result.task_id, timeout=timeout).status_and_result
         else:
-            # 普通发布（同步方式），可以指定 task_id
+            # Normal publish (synchronous), can specify task_id
             async_result = publisher.publish(msg_body, task_id=task_id_param)
             task_id = async_result.task_id
 
         return jsonify({
             "succ": True,
-            "msg": f'{queue_name} 队列,消息发布成功',
+            "msg": f'{queue_name} queue, message published successfully',
             "data": {
                 "task_id": task_id,
                 "status_and_result": status_and_result
             }
         })
-        
+
     except Exception as e:
         return jsonify({
             "succ": False,
-            "msg": f'消息发布失败 {type(e)} {e} {traceback.format_exc()}',
+            "msg": f'Failed to publish message {type(e)} {e} {traceback.format_exc()}',
             "data": {
                 "task_id": task_id,
                 "status_and_result": status_and_result
@@ -132,35 +131,35 @@ def publish_msg():
 @flask_blueprint.route("/get_result", methods=['GET'])
 def get_result():
     """
-    根据 task_id 获取任务执行结果
-    
-    查询参数:
-        task_id: str - 任务ID（必填）
-        timeout: int - 超时时间，默认5秒
+    Get task execution result by task_id.
+
+    Query parameters:
+        task_id: str - Task ID (required)
+        timeout: int - Timeout in seconds, default 5
     """
     try:
         task_id = request.args.get('task_id')
         timeout = int(request.args.get('timeout', 5))
-        
+
         if not task_id:
             return jsonify({
                 "succ": False,
-                "msg": "task_id 参数必填",
+                "msg": "task_id parameter is required",
                 "data": {
                     "task_id": None,
                     "status_and_result": None
                 }
             }), 400
-        
-        # 尝试获取结果，默认给个短的 timeout 防止一直阻塞
-        # 注意：如果任务还在运行，AsyncResult 会阻塞直到 timeout
-        # 如果任务早已完成并过期，这里可能返回 None
+
+        # Try to get the result with a short default timeout to prevent indefinite blocking
+        # Note: if the task is still running, AsyncResult will block until timeout
+        # If the task has already completed and expired, this may return None
         status_and_result = AsyncResult(task_id, timeout=timeout).status_and_result
-        
+
         if status_and_result is not None:
             return jsonify({
                 "succ": True,
-                "msg": "获取成功",
+                "msg": "Retrieved successfully",
                 "data": {
                     "task_id": task_id,
                     "status_and_result": status_and_result
@@ -169,17 +168,17 @@ def get_result():
         else:
             return jsonify({
                 "succ": False,
-                "msg": "未获取到结果(可能已过期或未开始执行或超时)",
+                "msg": "No result retrieved (possibly expired, not yet started, or timed out)",
                 "data": {
                     "task_id": task_id,
                     "status_and_result": None
                 }
             })
-            
+
     except Exception as e:
         return jsonify({
             "succ": False,
-            "msg": f"获取结果出错: {str(e)}",
+            "msg": f"Error getting result: {str(e)}",
             "data": {
                 "task_id": task_id if 'task_id' in locals() else None,
                 "status_and_result": None
@@ -190,42 +189,41 @@ def get_result():
 @flask_blueprint.route("/get_msg_count", methods=['GET'])
 def get_msg_count():
     """
-    根据 queue_name 获取消息数量
-    
-    查询参数:
-        queue_name: str - 队列名称（必填）
+    Get message count by queue_name.
+
+    Query parameters:
+        queue_name: str - Queue name (required)
     """
     try:
         queue_name = request.args.get('queue_name')
-        
+
         if not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "queue_name 参数必填",
+                "msg": "queue_name parameter is required",
                 "data": {
                     "queue_name": None,
                     "count": -1
                 }
             },), 400
-        
 
         publisher = SingleQueueConusmerParamsGetter(queue_name).gen_publisher_for_faas()
-        # 获取消息数量（注意：某些中间件可能不支持准确计数，返回-1）
+        # Get message count (Note: some middleware may not support accurate counting, returns -1)
         count = publisher.get_message_count()
-        
+
         return jsonify({
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": {
                 "queue_name": queue_name,
                 "count": count
             }
         })
-        
+
     except Exception as e:
         return jsonify({
             "succ": False,
-            "msg": f"获取消息数量失败: {str(e)}",
+            "msg": f"Failed to get message count: {str(e)}",
             "data": {
                 "queue_name": queue_name if 'queue_name' in locals() else None,
                 "count": -1
@@ -236,27 +234,27 @@ def get_msg_count():
 @flask_blueprint.route("/get_all_queues", methods=['GET'])
 def get_all_queues():
     """
-    获取所有已注册的队列名称
-    
-    返回所有通过 @boost 装饰器注册的队列名称列表
+    Get all registered queue names.
+
+    Returns a list of all queue names registered via the @boost decorator.
     """
     try:
-        # 获取所有队列名称
+        # Get all queue names
         all_queues = QueuesConusmerParamsGetter().get_all_queue_names()
-        
+
         return jsonify({
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": {
                 "queues": all_queues,
                 "count": len(all_queues)
             }
         })
-        
+
     except Exception as e:
         return jsonify({
             "succ": False,
-            "msg": f"获取所有队列失败: {str(e)}",
+            "msg": f"Failed to get all queues: {str(e)}",
             "data": {
                 "queues": [],
                 "count": 0
@@ -269,52 +267,52 @@ def get_all_queues():
 @flask_blueprint.route("/clear_queue", methods=['POST'])
 def clear_queue():
     """
-    清空队列中的所有消息
-    
-    请求体 (JSON):
+    Clear all messages in the queue.
+
+    Request body (JSON):
         {
-            "queue_name": "队列名称"
+            "queue_name": "queue name"
         }
-    
-    返回:
-        清空操作的结果
-        
-    说明:
-        此接口会清空指定队列中的所有待消费消息。
-        ⚠️ 此操作不可逆，请谨慎使用！
-        
-    注意:
-        broker_kind 会自动从已注册的 booster 中获取，无需手动指定。
+
+    Returns:
+        Result of the clear operation.
+
+    Notes:
+        This endpoint clears all pending messages in the specified queue.
+        Warning: this operation is irreversible, use with caution!
+
+    Note:
+        broker_kind is automatically obtained from the registered booster, no need to specify manually.
     """
     try:
         data = request.get_json()
         queue_name = data.get('queue_name')
-        
+
         if not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "queue_name 字段必填",
+                "msg": "queue_name field is required",
                 "data": None
             }), 400
-        
-        # 通过 queue_name 自动获取对应的 publisher
+
+        # Automatically get the corresponding publisher by queue_name
         publisher = SingleQueueConusmerParamsGetter(queue_name).gen_publisher_for_faas()
         publisher.clear()
-        
+
         return jsonify({
             "succ": True,
-            "msg": f"队列 {queue_name} 清空成功",
+            "msg": f"Queue {queue_name} cleared successfully",
             "data": {
                 "queue_name": queue_name,
                 "success": True
             }
         })
-        
+
     except Exception as e:
-        logger.exception(f'清空队列失败: {str(e)}')
+        logger.exception(f'Failed to clear queue: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"清空队列 {queue_name if 'queue_name' in locals() else ''} 失败: {str(e)}",
+            "msg": f"Failed to clear queue {queue_name if 'queue_name' in locals() else ''}: {str(e)}",
             "data": {
                 "queue_name": queue_name if 'queue_name' in locals() else None,
                 "success": False
@@ -323,44 +321,44 @@ def clear_queue():
 
 
 
-# ==================== 定时任务管理接口 ====================
+# ==================== Scheduled Task Management Endpoints ====================
 
 
 
 @flask_blueprint.route("/get_one_queue_config", methods=['GET'])
 def get_one_queue_config():
     """
-    获取单个队列的配置信息
-    
-    查询参数:
-        queue_name: 队列名称（必填）
-    
-    返回:
-        队列的配置信息，包括函数入参信息 (final_func_input_params_info)
+    Get configuration info for a single queue.
+
+    Query parameters:
+        queue_name: Queue name (required)
+
+    Returns:
+        Queue configuration info, including function input parameter info (final_func_input_params_info)
     """
     try:
         queue_name = request.args.get('queue_name')
-        
+
         if not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "queue_name 参数必填",
+                "msg": "queue_name parameter is required",
                 "data": None
             }), 400
-        
+
         queue_params = SingleQueueConusmerParamsGetter(queue_name).get_one_queue_params()
-        
+
         return jsonify({
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": queue_params
         })
-        
+
     except Exception as e:
-        logger.exception(f'获取队列配置失败: {str(e)}')
+        logger.exception(f'Failed to get queue config: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取队列配置失败: {str(e)}",
+            "msg": f"Failed to get queue config: {str(e)}",
             "data": None
         }), 500
 
@@ -368,35 +366,35 @@ def get_one_queue_config():
 @flask_blueprint.route("/get_queues_config", methods=['GET'])
 def get_queues_config():
     """
-    获取所有队列的配置信息
-    
-    返回所有已注册队列的详细配置参数，包括：
-    - 队列名称
-    - broker 类型
-    - 并发数量
-    - QPS 限制
-    - 是否启用 RPC 模式
-    - ！！！重要，消费函数的入参名字列表在 auto_generate_info.final_func_input_params_info 中
-    - 等等其他 @boost 装饰器的所有参数
-    
-    主要用于前端可视化展示和管理
+    Get configuration info for all queues.
+
+    Returns detailed configuration parameters for all registered queues, including:
+    - Queue name
+    - Broker type
+    - Concurrency count
+    - QPS limit
+    - Whether RPC mode is enabled
+    - IMPORTANT: the consumer function's input parameter name list is in auto_generate_info.final_func_input_params_info
+    - And all other parameters of the @boost decorator
+
+    Mainly used for frontend visualization and management.
     """
     try:
         queues_config = QueuesConusmerParamsGetter().get_queues_params()
-        
+
         return jsonify({
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": {
                 "queues_config": queues_config,
                 "count": len(queues_config)
             }
         })
     except Exception as e:
-        logger.exception(f'获取队列配置失败: {str(e)}')
+        logger.exception(f'Failed to get queue config: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取队列配置失败: {str(e)}",
+            "msg": f"Failed to get queue config: {str(e)}",
             "data": {
                 "queues_config": {},
                 "count": 0
@@ -407,51 +405,51 @@ def get_queues_config():
 @flask_blueprint.route("/get_queue_run_info", methods=['GET'])
 def get_queue_run_info():
     """
-    获取单个队列的运行信息
-    
-    查询参数:
-        queue_name: 队列名称（必填）
-    
-    返回:
-        队列的详细运行信息，包括：
-        - queue_params: 队列配置参数
-        - active_consumers: 活跃的消费者列表
-        - pause_flag: 暂停标志（-1,0表示未暂停，1表示已暂停）
-        - msg_num_in_broker: broker中的消息数量（实时）
-        - history_run_count: 历史运行总次数
-        - history_run_fail_count: 历史失败总次数
-        - all_consumers_last_x_s_execute_count: 所有消费进程，最近X秒所有消费者的执行次数
-        - all_consumers_last_x_s_execute_count_fail: 所有消费进程，最近X秒所有消费者的失败次数
-        - all_consumers_last_x_s_avarage_function_spend_time: 所有消费进程，最近X秒的平均函数耗时
-        - all_consumers_avarage_function_spend_time_from_start: 所有消费进程，从启动开始的平均函数耗时
-        - all_consumers_total_consume_count_from_start: 所有消费进程，从启动开始的总消费次数
-        - all_consumers_total_consume_count_from_start_fail: 所有消费进程，从启动开始的总失败次数
-        - all_consumers_last_execute_task_time: 所有消费进程中，最后一次执行任务的时间戳
+    Get run info for a single queue.
+
+    Query parameters:
+        queue_name: Queue name (required)
+
+    Returns:
+        Detailed run info for the queue, including:
+        - queue_params: Queue configuration parameters
+        - active_consumers: List of active consumers
+        - pause_flag: Pause flag (-1 or 0 means not paused, 1 means paused)
+        - msg_num_in_broker: Number of messages in the broker (real-time)
+        - history_run_count: Total historical run count
+        - history_run_fail_count: Total historical failure count
+        - all_consumers_last_x_s_execute_count: Execution count of all consumers across all consumer processes in the last X seconds
+        - all_consumers_last_x_s_execute_count_fail: Failure count of all consumers across all consumer processes in the last X seconds
+        - all_consumers_last_x_s_avarage_function_spend_time: Average function duration across all consumer processes in the last X seconds
+        - all_consumers_avarage_function_spend_time_from_start: Average function duration across all consumer processes since start
+        - all_consumers_total_consume_count_from_start: Total consumption count across all consumer processes since start
+        - all_consumers_total_consume_count_from_start_fail: Total failure count across all consumer processes since start
+        - all_consumers_last_execute_task_time: Timestamp of the last task executed across all consumer processes
     """
     try:
         queue_name = request.args.get('queue_name')
-        
+
         if not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "queue_name 参数必填",
+                "msg": "queue_name parameter is required",
                 "data": None
             }), 400
-        
-        # 获取单个队列的运行信息
+
+        # Get run info for a single queue
         queue_info = SingleQueueConusmerParamsGetter(queue_name).get_one_queue_params_and_active_consumers()
-        
+
         return jsonify({
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": queue_info
         })
-        
+
     except Exception as e:
-        logger.exception(f'获取队列运行信息失败: {str(e)}')
+        logger.exception(f'Failed to get queue run info: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取队列运行信息失败: {str(e)}",
+            "msg": f"Failed to get queue run info: {str(e)}",
             "data": None
         }), 500
 
@@ -459,22 +457,22 @@ def get_queue_run_info():
 @flask_blueprint.route("/add_timing_job", methods=['POST'])
 def add_timing_job():
     """
-    添加定时任务
-    
-    支持三种触发方式:
-    1. date: 在指定日期时间执行一次
-       - 需要提供: run_date
-       - 示例: {"trigger": "date", "run_date": "2025-12-03 15:00:00"}
-    
-    2. interval: 按固定时间间隔执行
-       - 需要提供: weeks, days, hours, minutes, seconds 中的至少一个
-       - 示例: {"trigger": "interval", "seconds": 10}
-    
-    3. cron: 按cron表达式执行
-       - 需要提供: year, month, day, week, day_of_week, hour, minute, second 中的至少一个
-       - 示例: {"trigger": "cron", "hour": "*/2", "minute": "30"}
-    
-    请求体示例:
+    Add a scheduled task.
+
+    Supports three trigger types:
+    1. date: Execute once at a specified date and time
+       - Required: run_date
+       - Example: {"trigger": "date", "run_date": "2025-12-03 15:00:00"}
+
+    2. interval: Execute at a fixed time interval
+       - Required: at least one of weeks, days, hours, minutes, seconds
+       - Example: {"trigger": "interval", "seconds": 10}
+
+    3. cron: Execute according to a cron expression
+       - Required: at least one of year, month, day, week, day_of_week, hour, minute, second
+       - Example: {"trigger": "cron", "hour": "*/2", "minute": "30"}
+
+    Request body example:
     {
         "queue_name": "test_queue",
         "trigger": "interval",
@@ -489,36 +487,36 @@ def add_timing_job():
         if not data:
             return jsonify({
                 "succ": False,
-                "msg": "请求体必须是 JSON 格式",
+                "msg": "Request body must be in JSON format",
                 "data": None
             }), 400
-        
+
         queue_name = data.get('queue_name')
         trigger = data.get('trigger')
         job_id = data.get('job_id')
         job_store_kind = data.get('job_store_kind', 'redis')
         replace_existing = data.get('replace_existing', False)
-        
+
         if not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "queue_name 字段必填",
+                "msg": "queue_name field is required",
                 "data": None
             }), 400
-        
+
         if not trigger or trigger not in ['date', 'interval', 'cron']:
             return jsonify({
                 "succ": False,
-                "msg": "trigger 字段必填，且必须是 'date', 'interval', 'cron' 之一",
+                "msg": "trigger field is required and must be one of 'date', 'interval', 'cron'",
                 "data": None
             }), 400
-        
-        # 获取 booster
+
+        # Get job_adder
         job_adder = gen_aps_job_adder(queue_name, job_store_kind)
 
         # print(888888,job_adder.aps_obj,id(job_adder.aps_obj),job_adder.aps_obj.get_jobs())
 
-        # 构建触发器参数
+        # Build trigger arguments
         trigger_args = {}
         
         if trigger == 'date':
@@ -555,7 +553,7 @@ def add_timing_job():
             if data.get('second') is not None:
                 trigger_args['second'] = data.get('second')
         
-        # 添加任务
+        # Add the job
         job = job_adder.add_push_job(
             trigger=trigger,
             args=data.get('args'),
@@ -564,10 +562,10 @@ def add_timing_job():
             replace_existing=replace_existing,
             **trigger_args
         )
-        
+
         return jsonify({
             "succ": True,
-            "msg": "定时任务添加成功",
+            "msg": "Scheduled task added successfully",
             "data": {
                 "job_id": job.id,
                 "queue_name": queue_name,
@@ -577,12 +575,12 @@ def add_timing_job():
                 "kwargs": data.get('kwargs')
             }
         })
-        
+
     except Exception as e:
-        logger.exception(f'添加定时任务失败: {str(e)}')
+        logger.exception(f'Failed to add scheduled task: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"添加定时任务失败: {str(e)}\n{traceback.format_exc()}",
+            "msg": f"Failed to add scheduled task: {str(e)}\n{traceback.format_exc()}",
             "data": None
         }), 500
 
@@ -590,45 +588,45 @@ def add_timing_job():
 @flask_blueprint.route("/get_timing_jobs", methods=['GET'])
 def get_timing_jobs():
     """
-    获取定时任务列表
-    
-    查询参数:
-        queue_name: 队列名称（可选，如果不提供则获取所有队列的任务）
-        job_store_kind: 任务存储方式，'redis' 或 'memory'，默认 'redis'
-    
-    返回格式:
+    Get the list of scheduled tasks.
+
+    Query parameters:
+        queue_name: Queue name (optional; if not provided, returns tasks for all queues)
+        job_store_kind: Job store type, 'redis' or 'memory', default 'redis'
+
+    Return format:
         {
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": {
                 "jobs_by_queue": {
                     "queue_name1": [job1, job2, ...],
                     "queue_name2": [job3, ...],
                     ...
                 },
-                "total_count": 总任务数
+                "total_count": total task count
             }
         }
     """
     try:
         queue_name = request.args.get('queue_name')
         job_store_kind = request.args.get('job_store_kind', 'redis')
-        
-        # 使用字典格式存储：{queue_name: [jobs]}
+
+        # Store in dict format: {queue_name: [jobs]}
         jobs_by_queue = {}
         total_count = 0
-        
+
         if queue_name:
-            # 获取指定队列的任务
+            # Get tasks for the specified queue
             jobs_by_queue[queue_name] = []
             try:
                 job_adder = gen_aps_job_adder(queue_name, job_store_kind)
                 jobs = job_adder.aps_obj.get_jobs()
-                
+
                 for job in jobs:
-                    # 判断任务状态：next_run_time 为 None 表示任务已暂停
+                    # Determine task status: next_run_time is None means the task is paused
                     status = "paused" if job.next_run_time is None else "running"
-                    # 获取任务的 kwargs 参数
+                    # Get the kwargs of the task
                     kwargs = job.kwargs if hasattr(job, 'kwargs') and job.kwargs else {}
                     jobs_by_queue[queue_name].append({
                         "job_id": job.id,
@@ -640,21 +638,21 @@ def get_timing_jobs():
                     })
                     total_count += 1
             except Exception as e:
-                logger.exception(f'获取定时任务列表失败: {str(e)}')
-               
+                logger.exception(f'Failed to get scheduled task list: {str(e)}')
+
         else:
-            # 获取所有队列的任务
+            # Get tasks for all queues
             all_queues = list(QueuesConusmerParamsGetter().get_all_queue_names())
             for q_name in all_queues:
-                jobs_by_queue[q_name] = []  # 初始化为空数组
+                jobs_by_queue[q_name] = []  # Initialize as empty array
                 try:
                     job_adder = gen_aps_job_adder(q_name, job_store_kind)
                     jobs = job_adder.aps_obj.get_jobs()
-                    
+
                     for job in jobs:
-                        # 判断任务状态：next_run_time 为 None 表示任务已暂停
+                        # Determine task status: next_run_time is None means the task is paused
                         status = "paused" if job.next_run_time is None else "running"
-                        # 获取任务的 kwargs 参数
+                        # Get the kwargs of the task
                         kwargs = job.kwargs if hasattr(job, 'kwargs') and job.kwargs else {}
                         jobs_by_queue[q_name].append({
                             "job_id": job.id,
@@ -666,23 +664,22 @@ def get_timing_jobs():
                         })
                         total_count += 1
                 except Exception as e:
-                    logger.exception(f'获取定时任务列表失败: {str(e)}')
-                 
-        
+                    logger.exception(f'Failed to get scheduled task list: {str(e)}')
+
         return jsonify({
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": {
                 "jobs_by_queue": jobs_by_queue,
                 "total_count": total_count
             }
         })
-        
+
     except Exception as e:
-        logger.exception(f'获取定时任务列表失败: {str(e)}')
+        logger.exception(f'Failed to get scheduled task list: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取定时任务列表失败: {str(e)}",
+            "msg": f"Failed to get scheduled task list: {str(e)}",
             "data": {
                 "jobs_by_queue": {},
                 "total_count": 0
@@ -693,36 +690,36 @@ def get_timing_jobs():
 @flask_blueprint.route("/get_timing_job", methods=['GET'])
 def get_timing_job():
     """
-    获取单个定时任务的详细信息
-    
-    查询参数:
-        job_id: 任务ID（必填）
-        queue_name: 队列名称（必填）
-        job_store_kind: 任务存储方式，'redis' 或 'memory'，默认 'redis'
+    Get detailed information for a single scheduled task.
+
+    Query parameters:
+        job_id: Job ID (required)
+        queue_name: Queue name (required)
+        job_store_kind: Job store type, 'redis' or 'memory', default 'redis'
     """
     try:
         job_id = request.args.get('job_id')
         queue_name = request.args.get('queue_name')
         job_store_kind = request.args.get('job_store_kind', 'redis')
-        
+
         if not job_id or not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "job_id 和 queue_name 参数必填",
+                "msg": "job_id and queue_name parameters are required",
                 "data": None
             }), 400
-        
+
         job_adder = gen_aps_job_adder(queue_name, job_store_kind)
-        
-        # 获取指定的任务
+
+        # Get the specified job
         job = job_adder.aps_obj.get_job(job_id)
-        
+
         if job:
             status = "paused" if job.next_run_time is None else "running"
             kwargs = job.kwargs if hasattr(job, 'kwargs') and job.kwargs else {}
             return jsonify({
                 "succ": True,
-                "msg": "获取成功",
+                "msg": "Retrieved successfully",
                 "data": {
                     "job_id": job.id,
                     "queue_name": queue_name,
@@ -735,15 +732,15 @@ def get_timing_job():
         else:
             return jsonify({
                 "succ": False,
-                "msg": f"任务 {job_id} 不存在",
+                "msg": f"Job {job_id} does not exist",
                 "data": None
             }), 404
-        
+
     except Exception as e:
-        logger.exception(f'获取定时任务失败: {str(e)}')
+        logger.exception(f'Failed to get scheduled task: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取定时任务失败: {str(e)}",
+            "msg": f"Failed to get scheduled task: {str(e)}",
             "data": None
         }), 500
 
@@ -751,39 +748,39 @@ def get_timing_job():
 @flask_blueprint.route("/delete_timing_job", methods=['DELETE'])
 def delete_timing_job():
     """
-    删除定时任务
-    
-    查询参数:
-        job_id: 任务ID（必填）
-        queue_name: 队列名称（必填）
-        job_store_kind: 任务存储方式，'redis' 或 'memory'，默认 'redis'
+    Delete a scheduled task.
+
+    Query parameters:
+        job_id: Job ID (required)
+        queue_name: Queue name (required)
+        job_store_kind: Job store type, 'redis' or 'memory', default 'redis'
     """
     try:
         job_id = request.args.get('job_id')
         queue_name = request.args.get('queue_name')
         job_store_kind = request.args.get('job_store_kind', 'redis')
-        
+
         if not job_id or not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "job_id 和 queue_name 参数必填",
+                "msg": "job_id and queue_name parameters are required",
                 "data": None
             }), 400
-        
+
         job_adder = gen_aps_job_adder(queue_name, job_store_kind)
         job_adder.aps_obj.remove_job(job_id)
-        
+
         return jsonify({
             "succ": True,
-            "msg": f"定时任务 {job_id} 删除成功",
+            "msg": f"Scheduled task {job_id} deleted successfully",
             "data": None
         })
-        
+
     except Exception as e:
-        logger.exception(f'删除定时任务失败: {str(e)}')
+        logger.exception(f'Failed to delete scheduled task: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"删除定时任务失败: {str(e)}",
+            "msg": f"Failed to delete scheduled task: {str(e)}",
             "data": None
         }), 500
 
@@ -791,11 +788,11 @@ def delete_timing_job():
 @flask_blueprint.route("/delete_all_timing_jobs", methods=['DELETE'])
 def delete_all_timing_jobs():
     """
-    删除所有定时任务
-    
-    查询参数:
-        queue_name: 队列名称（可选，如果不提供则删除所有队列的所有任务）
-        job_store_kind: 任务存储方式，'redis' 或 'memory'，默认 'redis'
+    Delete all scheduled tasks.
+
+    Query parameters:
+        queue_name: Queue name (optional; if not provided, deletes all tasks for all queues)
+        job_store_kind: Job store type, 'redis' or 'memory', default 'redis'
     """
     try:
         queue_name = request.args.get('queue_name')
@@ -805,7 +802,7 @@ def delete_all_timing_jobs():
         failed_jobs = []
         
         if queue_name:
-            # 删除指定队列的所有任务
+            # Delete all tasks for the specified queue
             try:
                 job_adder = gen_aps_job_adder(queue_name, job_store_kind)
                 jobs = job_adder.aps_obj.get_jobs()
@@ -819,20 +816,20 @@ def delete_all_timing_jobs():
             except Exception as e:
                 return jsonify({
                     "succ": False,
-                    "msg": f"删除队列 {queue_name} 的任务失败: {str(e)}",
+                    "msg": f"Failed to delete tasks for queue {queue_name}: {str(e)}",
                     "data": {
                         "deleted_count": deleted_count,
                         "failed_jobs": failed_jobs
                     }
                 }), 500
         else:
-            # 删除所有队列的所有任务
+            # Delete all tasks for all queues
             all_queues = list(QueuesConusmerParamsGetter().get_all_queue_names())
             for q_name in all_queues:
                 try:
                     job_adder = gen_aps_job_adder(q_name, job_store_kind)
                     jobs = job_adder.aps_obj.get_jobs()
-                    
+
                     for job in jobs:
                         try:
                             job_adder.aps_obj.remove_job(job.id)
@@ -840,13 +837,12 @@ def delete_all_timing_jobs():
                         except Exception as e:
                             failed_jobs.append(f"{q_name}/{job.id}: {str(e)}")
                 except Exception as e:
-                    logger.exception(f'删除队列 {q_name} 的任务失败: {str(e)}')
-                    # 队列没有任务或出错，继续处理下一个队列
-                    
-        
+                    logger.exception(f'Failed to delete tasks for queue {q_name}: {str(e)}')
+                    # Queue has no tasks or error; continue to next queue
+
         return jsonify({
             "succ": True,
-            "msg": f"成功删除 {deleted_count} 个定时任务",
+            "msg": f"Successfully deleted {deleted_count} scheduled tasks",
             "data": {
                 "deleted_count": deleted_count,
                 "failed_jobs": failed_jobs
@@ -854,10 +850,10 @@ def delete_all_timing_jobs():
         })
         
     except Exception as e:
-        logger.exception(f'删除所有定时任务失败: {str(e)}')
+        logger.exception(f'Failed to delete all scheduled tasks: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"删除所有定时任务失败: {str(e)}",
+            "msg": f"Failed to delete all scheduled tasks: {str(e)}",
             "data": {
                 "deleted_count": 0,
                 "failed_jobs": []
@@ -868,39 +864,39 @@ def delete_all_timing_jobs():
 @flask_blueprint.route("/pause_timing_job", methods=['POST'])
 def pause_timing_job():
     """
-    暂停定时任务
-    
-    查询参数:
-        job_id: 任务ID（必填）
-        queue_name: 队列名称（必填）
-        job_store_kind: 任务存储方式，'redis' 或 'memory'，默认 'redis'
+    Pause a scheduled task.
+
+    Query parameters:
+        job_id: Job ID (required)
+        queue_name: Queue name (required)
+        job_store_kind: Job store type, 'redis' or 'memory', default 'redis'
     """
     try:
         job_id = request.args.get('job_id')
         queue_name = request.args.get('queue_name')
         job_store_kind = request.args.get('job_store_kind', 'redis')
-        
+
         if not job_id or not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "job_id 和 queue_name 参数必填",
+                "msg": "job_id and queue_name parameters are required",
                 "data": None
             }), 400
-        
+
         job_adder = gen_aps_job_adder(queue_name, job_store_kind)
         job_adder.aps_obj.pause_job(job_id)
-        
+
         return jsonify({
             "succ": True,
-            "msg": f"定时任务 {job_id} 已暂停",
+            "msg": f"Scheduled task {job_id} paused",
             "data": None
         })
-        
+
     except Exception as e:
-        logger.exception(f'暂停定时任务失败: {str(e)}')
+        logger.exception(f'Failed to pause scheduled task: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"暂停定时任务失败: {str(e)}",
+            "msg": f"Failed to pause scheduled task: {str(e)}",
             "data": None
         }), 500
 
@@ -908,39 +904,39 @@ def pause_timing_job():
 @flask_blueprint.route("/resume_timing_job", methods=['POST'])
 def resume_timing_job():
     """
-    恢复定时任务
-    
-    查询参数:
-        job_id: 任务ID（必填）
-        queue_name: 队列名称（必填）
-        job_store_kind: 任务存储方式，'redis' 或 'memory'，默认 'redis'
+    Resume a scheduled task.
+
+    Query parameters:
+        job_id: Job ID (required)
+        queue_name: Queue name (required)
+        job_store_kind: Job store type, 'redis' or 'memory', default 'redis'
     """
     try:
         job_id = request.args.get('job_id')
         queue_name = request.args.get('queue_name')
         job_store_kind = request.args.get('job_store_kind', 'redis')
-        
+
         if not job_id or not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "job_id 和 queue_name 参数必填",
+                "msg": "job_id and queue_name parameters are required",
                 "data": None
             }), 400
-        
+
         job_adder = gen_aps_job_adder(queue_name, job_store_kind)
         job_adder.aps_obj.resume_job(job_id)
-        
+
         return jsonify({
             "succ": True,
-            "msg": f"定时任务 {job_id} 已恢复",
+            "msg": f"Scheduled task {job_id} resumed",
             "data": None
         })
-        
+
     except Exception as e:
-        logger.exception(f'恢复定时任务失败: {str(e)}')
+        logger.exception(f'Failed to resume scheduled task: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"恢复定时任务失败: {str(e)}",
+            "msg": f"Failed to resume scheduled task: {str(e)}",
             "data": None
         }), 500
 
@@ -963,46 +959,46 @@ def resume_timing_job():
 @flask_blueprint.route("/get_scheduler_status", methods=['GET'])
 def get_scheduler_status():
     """
-    获取定时器调度器状态
-    
-    查询参数:
-        queue_name: 队列名称（必填）
-        job_store_kind: 任务存储方式，'redis' 或 'memory'，默认 'redis'
-        
-    返回:
-        status: 0(已停止), 1(运行中), 2(已暂停)
+    Get the scheduler status.
+
+    Query parameters:
+        queue_name: Queue name (required)
+        job_store_kind: Job store type, 'redis' or 'memory', default 'redis'
+
+    Returns:
+        status: 0 (stopped), 1 (running), 2 (paused)
     """
     try:
         queue_name = request.args.get('queue_name')
         job_store_kind = request.args.get('job_store_kind', 'redis')
-        
+
         if not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "queue_name 参数必填",
+                "msg": "queue_name parameter is required",
                 "data": None
             }), 400
-            
+
         job_adder = gen_aps_job_adder(queue_name, job_store_kind)
-        
+
         state_map = {0: 'stopped', 1: 'running', 2: 'paused'}
         state = job_adder.aps_obj.state
-        
+
         return jsonify({
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": {
                 "queue_name": queue_name,
                 "status_code": state,
                 "status_str": state_map.get(state, 'unknown')
             }
         })
-        
+
     except Exception as e:
-        logger.exception(f'获取调度器状态失败: {str(e)}')
+        logger.exception(f'Failed to get scheduler status: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取调度器状态失败: {str(e)}",
+            "msg": f"Failed to get scheduler status: {str(e)}",
             "data": None
         }), 500
 
@@ -1010,41 +1006,41 @@ def get_scheduler_status():
 @flask_blueprint.route("/pause_scheduler", methods=['POST'])
 def pause_scheduler():
     """
-    暂停定时器调度器
-    注意：这只会暂停当前进程中的调度器实例。如果部署了多实例，可能需要单独控制。
-    
-    查询参数:
-        queue_name: 队列名称（必填）
-        job_store_kind: 任务存储方式，'redis' 或 'memory'，默认 'redis'
+    Pause the scheduler.
+    Note: This only pauses the scheduler instance in the current process. If multiple instances are deployed, each may need to be controlled separately.
+
+    Query parameters:
+        queue_name: Queue name (required)
+        job_store_kind: Job store type, 'redis' or 'memory', default 'redis'
     """
     try:
         queue_name = request.args.get('queue_name')
         job_store_kind = request.args.get('job_store_kind', 'redis')
-        
+
         if not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "queue_name 参数必填",
+                "msg": "queue_name parameter is required",
                 "data": None
             }), 400
-            
+
         job_adder = gen_aps_job_adder(queue_name, job_store_kind)
         job_adder.aps_obj.pause()
-        
+
         return jsonify({
             "succ": True,
-            "msg": f"调度器已暂停 ({queue_name})",
+            "msg": f"Scheduler paused ({queue_name})",
             "data": {
                 "queue_name": queue_name,
                 "status_str": "paused"
             }
         })
-        
+
     except Exception as e:
-        logger.exception(f'暂停调度器失败: {str(e)}')
+        logger.exception(f'Failed to pause scheduler: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"暂停调度器失败: {str(e)}",
+            "msg": f"Failed to pause scheduler: {str(e)}",
             "data": None
         }), 500
 
@@ -1052,40 +1048,40 @@ def pause_scheduler():
 @flask_blueprint.route("/resume_scheduler", methods=['POST'])
 def resume_scheduler():
     """
-    恢复运行定时器调度器
-    
-    查询参数:
-        queue_name: 队列名称（必填）
-        job_store_kind: 任务存储方式，'redis' 或 'memory'，默认 'redis'
+    Resume the scheduler.
+
+    Query parameters:
+        queue_name: Queue name (required)
+        job_store_kind: Job store type, 'redis' or 'memory', default 'redis'
     """
     try:
         queue_name = request.args.get('queue_name')
         job_store_kind = request.args.get('job_store_kind', 'redis')
-        
+
         if not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "queue_name 参数必填",
+                "msg": "queue_name parameter is required",
                 "data": None
             }), 400
-            
+
         job_adder = gen_aps_job_adder(queue_name, job_store_kind)
         job_adder.aps_obj.resume()
-        
+
         return jsonify({
             "succ": True,
-            "msg": f"调度器已恢复运行 ({queue_name})",
+            "msg": f"Scheduler resumed ({queue_name})",
             "data": {
                 "queue_name": queue_name,
                 "status_str": "running"
             }
         })
-        
+
     except Exception as e:
-        logger.exception(f'恢复调度器失败: {str(e)}')
+        logger.exception(f'Failed to resume scheduler: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"恢复调度器失败: {str(e)}",
+            "msg": f"Failed to resume scheduler: {str(e)}",
             "data": None
         }), 500
 
@@ -1093,19 +1089,19 @@ def resume_scheduler():
 @flask_blueprint.route("/deprecate_queue", methods=['DELETE'])
 def deprecate_queue():
     """
-    废弃队列 - 从 Redis 的 funboost_all_queue_names set 和 项目的队列名下 移除队列名
-    
-    请求体 (JSON):
+    Deprecate a queue - removes the queue name from the funboost_all_queue_names set and the project's queue list in Redis.
+
+    Request body (JSON):
         {
-            "queue_name": "要废弃的队列名称"
+            "queue_name": "name of the queue to deprecate"
         }
-    
-    返回:
+
+    Returns:
         {
             "succ": True/False,
-            "msg": "提示信息",
+            "msg": "message",
             "data": {
-                "queue_name": "队列名称",
+                "queue_name": "queue name",
                 "removed": True/False
             }
         }
@@ -1113,68 +1109,68 @@ def deprecate_queue():
     try:
         data = request.get_json()
         queue_name = data.get('queue_name')
-        
+
         if not queue_name:
             return jsonify({
                 "succ": False,
-                "msg": "缺少参数 queue_name",
+                "msg": "Missing parameter queue_name",
                 "data": None
             }), 400
-        
-        # 调用 SingleQueueConusmerParamsGetter 的 deprecate_queue 方法
+
+        # Call the deprecate_queue method of SingleQueueConusmerParamsGetter
         SingleQueueConusmerParamsGetter(queue_name).deprecate_queue()
-        
-        logger.info(f'成功废弃队列: {queue_name}')
+
+        logger.info(f'Successfully deprecated queue: {queue_name}')
         return jsonify({
             "succ": True,
-            "msg": f"成功废弃队列: {queue_name}",
+            "msg": f"Successfully deprecated queue: {queue_name}",
             "data": {
                 "queue_name": queue_name,
                 "removed": True
             }
         })
-        
+
     except Exception as e:
-        logger.exception(f'废弃队列失败: {str(e)}')
+        logger.exception(f'Failed to deprecate queue: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"废弃队列失败: {str(e)}",
+            "msg": f"Failed to deprecate queue: {str(e)}",
             "data": None
         }), 500
 
 
-# ==================== care_project_name 项目筛选接口 ====================
+# ==================== care_project_name Project Filter Endpoints ====================
 
 @flask_blueprint.route("/get_care_project_name", methods=['GET'])
 def get_care_project_name():
     """
-    获取当前的 care_project_name 设置
-    
-    返回:
+    Get the current care_project_name setting.
+
+    Returns:
         {
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": {
-                "care_project_name": "项目名称或None"
+                "care_project_name": "project name or None"
             }
         }
     """
     try:
         care_project_name = CareProjectNameEnv.get()
-        
+
         return jsonify({
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": {
                 "care_project_name": care_project_name
             }
         })
-        
+
     except Exception as e:
-        logger.exception(f'获取 care_project_name 失败: {str(e)}')
+        logger.exception(f'Failed to get care_project_name: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取失败: {str(e)}",
+            "msg": f"Failed to get: {str(e)}",
             "data": None
         }), 500
 
@@ -1182,46 +1178,46 @@ def get_care_project_name():
 @flask_blueprint.route("/set_care_project_name", methods=['POST'])
 def set_care_project_name():
     """
-    设置 care_project_name
-    
-    请求体 (JSON):
+    Set care_project_name.
+
+    Request body (JSON):
         {
-            "care_project_name": "项目名称" 或 "" (空字符串表示不限制)
+            "care_project_name": "project name" or "" (empty string means no restriction)
         }
-    
-    返回:
+
+    Returns:
         {
             "succ": True,
-            "msg": "设置成功",
+            "msg": "Set successfully",
             "data": {
-                "care_project_name": "设置后的值"
+                "care_project_name": "the value after setting"
             }
         }
     """
     try:
         data = request.get_json()
         care_project_name = data.get('care_project_name', '')
-        
-        # 空字符串表示清除限制，设置为空字符串（环境变量中）
+
+        # Empty string means clear the restriction, set to empty string (in environment variable)
         CareProjectNameEnv.set(care_project_name)
-        
-        # 如果设置为空字符串，返回时显示为 None
+
+        # If set to empty string, display as None when returning
         display_value = care_project_name if care_project_name else None
-        
-        logger.info(f'设置 care_project_name 为: {display_value}')
+
+        logger.info(f'Set care_project_name to: {display_value}')
         return jsonify({
             "succ": True,
-            "msg": f"设置成功: {display_value if display_value else '不限制（显示全部）'}",
+            "msg": f"Set successfully: {display_value if display_value else 'No restriction (show all)'}",
             "data": {
                 "care_project_name": display_value
             }
         })
-        
+
     except Exception as e:
-        logger.exception(f'设置 care_project_name 失败: {str(e)}')
+        logger.exception(f'Failed to set care_project_name: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"设置失败: {str(e)}",
+            "msg": f"Failed to set: {str(e)}",
             "data": None
         }), 500
 
@@ -1229,36 +1225,36 @@ def set_care_project_name():
 @flask_blueprint.route("/get_all_project_names", methods=['GET'])
 def get_all_project_names():
     """
-    获取所有已注册的项目名称列表
-    
-    返回:
+    Get the list of all registered project names.
+
+    Returns:
         {
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": {
                 "project_names": ["project1", "project2", ...],
-                "count": 数量
+                "count": count
             }
         }
     """
     try:
-        # 使用 QueuesConusmerParamsGetter 获取所有项目名称
+        # Use QueuesConusmerParamsGetter to get all project names
         project_names = QueuesConusmerParamsGetter().get_all_project_names()
-        
+
         return jsonify({
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": {
                 "project_names": sorted(project_names) if project_names else [],
                 "count": len(project_names) if project_names else 0
             }
         })
-        
+
     except Exception as e:
-        logger.exception(f'获取项目名称列表失败: {str(e)}')
+        logger.exception(f'Failed to get project name list: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取项目名称列表失败: {str(e)}",
+            "msg": f"Failed to get project name list: {str(e)}",
             "data": {
                 "project_names": [],
                 "count": 0
@@ -1266,18 +1262,18 @@ def get_all_project_names():
         }), 500
 
 
-# ==================== 运行中消费者信息接口 ====================
+# ==================== Running Consumer Info Endpoints ====================
 
 @flask_blueprint.route("/running_consumer/hearbeat_info_by_queue_name", methods=['GET'])
 def hearbeat_info_by_queue_name():
     """
-    按队列名获取消费者心跳信息
-    
-    查询参数:
-        queue_name: 队列名称（可选，不传或传"所有"则返回所有消费者）
-    
-    返回:
-        消费者心跳信息列表
+    Get consumer heartbeat info by queue name.
+
+    Query parameters:
+        queue_name: Queue name (optional; if not provided or "All" is passed, returns all consumers)
+
+    Returns:
+        List of consumer heartbeat info
     """
     try:
         queue_name = request.args.get("queue_name")
@@ -1288,21 +1284,21 @@ def hearbeat_info_by_queue_name():
                 ret_list.extend(dic)
             return jsonify({
                 "succ": True,
-                "msg": "获取成功",
+                "msg": "Retrieved successfully",
                 "data": ret_list
             })
         else:
             data = ActiveCousumerProcessInfoGetter().get_all_hearbeat_info_by_queue_name(queue_name)
             return jsonify({
                 "succ": True,
-                "msg": "获取成功",
+                "msg": "Retrieved successfully",
                 "data": data
             })
     except Exception as e:
-        logger.exception(f'获取消费者心跳信息失败: {str(e)}')
+        logger.exception(f'Failed to get consumer heartbeat info: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取消费者心跳信息失败: {str(e)}",
+            "msg": f"Failed to get consumer heartbeat info: {str(e)}",
             "data": []
         }), 500
 
@@ -1310,13 +1306,13 @@ def hearbeat_info_by_queue_name():
 @flask_blueprint.route("/running_consumer/hearbeat_info_by_ip", methods=['GET'])
 def hearbeat_info_by_ip():
     """
-    按 IP 获取消费者心跳信息
-    
-    查询参数:
-        ip: IP 地址（可选，不传或传"所有"则返回所有消费者）
-    
-    返回:
-        消费者心跳信息列表
+    Get consumer heartbeat info by IP.
+
+    Query parameters:
+        ip: IP address (optional; if not provided or "All" is passed, returns all consumers)
+
+    Returns:
+        List of consumer heartbeat info
     """
     try:
         ip = request.args.get("ip")
@@ -1327,21 +1323,21 @@ def hearbeat_info_by_ip():
                 ret_list.extend(dic)
             return jsonify({
                 "succ": True,
-                "msg": "获取成功",
+                "msg": "Retrieved successfully",
                 "data": ret_list
             })
         else:
             data = ActiveCousumerProcessInfoGetter().get_all_hearbeat_info_by_ip(ip)
             return jsonify({
                 "succ": True,
-                "msg": "获取成功",
+                "msg": "Retrieved successfully",
                 "data": data
             })
     except Exception as e:
-        logger.exception(f'获取消费者心跳信息失败: {str(e)}')
+        logger.exception(f'Failed to get consumer heartbeat info: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取消费者心跳信息失败: {str(e)}",
+            "msg": f"Failed to get consumer heartbeat info: {str(e)}",
             "data": []
         }), 500
 
@@ -1349,10 +1345,10 @@ def hearbeat_info_by_ip():
 @flask_blueprint.route("/running_consumer/hearbeat_info_partion_by_queue_name", methods=['GET'])
 def hearbeat_info_partion_by_queue_name():
     """
-    按队列名分组统计消费者数量
-    
-    返回:
-        队列名列表及每个队列的消费者数量，第一项为"所有"表示总数
+    Get consumer count grouped by queue name.
+
+    Returns:
+        List of queue names and consumer count per queue; the first item is "All" representing the total count.
     """
     try:
         info_map = ActiveCousumerProcessInfoGetter().get_all_hearbeat_info_partition_by_queue_name()
@@ -1365,14 +1361,14 @@ def hearbeat_info_partion_by_queue_name():
         ret_list.insert(0, {"collection_name": "所有", "count": total_count})
         return jsonify({
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": ret_list
         })
     except Exception as e:
-        logger.exception(f'获取消费者分组统计失败: {str(e)}')
+        logger.exception(f'Failed to get consumer group statistics: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取消费者分组统计失败: {str(e)}",
+            "msg": f"Failed to get consumer group statistics: {str(e)}",
             "data": []
         }), 500
 
@@ -1380,10 +1376,10 @@ def hearbeat_info_partion_by_queue_name():
 @flask_blueprint.route("/running_consumer/hearbeat_info_partion_by_ip", methods=['GET'])
 def hearbeat_info_partion_by_ip():
     """
-    按 IP 分组统计消费者数量
-    
-    返回:
-        IP 列表及每个 IP 的消费者数量，第一项为"所有"表示总数
+    Get consumer count grouped by IP.
+
+    Returns:
+        List of IP addresses and consumer count per IP; the first item is "All" representing the total count.
     """
     try:
         info_map = ActiveCousumerProcessInfoGetter().get_all_hearbeat_info_partition_by_ip()
@@ -1396,14 +1392,14 @@ def hearbeat_info_partion_by_ip():
         ret_list.insert(0, {"collection_name": "所有", "count": total_count})
         return jsonify({
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": ret_list
         })
     except Exception as e:
-        logger.exception(f'获取消费者分组统计失败: {str(e)}')
+        logger.exception(f'Failed to get consumer group statistics: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取消费者分组统计失败: {str(e)}",
+            "msg": f"Failed to get consumer group statistics: {str(e)}",
             "data": []
         }), 500
 
@@ -1411,23 +1407,23 @@ def hearbeat_info_partion_by_ip():
 @flask_blueprint.route("/queues_params_and_active_consumers", methods=['GET'])
 def get_queues_params_and_active_consumers():
     """
-    获取所有队列的参数配置和活跃消费者信息
-    
-    返回:
-        所有队列的配置参数及其活跃消费者列表
+    Get configuration parameters and active consumer info for all queues.
+
+    Returns:
+        Configuration parameters and active consumer list for all queues.
     """
     try:
         data = QueuesConusmerParamsGetter().get_queues_params_and_active_consumers()
         return jsonify({
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": data
         })
     except Exception as e:
-        logger.exception(f'获取队列参数和活跃消费者失败: {str(e)}')
+        logger.exception(f'Failed to get queue params and active consumers: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取队列参数和活跃消费者失败: {str(e)}",
+            "msg": f"Failed to get queue params and active consumers: {str(e)}",
             "data": {}
         }), 500
 
@@ -1435,46 +1431,46 @@ def get_queues_params_and_active_consumers():
 @flask_blueprint.route("/get_msg_num_all_queues", methods=['GET'])
 def get_msg_num_all_queues():
     """
-    批量获取所有队列的消息数量
-    
-    说明:
-        这个是通过消费者周期每隔10秒上报到redis的，性能好。
-        不需要实时获取每个消息队列，直接从redis读取所有队列的消息数量。
-    
-    返回:
+    Batch get message count for all queues.
+
+    Notes:
+        This is reported to Redis by consumers periodically every 10 seconds, so performance is good.
+        No need to query each message queue in real-time; reads all queue message counts directly from Redis.
+
+    Returns:
         {queue_name: msg_count, ...}
     """
     try:
         data = QueuesConusmerParamsGetter().get_msg_num(ignore_report_ts=True)
         return jsonify({
             "succ": True,
-            "msg": "获取成功",
+            "msg": "Retrieved successfully",
             "data": data
         })
     except Exception as e:
-        logger.exception(f'获取所有队列消息数量失败: {str(e)}')
+        logger.exception(f'Failed to get all queue message counts: {str(e)}')
         return jsonify({
             "succ": False,
-            "msg": f"获取所有队列消息数量失败: {str(e)}",
+            "msg": f"Failed to get all queue message counts: {str(e)}",
             "data": {}
         }), 500
 
 
-# 运行应用 (仅在作为主脚本运行时创建 app)
+# Run the application (only create the app when run as the main script)
 if __name__ == "__main__":
     from flask import Flask
 
 
-    # 这是一个示例，展示用户如何将 flask_blueprint 集成到自己的 app 中
+    # This is an example showing how users can integrate flask_blueprint into their own app
     app = Flask(__name__)
     app.config['JSON_AS_ASCII'] = False
     app.register_blueprint(flask_blueprint)
 
     @app.route('/')
     def index():
-        return "Funboost Flask API 服务运行中！"
+        return "Funboost Flask API service is running!"
 
-    print("启动 Funboost Flask API 服务...")
-    print("访问地址: http://127.0.0.1:5000")
+    print("Starting Funboost Flask API service...")
+    print("Access URL: http://127.0.0.1:5000")
 
     app.run(host="0.0.0.0", port=5000, debug=True)
