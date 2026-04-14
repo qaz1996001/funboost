@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
 '''
 
-Linux celery error: EntryPoints’ object has no attribute ‘get’, fix as follows:
+Linux celery error: EntryPoints' object has no attribute 'get', fix as follows:
 https://blog.csdn.net/weixin_73672704/article/details/129477312
 
 pip install frozenlist==1.3.1 geopy==2.2.0 humanize==4.3.0 idna==3.3 importlib-metadata==4.12.0 jsonschema==4.9.0 korean_lunar_calendar==0.2.1 marshmallow==3.17.0 pyOpenSSL==22.0.0 pyrsistent==0.18.1 python-dotenv==0.20.0 pytz==2022.2.1 selenium==4.4.0 simplejson==3.17.6 sniffio==1.2.0 trio==0.21.0 urllib3==1.26.11 wsproto==1.1.0 zipp==3.8.1

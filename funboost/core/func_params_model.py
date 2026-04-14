@@ -83,15 +83,15 @@ class BoosterParams(BaseJsonAbleModel):
     queue_name: str  # Queue name, required, each function should use a different queue name.
     broker_kind: str = BrokerEnum.SQLITE_QUEUE  # Broker selection, see section 3.1 https://funboost.readthedocs.io/zh-cn/latest/articles/c3.html
 
-    “”” project_name is the project name, a management-level label. Defaults to None. Assigns a project name to the booster, used for viewing related queues in funboost's Redis-stored info by project name.
+    """ project_name is the project name, a management-level label. Defaults to None. Assigns a project name to the booster, used for viewing related queues in funboost's Redis-stored info by project name.
     # Without this, it's hard to distinguish which queue names belong to which project from Redis-stored funboost info. Mainly used for web interface viewing.
     # The queue names for a project are stored in a Redis set with key f'funboost.project_name:{project_name}'.
-    # Usually used together with CareProjectNameEnv.set($project_name), so you can “only see your own domain” during monitoring and management, avoiding noise from other projects' queues.”””
+    # Usually used together with CareProjectNameEnv.set($project_name), so you can "only see your own domain" during monitoring and management, avoiding noise from other projects' queues."""
     project_name: typing.Optional[str] = None
 
-    “””If qps is set and concurrent_num is at the default 50, it will auto-expand to 500 concurrent. Since the smart thread pool won't actually start that many threads when tasks are few, and it auto-shrinks thread count,
+    """If qps is set and concurrent_num is at the default 50, it will auto-expand to 500 concurrent. Since the smart thread pool won't actually start that many threads when tasks are few, and it auto-shrinks thread count,
     see ThreadPoolExecutorShrinkAble for details.
-    Thanks to the powerful qps-based frequency control and the smart expanding/shrinking thread pool, this framework recommends ignoring concurrent_num and only caring about qps. Concurrency is self-adaptive, which is very powerful and convenient.”””
+    Thanks to the powerful qps-based frequency control and the smart expanding/shrinking thread pool, this framework recommends ignoring concurrent_num and only caring about qps. Concurrency is self-adaptive, which is very powerful and convenient."""
     concurrent_mode: str = ConcurrentModeEnum.THREADING  # Concurrency mode; supports THREADING, GEVENT, EVENTLET, ASYNC, SINGLE_THREAD. multi_process_consume supports coroutine/thread stacked with multi-process for blazing performance.
     concurrent_num: int = 50  # Concurrency count; the type of concurrency is determined by concurrent_mode.
     specify_concurrent_pool: typing.Optional[FunboostBaseConcurrentPool] = None  # Use a specified thread pool / coroutine pool. Multiple consumers can share one thread pool to save threads. When not None, threads_num is ignored.
@@ -242,33 +242,33 @@ class BoosterParams(BaseJsonAbleModel):
     # func_params_is_pydantic_model: bool = False  # funboost supports functions that accept pydantic model types; funboost auto-converts before publishing and when retrieving.
 
     consuming_function_kind: typing.Optional[str] = None  # Auto-generated info; no need for users to pass this unless auto-detection is wrong. Determines whether the consuming function is a plain function, instance method, or class method. If passed, auto-detection is skipped.
-    “”” consuming_function_kind can be one of the following:
+    """ consuming_function_kind can be one of the following:
     class FunctionKind:
         CLASS_METHOD = 'CLASS_METHOD'
         INSTANCE_METHOD = 'INSTANCE_METHOD'
         STATIC_METHOD = 'STATIC_METHOD'
         COMMON_FUNCTION = 'COMMON_FUNCTION'
-    “””
+    """
 
-    “””
+    """
     user_options:
     User-defined extra configuration. Useful for advanced users or unusual requirements; users can store any settings freely.
-    user_options provides a unified user-defined namespace for passing configuration for “unusual requirements” or “advanced customizations” without waiting for the framework developer to add official support.
+    user_options provides a unified user-defined namespace for passing configuration for "unusual requirements" or "advanced customizations" without waiting for the framework developer to add official support.
     funboost is a free framework, not a restrictive one. Not only is the consuming function logic free and directory structure free, but custom extensions should also be free. Users don't need to modify BoosterParams source code to add decorator parameters.
 
     See section 4b.6 in the docs for usage scenarios.
-    “””
+    """
     user_options: dict = {} # User-defined configuration; useful for advanced users or unusual requirements. Store any settings freely, e.g. read in consumer_override_cls or use with register_custom_broker.
 
 
     auto_generate_info: dict = {}  # Auto-generated information; users do not need to pass this. Contains e.g. final_func_input_params_info and where_to_instantiate.
 
-    “””# is_fake_booster: Whether this is a fake booster.
+    """# is_fake_booster: Whether this is a fake booster.
     # Used in faas mode where cross-project faas management only retrieves basic Redis metadata, without the actual booster function logic.
     # For example, ApsJobAdder manages scheduled tasks and needs a booster, but has no real function logic.
     # See SingleQueueConusmerParamsGetter.gen_booster_for_faas for usage. Currently mainly controls whether BoostersManager.regist_booster is executed.
     # Regular users don't need to change this parameter at all.
-    “””
+    """
     is_fake_booster: bool = False
 
     # Regular users don't need to manage or change this. Used to isolate booster registration.

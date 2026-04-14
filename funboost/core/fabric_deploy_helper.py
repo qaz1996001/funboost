@@ -24,7 +24,7 @@ def fabric_deploy(booster: Booster, host, port, user, password,
                   process_num=1,
                   pkey_file_path=None,
                   ):
-    “””
+    """
     No dependency on Alibaba Cloud CodePipeline or any DevOps deployment tools, multi-machine remote deployment can be achieved purely at the Python code level.
     This implements function-level precise deployment, not just deploying a .py file. Remote deployment of a function is more challenging than a script, but more flexible.
 
@@ -35,7 +35,7 @@ def fabric_deploy(booster: Booster, host, port, user, password,
     E.g. test_frame/test_fabric_deploy/test_deploy1.py's fun2 function is automatically converted to: from test_frame.test_fabric_deploy.test_deploy1 import f2
     Thus auto-generating the deployment statement:
     export PYTHONPATH=/home/ydf/codes/distributed_framework:$PYTHONPATH ;cd /home/ydf/codes/distributed_framework;
-    python3 -c “from test_frame.test_fabric_deploy.test_deploy1 import f2;f2.multi_process_consume(2)”  -funboostmark funboost_fabric_mark_queue_test30
+    python3 -c "from test_frame.test_fabric_deploy.test_deploy1 import f2;f2.multi_process_consume(2)"  -funboostmark funboost_fabric_mark_queue_test30
 
     This can directly run function tasks on remote machines. No need for users to manually deploy code or start code. Auto-uploads code, auto-sets environment variables, auto-imports functions, auto-runs.
     The principle uses python -c for function-level deployment, not script-level deployment.
@@ -55,7 +55,7 @@ def fabric_deploy(booster: Booster, host, port, user, password,
     :param extra_shell_str: Extra commands to execute before auto-deployment, e.g. setting environment variables
     :param python_interpreter: Python interpreter path. If multiple Python environments are installed on Linux, specify the absolute path.
     :param invoke_runner_kwargs: All parameters for the invoke package's runner.py run() method. The example shows a few parameters, but you can pass dozens. Explore fabric's run method and pass as needed.
-                                 hide: whether to hide remote machine output. False=show all, “out”=hide stdout only, “err”=hide stderr only, True=hide all output.
+                                 hide: whether to hide remote machine output. False=show all, "out"=hide stdout only, "err"=hide stderr only, True=hide all output.
                                  pty: whether the remote deployment process ends when the current script ends. True=remote process ends with local script. False=remote machine continues running even after local script closes.
                                  warn: whether local code exits immediately if remote machine returns an error code. True=just warn, False=terminate local code on remote error code.
     :param process_num: Number of processes to start. For maximum CPU performance, set to the number of CPU cores. Each process has its own concurrency mode and count specified by the task function, so it's multi-process + threads/coroutines.
@@ -64,7 +64,7 @@ def fabric_deploy(booster: Booster, host, port, user, password,
 
 
     task_fun.fabric_deploy('192.168.6.133', 22, 'ydf', '123456', process_num=2) is all you need to auto-deploy and run on a remote machine.
-    “””
+    """
     # print(locals())
     python_proj_dir = Path(sys.path[1]).resolve().as_posix() + '/'
     python_proj_dir_short = python_proj_dir.split('/')[-2]

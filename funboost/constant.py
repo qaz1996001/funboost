@@ -35,15 +35,15 @@ class BrokerEnum:
 
     RABBITMQ_AMQP = 'RABBITMQ_AMQP'  # Uses the amqp package to operate RabbitMQ. Celery/Kombu's underlying client with better performance than pika.
 
-    “””
+    """
     Below are various Redis data structures and methods used to implement message queues. The author has explored Redis in every possible way.
     Since Redis is fundamentally a cache/database and not a message queue (it doesn't implement the classic AMQP protocol), Redis only simulates message queues rather than being a true MQ.
     For example, to implement consumer acknowledgment where messages are safe through arbitrary restarts, a simple redis.blpop that pops and deletes messages simply won't work — messages are lost on restart even if they haven't started or are still running.
 
     The challenge of implementing ACK in Redis is not how to implement the acknowledgment itself, but rather when to return orphaned unacknowledged messages from crashed/stopped consumer processes back to the queue.
-    The real difficulty of implementing ACK on Redis is not the “acknowledge” action itself, but building a reliable distributed failure detection mechanism that can accurately determine “when it is safe and timely to recover tasks.”
+    The real difficulty of implementing ACK on Redis is not the "acknowledge" action itself, but building a reliable distributed failure detection mechanism that can accurately determine "when it is safe and timely to recover tasks."
     So if you think simply using brpoplpush or REDIS_STREAM will easily solve the ACK problem, that's too naive — Redis server doesn't natively have the automatic message recovery mechanism for crashed consumers like RabbitMQ does. You need to maintain this mechanism on the Redis client side.
-    “””
+    """
     REDIS = 'REDIS'  # Uses Redis list structure with brpop as a distributed message queue. Arbitrary restarts will lose many messages. No consumer acknowledgment support. Choose this for performance when message loss is acceptable.
     REDIS_ACK_ABLE = 'REDIS_ACK_ABLE'  # Based on Redis list + temporary unack set. Uses Lua scripts for atomic task fetch and pending addition. Detects disconnected processes via heartbeat loss. No task loss on restarts or disconnections.
     REIDS_ACK_USING_TIMEOUT = 'reids_ack_using_timeout'  # Based on Redis list + temporary unack set. Messages automatically return to queue if not acknowledged within timeout seconds. Be careful with ack_timeout vs function duration to avoid repeated re-queuing. Set ack timeout via broker_exclusive_config={'ack_timeout': 1800}. Drawback: cannot distinguish slow execution from actual crashes.
@@ -106,17 +106,17 @@ class BrokerEnum:
     ZEROMQ = 'ZEROMQ'  # Uses ZeroMQ as a distributed message queue. No middleware installation required. Supports cross-machine but not persistence.
 
 
-    “””
+    """
     Both kombu and celery are god-tier broker_kinds in funboost.
     They allow funboost to effortlessly support all current and future message queues supported by kombu.
     By directly supporting kombu, funboost instantly inherits all current and future message queue capabilities of kombu. Regardless of what new cloud messaging services (e.g., Google
     Pub/Sub, Azure Service Bus) or niche MQs the kombu community adds support for in the future, funboost automatically gains that capability without modifying its own code.
-    This is a “wait at ease for the exhausted enemy” strategy that greatly expands funboost's applicability.
+    This is a "wait at ease for the exhausted enemy" strategy that greatly expands funboost's applicability.
 
     The kombu package can serve as a funboost broker. This package is also Celery's middleware dependency and can operate 10+ types of middleware (e.g., RabbitMQ, Redis), but does not include Kafka, NSQ, ZeroMQ, etc.
     However, kombu's performance is very poor — comparing native Redis lpush vs kombu publish, and brpop vs kombu drain_events, the difference is 5-10x.
     Due to poor performance, only choose kombu for brokers not natively implemented in funboost (e.g., kombu supports Amazon SQS, Qpid, Pyro queues). Otherwise, strongly recommended to use funboost's native broker implementations instead of kombu.
-    “””
+    """
     KOMBU = 'KOMBU'
 
     """ Based on EMQ as the broker. This is very different from the brokers above — the server does not store messages. So you cannot publish hundreds of thousands of messages first and then start consuming. MQTT's advantage is that web frontend and backend can interact —
@@ -144,7 +144,7 @@ class BrokerEnum:
 
     CELERY = 'CELERY'  # funboost supports Celery framework for publishing and consuming tasks, with Celery handling task scheduling/execution. The usage is far simpler than using Celery directly.
     # Users never need to worry about Celery object instances, task_routes, or includes configuration — funboost automatically sets up all Celery configurations.
-    # funboost incorporates Celery itself into its broker system. Being able to “absorb” another major framework is brilliant and demonstrates funboost's architectural inclusiveness, elegance, and sophistication.
+    # funboost incorporates Celery itself into its broker system. Being able to "absorb" another major framework is brilliant and demonstrates funboost's architectural inclusiveness, elegance, and sophistication.
 
     DRAMATIQ = 'DRAMATIQ'  # funboost uses the Dramatiq framework as a message queue. Dramatiq is a task queue framework similar to Celery. Users operate Dramatiq's core scheduling through the funboost API.
 
@@ -285,13 +285,13 @@ class RedisKeys:
 
     @staticmethod
     def gen_funboost_unack_registry_key_by_queue_name(queue_name):
-        “””
+        """
         Approach C:
-        Maintain a separate unack key registry (set) solely responsible for “full indexing”, not cleaned up by heartbeat threads.
+        Maintain a separate unack key registry (set) solely responsible for "full indexing", not cleaned up by heartbeat threads.
         The registry stores the specific unack Redis key names, e.g.:
         - redis_ack_able:  {queue_name}__unack_id_{consumer_id}
         - brpoplpush:      unack_{queue_name}_{consumer_id}
-        “””
+        """
         return f'{RedisKeys.FUNBOOST_UNACK_REGISTRY_PREFIX}{queue_name}'
 
 class ConsumingFuncInputParamsCheckerField:

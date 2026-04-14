@@ -1,4 +1,4 @@
-“””
+"""
 [⚠️ Security Warning & Best Practices]
 
 1. Risk Warning for BoosterDiscovery Auto-Scanning
@@ -8,7 +8,7 @@ BoosterDiscovery(....).auto_discovery() must be used with great care. It is stro
 Reason:
     Some developers may have loose coding habits: scripts that perform actions at module level may lack
     `if __name__ == '__main__':` protection, or the author may not understand how `__main__` works.
-    Python's import mechanism means “importing a module executes its top-level code.”
+    Python's import mechanism means "importing a module executes its top-level code."
 
 Dangerous scenario:
     Suppose there is a temporary dirty-data cleanup script `my_temp_dangerous_delete_mysql_script.py` in the project:
@@ -16,7 +16,7 @@ Dangerous scenario:
     ```python
     # ❌ Dangerous: written at module top level, not inside a function, and without main guard
     import db_client
-    db_client.execute(“DROP TABLE users”)
+    db_client.execute("DROP TABLE users")
     ```
 
 Consequence:
@@ -32,7 +32,7 @@ Consequence:
     ).auto_discovery()
 
 
-2. Why prefer “explicit Import” over “auto-scanning”? BoosterDiscovery is NOT required by funboost!
+2. Why prefer "explicit Import" over "auto-scanning"? BoosterDiscovery is NOT required by funboost!
 -------------------------------------------------------
 It is actually not recommended to over-rely on `auto_discovery()`. The recommended best practice is:
 👉 Manually and explicitly import the modules containing @boost. Import only what you need.
@@ -40,7 +40,7 @@ It is actually not recommended to over-rely on `auto_discovery()`. The recommend
 Architecture difference between Funboost and Celery:
     * Funboost:
       Has no central `app` instance, no need for a separate `celery_app.py` module like Celery.
-      Architecturally, there is no “circular import deadlock” by design. Just import the consuming functions you need — simple and straightforward.
+      Architecturally, there is no "circular import deadlock" by design. Just import the consuming functions you need — simple and straightforward.
 
     * Celery:
       Must manually configure `includes` or call `autodiscover_tasks()`.
@@ -48,7 +48,7 @@ Architecture difference between Funboost and Celery:
       while `celery worker` starting `app` also needs to import `xx_tasks.py` to register tasks.
       This design traps both sides in a circular import deadlock, forcing Celery to invent a complex import mechanism
       and making newcomers very careful and frustrated when planning the project directory structure.
-“”” 
+""" 
 
 import re
 import sys

@@ -28,7 +28,7 @@ class ConsumerConfirmMixinWithTheHelpOfRedisByHearbeat(RedisMixin):
         self.consumer_params.is_send_consumer_heartbeat_to_redis = True
         self._last_show_unacked_msg_num_log = 0
         self.consumer_params.is_send_consumer_heartbeat_to_redis = True
-        # Plan C: Register unack key as a “full index” to avoid relying on heartbeat key for dead consumer records
+        # Plan C: Register unack key as a "full index" to avoid relying on heartbeat key for dead consumer records
         self.redis_db_frame.sadd(self._unack_registry_key, self._unack_zset_name)
 
     def start_consuming_message(self):
