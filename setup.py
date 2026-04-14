@@ -1,6 +1,10 @@
 # coding=utf-8
+import re
 from setuptools import setup, find_packages
-from funboost import __version__
+
+# Read version without importing funboost (which triggers heavy dependencies)
+with open('funboost/__init__.py', 'r', encoding='utf-8') as f:
+    __version__ = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', f.read()).group(1)
 
 # from logging_tree import printout
 # printout()
